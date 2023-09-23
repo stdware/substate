@@ -35,8 +35,10 @@ namespace Substate {
             User = 1024,
         };
 
-        Variant(Type type = Invalid);
+        inline Variant() noexcept;
+        Variant(Type type);
         Variant(bool b);
+        inline Variant(char c);
         Variant(int8_t c);
         Variant(int16_t s);
         Variant(int32_t i);
@@ -128,6 +130,12 @@ namespace Substate {
     protected:
         Private d;
     };
+
+    Variant::Variant() noexcept : d() {
+    }
+
+    Variant::Variant(char c) : Variant(int8_t(c)) {
+    }
 
     inline Variant::Variant(Variant &&other) noexcept : d(other.d) {
         other.d = Private();

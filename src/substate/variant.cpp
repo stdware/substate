@@ -5,6 +5,12 @@
 
 #include "substate_utils_p.h"
 
+/*!
+    \namespace Substate
+
+    Substate library general namespace.
+*/
+
 namespace Substate {
 
     static std::unordered_map<int, VariantHandler> handlerManager = {
@@ -71,6 +77,46 @@ namespace Substate {
         delete d->data.shared;
     }
 
+    /*!
+        \struct VariantHelper
+
+        This struct encompasses the basic handlers to store and serialize a type.
+
+        \property VariantHelper::read
+        \brief Reads the data from the input stream and deserializes it into an instance of the
+        class, allocates a new block of space to store it, and returns the pointer of the
+        block.
+
+        \property VariantHelper::write
+        \brief Serializes the instance of the class and writes the data into the output
+        stream.
+
+        \property VariantHelper::construct
+        \brief Constructs a new instance of the class, allocates a new block of space to store
+        it, and returns the pointer of the block. If the given instance is null, constructs a
+        default one, otherwise uses the copy constructor.
+
+        \property VariantHelper::destroy
+        \brief Deletes the instance of the class.
+    */
+
+    /*!
+        \class Variant
+
+        Variant is a storage class for C++ classes, providing a general serialization feature
+        for each type.
+    */
+
+    /*!
+        \fn Variant::Variant()
+
+        Constructs an invalid variant.
+    */
+
+    /*!
+        Constructs an uninitialized variant of type \a type.
+    */
+
     Variant::Variant(Variant::Type type) : d(type) {
         if (type >= User) {
             d.is_shared = true;
@@ -78,43 +124,95 @@ namespace Substate {
             return;
         }
     }
+
+    /*!
+        Constructs a new variant with a boolean value.
+    */
     Variant::Variant(bool b) : d(Boolean) {
         d.data.b = b;
     }
+
+    /*!
+        Constructs a new variant with a char value.
+    */
     Variant::Variant(int8_t c) : d(Byte) {
         d.data.c = c;
     }
+
+    /*!
+        Constructs a new variant with a short value.
+    */
     Variant::Variant(int16_t s) : d(Int16) {
         d.data.s = s;
     }
+
+    /*!
+        Constructs a new variant with a int value.
+    */
     Variant::Variant(int32_t i) : d(Int32) {
         d.data.i = i;
     }
+
+    /*!
+        Constructs a new variant with a long value.
+    */
     Variant::Variant(int64_t l) : d(Int64) {
         d.data.l = l;
     }
+
+    /*!
+        Constructs a new variant with an unsigned char value.
+    */
     Variant::Variant(uint8_t uc) : d(UByte) {
         d.data.uc = uc;
     }
+
+    /*!
+        Constructs a new variant with an unsigned short value.
+    */
     Variant::Variant(uint16_t us) : d(UInt16) {
         d.data.us = us;
     }
+
+    /*!
+        Constructs a new variant with an unsigned int value.
+    */
     Variant::Variant(uint32_t u) : d(UInt32) {
         d.data.u = u;
     }
+
+    /*!
+        Constructs a new variant with an unsigned long value.
+    */
     Variant::Variant(uint64_t ul) : d(UInt64) {
         d.data.ul = ul;
     }
+
+    /*!
+        Constructs a new variant with a float value.
+    */
     Variant::Variant(float f) : d(Single) {
         d.data.f = f;
     }
+
+    /*!
+        Constructs a new variant with a double value.
+    */
     Variant::Variant(double d) : d(Double) {
         this->d.data.d = d;
     }
+
+    /*!
+        Constructs a new variant with a string value.
+    */
     Variant::Variant(const std::string &s) : d(String) {
         d.is_shared = true;
         substate_v_construct(String, &d, &s);
     }
+
+    /*!
+        Constructs variant of type \a type, and initializes with \a data if \a data is not null.
+    */
     Variant::Variant(int type, const void *data) : d(type) {
         switch (type) {
             case Variant::Boolean:
@@ -156,16 +254,22 @@ namespace Substate {
                 break;
         }
     }
+
+    /*!
+        Destructor.
+    */
     Variant::~Variant() {
         if (d.is_shared && d.data.shared->ref.fetch_sub(1) == 1) {
             substate_v_destroy(d.type, &d);
         }
     }
+
     Variant::Variant(const Variant &other) : d(other.d) {
         if (d.is_shared) {
             d.data.shared->ref.fetch_add(1);
         }
     }
+
     Variant &Variant::operator=(const Variant &other) {
         if (this == &other)
             return *this;
@@ -178,56 +282,129 @@ namespace Substate {
         }
         return *this;
     }
+
+    /*!
+        \fn void Variant::swap(QVariant &other)
+
+        Swaps variant \a other with this variant.
+    */
+
+    /*!
+        Returns \c true if the storage type of this variant is valid, otherwise returns \c false.
+    */
     bool Variant::isValid() const {
         return d.type != Invalid;
     }
+
+    /*!
+        Returns the storage type of the value stored in the variant.
+    */
     Variant::Type Variant::type() const {
         return d.type >= User ? User : static_cast<Type>(d.type);
     }
+
+    /*!
+        Returns the storage type of the value stored in the variant. For non-user types, this is
+        the same as type().
+
+        \sa type()
+    */
     int Variant::userType() const {
         return d.type;
     }
+
+    /*!
+        Returns the variant as a boolean if the variant has userType() Bool.
+    */
     bool Variant::toBool() const {
         if (d.type == Boolean)
             return d.data.b;
         return false;
     }
+
+    /*!
+        Returns the variant as a signed char if the variant is numerical.
+    */
     int8_t Variant::toByte() const {
         return substate_toNum<int8_t>(d);
     }
+
+    /*!
+        Returns the variant as a short if the variant is numerical.
+    */
     int16_t Variant::toInt16() const {
         return substate_toNum<int16_t>(d);
     }
+
+    /*!
+        Returns the variant as an int if the variant is numerical.
+    */
     int32_t Variant::toInt32() const {
         return substate_toNum<int32_t>(d);
     }
+
+    /*!
+        Returns the variant as a long if the variant is numerical.
+    */
     int64_t Variant::toInt64() const {
         return substate_toNum<int64_t>(d);
     }
+
+    /*!
+        Returns the variant as an unsigned char if the variant is numerical.
+    */
     uint8_t Variant::toUByte() const {
         return substate_toNum<uint8_t>(d);
     }
+
+    /*!
+        Returns the variant as an unsigned short if the variant is numerical.
+    */
     uint16_t Variant::toUInt16() const {
         return substate_toNum<uint16_t>(d);
     }
+
+    /*!
+        Returns the variant as an unsigned int if the variant is numerical.
+    */
     uint32_t Variant::toUInt32() const {
         return substate_toNum<uint32_t>(d);
     }
+
+    /*!
+        Returns the variant as an unsigned long if the variant is numerical.
+    */
     uint64_t Variant::toUInt64() const {
         return substate_toNum<uint64_t>(d);
     }
+
+    /*!
+        Returns the variant as a float if the variant is numerical.
+    */
     float Variant::toSingle() const {
         return substate_toNum<float>(d);
     }
+
+    /*!
+        Returns the variant as a double if the variant is numerical.
+    */
     double Variant::toDouble() const {
         return substate_toNum<double>(d);
     }
+
+    /*!
+        Returns the variant as a string if the variant is numerical.
+    */
     std::string Variant::toString() const {
         if (d.type != String) {
             return {};
         }
         return *reinterpret_cast<std::string *>(d.data.shared->ptr);
     }
+
+    /*!
+        Returns the variant's internal data pointer, use this function to cast to the user value.
+    */
     void *Variant::data() {
         if (d.type < String)
             return &d.data;
@@ -235,6 +412,10 @@ namespace Substate {
             return nullptr;
         return d.data.shared->ptr;
     }
+
+    /*!
+        Returns the variant's internal const data pointer.
+    */
     const void *Variant::constData() const {
         if (d.type < String)
             return &d.data;
@@ -242,6 +423,11 @@ namespace Substate {
             return nullptr;
         return d.data.shared->ptr;
     }
+
+    /*!
+        Convert this variant to type QMetaType::UnknownType and free up any resources
+        used.
+    */
     void Variant::clear() {
         if (d.is_shared && d.data.shared->ref.fetch_sub(1) == 1) {
             substate_v_destroy(d.type, &d);
@@ -249,6 +435,10 @@ namespace Substate {
         d.type = Invalid;
         d.is_shared = false;
     }
+
+    /*!
+        \internal
+    */
     void Variant::detach() {
         if (!d.is_shared || d.data.shared->ref.load() == 1)
             return;
@@ -260,9 +450,17 @@ namespace Substate {
         }
         d.data.shared = dd.data.shared;
     }
+
+    /*!
+        \internal
+    */
     bool Variant::isDetached() const {
         return !d.is_shared || d.data.shared->ref.load() == 1;
     }
+
+    /*!
+        Reads the variant from the stream \a in.
+    */
     Variant Variant::read(std::istream &in) {
         int type;
         if (!readInt32(in, type)) {
@@ -337,6 +535,10 @@ namespace Substate {
         res.d.data.shared = new PrivateShared(buf);
         return res;
     }
+
+    /*!
+        Writes the variant to the stream \a out.
+    */
     void Variant::write(std::ostream &out) const {
         if (!writeInt32(out, d.type))
             return;
@@ -396,12 +598,21 @@ namespace Substate {
         }
         handlerManager[d.type].write(d.data.shared->ptr, out);
     }
+
+    /*!
+        Registers the given user type handler to the variant context and enable the serialization of
+        such type when the value is stored in variant.
+    */
     bool Variant::addUserType(int id, const VariantHandler &handler) {
         if (id < User || handlerManager.find(id) != handlerManager.end())
             return false;
         handlerManager.insert(std::make_pair(id, handler));
         return true;
     }
+
+    /*!
+        Unregisters the given user type handler.
+    */
     bool Variant::removeUserType(int id) {
         return id >= User && handlerManager.erase(id);
     }
