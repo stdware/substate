@@ -1,6 +1,7 @@
 #ifndef SUBSTATE_GLOBAL_H
 #define SUBSTATE_GLOBAL_H
 
+// Export define
 #ifdef _WIN32
 #  define SUBSTATE_DECL_EXPORT __declspec(dllexport)
 #  define SUBSTATE_DECL_IMPORT __declspec(dllimport)
@@ -19,6 +20,31 @@
 #  endif
 #endif
 
+// Qt style P-IMPL
+#define SUBSTATE_DECL_PRIVATE(Class)                                                               \
+    inline Class##Private *d_func() {                                                              \
+        return static_cast<Class##Private *>(d_ptr.get());                                         \
+    }                                                                                              \
+    inline const Class##Private *d_func() const {                                                  \
+        return static_cast<const Class##Private *>(d_ptr.get());                                   \
+    }                                                                                              \
+    friend class Class##Private;
 
+#define SUBSTATE_DECL_PUBLIC(Class)                                                                \
+    inline Class *q_func() {                                                                       \
+        return static_cast<Class *>(q_ptr);                                                        \
+    }                                                                                              \
+    inline const Class *q_func() const {                                                           \
+        return static_cast<const Class *>(q_ptr);                                                  \
+    }                                                                                              \
+    friend class Class;
+
+#ifndef Q_D
+#  define Q_D(Class) Class##Private *const d = d_func()
+#endif
+
+#ifndef Q_Q
+#  define Q_Q(Class) Class *const q = q_func()
+#endif
 
 #endif // SUBSTATE_GLOBAL_H

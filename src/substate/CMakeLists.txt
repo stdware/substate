@@ -1,4 +1,3 @@
-
 set(_generate_include_dir "${CMAKE_CURRENT_BINARY_DIR}/include")
 file(GLOB_RECURSE _src *.h *.cpp)
 

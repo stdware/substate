@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.17)
 
-project(substate VERSION 0.2.18.1 LANGUAGES CXX)
+project(substate VERSION 0.0.1.1 LANGUAGES CXX)
 
 # ----------------------------------
 # Build Options
