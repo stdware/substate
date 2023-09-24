@@ -5,6 +5,8 @@
 #include <substate/stream.h>
 #include <substate/variant.h>
 
+#include "point.h"
+
 using namespace Substate;
 
 static void testInt() {
@@ -41,37 +43,6 @@ static void testString() {
     }
 }
 
-static int g_cnt = 0;
-
-class Point {
-public:
-    int x;
-    int y;
-
-    Point(int x = 0, int y = 0) : x(x), y(y) {
-        g_cnt++;
-    }
-    Point(const Point &other) {
-        x = other.x;
-        y = other.y;
-
-        g_cnt++;
-    }
-    ~Point() {
-        g_cnt--;
-    }
-
-    friend IStream &operator>>(IStream &stream, Point &p) {
-        stream >> p.x >> p.y;
-        return stream;
-    }
-
-    friend OStream &operator<<(OStream &stream, const Point &p) {
-        stream << p.x << p.y;
-        return stream;
-    }
-};
-
 static void testUserType() {
     std::stringstream ss;
     {
@@ -90,7 +61,7 @@ static void testUserType() {
         assert(p.x == 2 && p.y == 3);
     }
 
-    assert(g_cnt == 0);
+    assert(Point::g_count() == 0);
 }
 
 int main(int argc, char *argv[]) {

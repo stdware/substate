@@ -14,9 +14,6 @@ namespace Substate {
         explicit IStream(std::string *s);
         ~IStream();
 
-        IStream(const IStream &) = delete;
-        IStream &operator=(const IStream &) = delete;
-
     public:
         inline std::istream *device() const;
         inline std::ios::iostate state() const;
@@ -45,6 +42,8 @@ namespace Substate {
         std::istream *in;
         bool own_stream;
         std::streambuf *buf;
+
+        SUBSTATE_DISABLE_COPY(IStream)
     };
 
     inline std::istream *IStream::device() const {
@@ -73,9 +72,6 @@ namespace Substate {
         explicit OStream(const std::string *s);
         ~OStream();
 
-        OStream(const OStream &) = delete;
-        OStream &operator=(const OStream &) = delete;
-
     public:
         inline std::ostream *device() const;
         inline std::ios::iostate state() const;
@@ -103,6 +99,8 @@ namespace Substate {
         std::ostream *out;
         bool own_stream;
         std::streambuf *buf;
+
+        SUBSTATE_DISABLE_COPY(OStream)
     };
 
     inline std::ostream *OStream::device() const {

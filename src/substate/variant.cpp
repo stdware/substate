@@ -1,6 +1,8 @@
 #include "variant.h"
 
 #include <iostream>
+#include <mutex>
+#include <shared_mutex>
 #include <unordered_map>
 
 #include "stream.h"
@@ -13,31 +15,27 @@
 
 namespace Substate {
 
+    static std::shared_mutex handlerLock;
+
     static std::unordered_map<int, Variant::Handler> handlerManager = {
         {
          Variant::String,
          {
-                [](IStream &stream) -> void * {
-                    std::string s;
-                    stream >> s;
-                    if (stream.fail()) {
-                        return nullptr;
-                    }
-                    return new std::string(std::move(s));
-                },
-                [](const void *buf, OStream &stream) -> bool {
-                    stream << *reinterpret_cast<const std::string *>(buf);
-                    return stream.good();
-                },
-                [](const void *buf) -> void * {
-                    return buf ? new std::string(*reinterpret_cast<const std::string *>(buf))
-                               : new std::string();
-                },
-                [](void *buf) {
-                    delete reinterpret_cast<std::string *>(buf); //
-                },
+                TypeFunctionHelper<std::string>::read,
+                TypeFunctionHelper<std::string>::write,
+                TypeFunctionHelper<std::string>::construct,
+                TypeFunctionHelper<std::string>::destroy,
             }, }
     };
+
+    static inline Variant::Handler getHandler(int type) {
+        std::shared_lock<std::shared_mutex> lock(handlerLock);
+        auto it = handlerManager.find(type);
+        if (it == handlerManager.end()) {
+            throw std::exception("Substate::Variant: Unknown type");
+        }
+        return it->second;
+    }
 
     template <class T>
     static T substate_toNum(const Variant::Private &d) {
@@ -71,11 +69,11 @@ namespace Substate {
     }
 
     static inline void substate_v_construct(int type, Variant::Private *d, const void *data) {
-        d->data.shared = new Variant::PrivateShared(handlerManager[type].construct(data));
+        d->data.shared = new Variant::PrivateShared(getHandler(type).construct(data));
     }
 
     static inline void substate_v_destroy(int type, Variant::Private *d) {
-        handlerManager[type].destroy(d->data.shared->ptr);
+        getHandler(type).destroy(d->data.shared->ptr);
         delete d->data.shared;
     }
 
@@ -446,7 +444,7 @@ namespace Substate {
             return;
         Private dd;
         dd.type = d.type;
-        dd.data.shared->ptr = new PrivateShared(handlerManager[d.type].construct(constData()));
+        dd.data.shared->ptr = new PrivateShared(getHandler(d.type).construct(constData()));
         if (d.data.shared->ref.fetch_sub(1) == 1) {
             substate_v_destroy(d.type, &d);
         }
@@ -488,30 +486,25 @@ namespace Substate {
     /*!
         \internal
     */
-    int Variant::registerUserTypeImpl(const Handler &handler, int hint) {
-        static std::atomic_int max(User + 1);
+    int Variant::registerUserTypeImpl(const type_info &info, const Handler &handler, int hint) {
+        static std::unordered_map<std::string, int> names;
+        static int max = User;
+
+        std::unique_lock<std::shared_mutex> lock(handlerLock);
+        if (auto it = names.find(info.name()); it != names.end()) {
+            return it->second;
+        }
 
         int id;
         if (hint < User) {
-            id = max.fetch_add(1);
-            handlerManager.insert(std::make_pair(id, handler));
-        } else if (auto it = handlerManager.find(hint); it != handlerManager.end()) {
-            id = it->first;
+            id = max++;
         } else {
             id = hint;
-            handlerManager.insert(std::make_pair(id, handler));
-
-            // Atomic change `max` if the `hint` is bigger
-            while (true) {
-                int current_value = max.load();
-                if (current_value >= id) {
-                    break;
-                }
-                if (max.compare_exchange_strong(current_value, id)) {
-                    break;
-                }
-            }
+            max = std::max(id, max);
         }
+        handlerManager.insert(std::make_pair(id, handler));
+        names.insert(std::make_pair(info.name(), id));
+
         return id;
     }
 
@@ -607,12 +600,7 @@ namespace Substate {
                 break;
         }
 
-        auto it = handlerManager.find(type);
-        if (it == handlerManager.end())
-            return stream;
-
-        const auto &handler = it->second;
-        void *buf = handler.read(stream);
+        void *buf = getHandler(type).read(stream);
         if (!buf) {
             return stream;
         }
@@ -691,7 +679,7 @@ namespace Substate {
                 }
                 break;
         }
-        handlerManager[d.type].write(d.data.shared->ptr, stream);
+        getHandler(d.type).write(d.data.shared->ptr, stream);
         return stream;
     }
 

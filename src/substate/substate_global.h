@@ -47,4 +47,17 @@
 #  define Q_Q(Class) Class *const q = q_func()
 #endif
 
+// Some classes do not permit copies to be made of an object.
+#define SUBSTATE_DISABLE_COPY(Class)                                                               \
+    Class(const Class &) = delete;                                                                 \
+    Class &operator=(const Class &) = delete;
+
+#define SUBSTATE_DISABLE_MOVE(Class)                                                               \
+    Class(Class &&) = delete;                                                                      \
+    Class &operator=(Class &&) = delete;
+
+#define SUBSTATE_DISABLE_COPY_MOVE(Class)                                                          \
+    SUBSTATE_DISABLE_COPY(Class)                                                                   \
+    SUBSTATE_DISABLE_MOVE(Class)
+
 #endif // SUBSTATE_GLOBAL_H

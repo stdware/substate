@@ -8,6 +8,34 @@
 
 namespace Substate {
 
+    template <class T>
+    class TypeFunctionHelper {
+    public:
+        static void *read(IStream &stream) {
+            auto p = new T();
+            stream >> *p;
+            if (stream.fail()) {
+                delete p;
+                return nullptr;
+            }
+            return p;
+        }
+
+        static bool write(const void *buf, OStream &stream) {
+            auto &val = *reinterpret_cast<const T *>(buf);
+            stream << val;
+            return stream.good();
+        }
+
+        static void *construct(const void *buf) {
+            return buf ? new T(*reinterpret_cast<const T *>(buf)) : new T();
+        }
+
+        static void destroy(void *buf) {
+            delete reinterpret_cast<T *>(buf);
+        }
+    };
+
     class SUBSTATE_EXPORT Variant {
     public:
         enum Type {
@@ -135,7 +163,8 @@ namespace Substate {
     protected:
         Private d;
 
-        static int registerUserTypeImpl(const Handler &handler, int hint = -1);
+        static int registerUserTypeImpl(const type_info &info, const Handler &handler,
+                                        int hint = -1);
     };
 
     Variant::Variant() noexcept : d() {
@@ -180,33 +209,18 @@ namespace Substate {
     template <class T>
     inline int Variant::typeId(int hint) {
         static std::atomic_int type_id(0);
-        if (const int id = type_id.load()) {
+        int id = type_id.load();
+        if (id > 0) {
             return id;
         }
-        const int id = Variant::registerUserTypeImpl(
-            {
-                [](IStream &stream) -> void * {
-                    auto p = new T();
-                    stream >> *p;
-                    if (stream.fail()) {
-                        delete p;
-                        return nullptr;
-                    }
-                    return p;
-                },
-                [](const void *buf, OStream &stream) -> bool {
-                    auto &val = *reinterpret_cast<const T *>(buf);
-                    stream << val;
-                    return stream.good();
-                },
-                [](const void *buf) -> void * {
-                    return buf ? new T(*reinterpret_cast<const T *>(buf)) : new T();
-                },
-                [](void *buf) {
-                    delete reinterpret_cast<T *>(buf); //
-                },
-            },
-            hint);
+        id = Variant::registerUserTypeImpl(typeid(T),
+                                           {
+                                               TypeFunctionHelper<T>::read,
+                                               TypeFunctionHelper<T>::write,
+                                               TypeFunctionHelper<T>::construct,
+                                               TypeFunctionHelper<T>::destroy,
+                                           },
+                                           hint);
         type_id.store(id);
         return id;
     }
