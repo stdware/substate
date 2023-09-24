@@ -3,7 +3,7 @@
 #include <iostream>
 #include <unordered_map>
 
-#include "substate_utils_p.h"
+#include "stream.h"
 
 /*!
     \namespace Substate
@@ -13,19 +13,21 @@
 
 namespace Substate {
 
-    static std::unordered_map<int, VariantHandler> handlerManager = {
+    static std::unordered_map<int, Variant::Handler> handlerManager = {
         {
          Variant::String,
          {
-                [](std::istream &in) -> void * {
+                [](IStream &stream) -> void * {
                     std::string s;
-                    if (!readString(in, s)) {
+                    stream >> s;
+                    if (stream.fail()) {
                         return nullptr;
                     }
                     return new std::string(std::move(s));
                 },
-                [](const void *buf, std::ostream &out) -> bool {
-                    return writeString(out, *reinterpret_cast<const std::string *>(buf));
+                [](const void *buf, OStream &stream) -> bool {
+                    stream << *reinterpret_cast<const std::string *>(buf);
+                    return stream.good();
                 },
                 [](const void *buf) -> void * {
                     return buf ? new std::string(*reinterpret_cast<const std::string *>(buf))
@@ -80,7 +82,7 @@ namespace Substate {
     /*!
         \struct VariantHelper
 
-        This struct encompasses the basic handlers to store and serialize a type.
+        This struct encompasses the basic handlers for the storage and serialization of a class.
 
         \property VariantHelper::read
         \brief Reads the data from the input stream and deserializes it into an instance of the
@@ -459,61 +461,147 @@ namespace Substate {
     }
 
     /*!
-        Reads the variant from the stream \a in.
+        \fn Variant fromValue(const T &val)
+
+        Returns a variant containing a copy of value.
     */
-    Variant Variant::read(std::istream &in) {
+
+    /*!
+        \fn void setValue(const T &val)
+
+        Stores a copy of value.
+    */
+
+    /*!
+        \fn T value() const
+
+        Returns the stored value if the type matches.
+    */
+
+    /*!
+        \fn int typeId(int hint)
+
+        Returns the id of the type. Registers the type if the type wasn't registered before, the
+        hint provided will be used if it is available.
+    */
+
+    /*!
+        \internal
+    */
+    int Variant::registerUserTypeImpl(const Handler &handler, int hint) {
+        static std::atomic_int max(User + 1);
+
+        int id;
+        if (hint < User) {
+            id = max.fetch_add(1);
+            handlerManager.insert(std::make_pair(id, handler));
+        } else if (auto it = handlerManager.find(hint); it != handlerManager.end()) {
+            id = it->first;
+        } else {
+            id = hint;
+            handlerManager.insert(std::make_pair(id, handler));
+
+            // Atomic change `max` if the `hint` is bigger
+            while (true) {
+                int current_value = max.load();
+                if (current_value >= id) {
+                    break;
+                }
+                if (max.compare_exchange_strong(current_value, id)) {
+                    break;
+                }
+            }
+        }
+        return id;
+    }
+
+    IStream &operator>>(IStream &stream, Variant &var) {
         int type;
-        if (!readInt32(in, type)) {
-            return {};
+        stream >> type;
+        if (stream.fail()) {
+            return stream;
         }
 
         switch (type) {
-            case Invalid:
-                return {};
-            case Boolean: {
+            case Variant::Invalid:
+                break;
+            case Variant::Boolean: {
                 // Use 1 byte
                 int8_t tmp;
-                return readInt8(in, tmp) ? Variant(bool(tmp)) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(bool(tmp));
+                return stream;
             }
-            case Byte: {
+            case Variant::Byte: {
                 int8_t tmp;
-                return readInt8(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
-            case Int16: {
+            case Variant::Int16: {
                 int16_t tmp;
-                return readInt16(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
-            case Int32: {
+            case Variant::Int32: {
                 int32_t tmp;
-                return readInt32(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
-            case Int64: {
+            case Variant::Int64: {
                 int64_t tmp;
-                return readInt64(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
-            case UByte: {
+            case Variant::UByte: {
                 uint8_t tmp;
-                return readUInt8(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
-            case UInt16: {
+            case Variant::UInt16: {
                 uint16_t tmp;
-                return readUInt16(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
-            case UInt32: {
+            case Variant::UInt32: {
                 uint32_t tmp;
-                return readUInt32(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
-            case UInt64: {
+            case Variant::UInt64: {
                 uint64_t tmp;
-                return readUInt64(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
             case Variant::Single: {
                 float tmp;
-                return readFloat(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
             case Variant::Double: {
                 double tmp;
-                return readDouble(in, tmp) ? Variant(tmp) : Variant();
+                stream >> tmp;
+                if (stream.good())
+                    var = Variant(tmp);
+                return stream;
             }
             default:
                 break;
@@ -521,100 +609,90 @@ namespace Substate {
 
         auto it = handlerManager.find(type);
         if (it == handlerManager.end())
-            return {};
+            return stream;
 
         const auto &handler = it->second;
-        void *buf = handler.read(in);
+        void *buf = handler.read(stream);
         if (!buf) {
-            return {};
+            return stream;
         }
 
-        Variant res;
-        res.d.type = type;
-        res.d.is_shared = true;
-        res.d.data.shared = new PrivateShared(buf);
-        return res;
+        // Construct
+        {
+            Variant res;
+            res.d.type = type;
+            res.d.is_shared = true;
+            res.d.data.shared = new Variant::PrivateShared(buf);
+            var = res;
+        }
+        return stream;
     }
 
-    /*!
-        Writes the variant to the stream \a out.
-    */
-    void Variant::write(std::ostream &out) const {
-        if (!writeInt32(out, d.type))
-            return;
+    OStream &operator<<(OStream &stream, const Variant &var) {
+        const auto &d = var.d;
+
+        stream << d.type;
+
+        if (stream.fail())
+            return stream;
 
         switch (d.type) {
-            case Invalid:
-                return;
-            case Boolean: {
+            case Variant::Invalid:
+                return stream;
+            case Variant::Boolean: {
                 // Use 1 byte
-                writeInt8(out, int8_t(d.data.b));
-                return;
+                stream << d.data.b;
+                return stream;
             }
-            case Byte: {
-                writeInt8(out, d.data.c);
-                return;
+            case Variant::Byte: {
+                stream << d.data.c;
+                return stream;
             }
-            case Int16: {
-                writeInt16(out, d.data.s);
-                return;
+            case Variant::Int16: {
+                stream << d.data.s;
+                return stream;
             }
-            case Int32: {
-                writeInt32(out, d.data.i);
-                return;
+            case Variant::Int32: {
+                stream << d.data.i;
+                return stream;
             }
-            case Int64: {
-                writeInt64(out, d.data.l);
-                return;
+            case Variant::Int64: {
+                stream << d.data.l;
+                return stream;
             }
-            case UByte: {
-                writeUInt8(out, d.data.uc);
-                return;
+            case Variant::UByte: {
+                stream << d.data.uc;
+                return stream;
             }
-            case UInt16: {
-                writeUInt16(out, d.data.us);
-                return;
+            case Variant::UInt16: {
+                stream << d.data.us;
+                return stream;
             }
-            case UInt32: {
-                writeUInt32(out, d.data.u);
-                return;
+            case Variant::UInt32: {
+                stream << d.data.u;
+                return stream;
             }
-            case UInt64: {
-                writeUInt64(out, d.data.ul);
-                return;
+            case Variant::UInt64: {
+                stream << d.data.ul;
+                return stream;
             }
             case Variant::Single: {
-                writeFloat(out, d.data.f);
-                return;
+                stream << d.data.f;
+                return stream;
             }
             case Variant::Double: {
-                writeDouble(out, d.data.d);
-                return;
+                stream << d.data.d;
+                return stream;
             }
             default:
-                if (!d.is_shared)
-                    return;
+                if (!d.is_shared) {
+                    stream.setState(std::ios::badbit);
+                    return stream;
+                }
                 break;
         }
-        handlerManager[d.type].write(d.data.shared->ptr, out);
-    }
-
-    /*!
-        Registers the given user type handler to the variant context and enable the serialization of
-        such type when the value is stored in variant.
-    */
-    bool Variant::addUserType(int id, const VariantHandler &handler) {
-        if (id < User || handlerManager.find(id) != handlerManager.end())
-            return false;
-        handlerManager.insert(std::make_pair(id, handler));
-        return true;
-    }
-
-    /*!
-        Unregisters the given user type handler.
-    */
-    bool Variant::removeUserType(int id) {
-        return id >= User && handlerManager.erase(id);
+        handlerManager[d.type].write(d.data.shared->ptr, stream);
+        return stream;
     }
 
 }

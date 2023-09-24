@@ -4,16 +4,9 @@
 #include <atomic>
 #include <string>
 
-#include <substate/substate_global.h>
+#include <substate/stream.h>
 
 namespace Substate {
-
-    struct VariantHandler {
-        void *(*read)(std::istream &);
-        bool (*write)(const void *, std::ostream &);
-        void *(*construct)(const void *);
-        void (*destroy)(void *);
-    };
 
     class SUBSTATE_EXPORT Variant {
     public:
@@ -38,7 +31,6 @@ namespace Substate {
         inline Variant() noexcept;
         Variant(Type type);
         Variant(bool b);
-        inline Variant(char c);
         Variant(int8_t c);
         Variant(int16_t s);
         Variant(int32_t i);
@@ -84,14 +76,20 @@ namespace Substate {
         void detach();
         bool isDetached() const;
 
-        static Variant read(std::istream &in);
-        void write(std::ostream &out) const;
+        template <class T>
+        inline static Variant fromValue(const T &val);
+
+        template <class T>
+        inline void setValue(const T &val);
 
         template <class T>
         inline T value() const;
 
-        static bool addUserType(int id, const VariantHandler &handler);
-        static bool removeUserType(int id);
+        template <class T>
+        static inline int typeId(int hint = -1);
+
+        SUBSTATE_EXPORT friend IStream &operator>>(IStream &stream, Variant &var);
+        SUBSTATE_EXPORT friend OStream &operator<<(OStream &stream, const Variant &var);
 
     public:
         struct PrivateShared {
@@ -127,14 +125,20 @@ namespace Substate {
             bool is_shared;
         };
 
+        struct Handler {
+            void *(*read)(IStream &);
+            bool (*write)(const void *, OStream &);
+            void *(*construct)(const void *);
+            void (*destroy)(void *);
+        };
+
     protected:
         Private d;
+
+        static int registerUserTypeImpl(const Handler &handler, int hint = -1);
     };
 
     Variant::Variant() noexcept : d() {
-    }
-
-    Variant::Variant(char c) : Variant(int8_t(c)) {
     }
 
     inline Variant::Variant(Variant &&other) noexcept : d(other.d) {
@@ -151,10 +155,81 @@ namespace Substate {
     }
 
     template <class T>
-    T Variant::value() const {
+    inline Variant Variant::fromValue(const T &val) {
+        return {typeId<T>(), &val};
+    }
+
+    template <>
+    inline Variant Variant::fromValue<Variant>(const Variant &val) {
+        return val;
+    }
+
+    template <class T>
+    inline void Variant::setValue(const T &val) {
+        *this = fromValue(val);
+    }
+
+    template <class T>
+    inline T Variant::value() const {
+        if (d.type != typeId<T>()) {
+            return T{};
+        }
         return *reinterpret_cast<const T *>(constData());
     }
 
+    template <class T>
+    inline int Variant::typeId(int hint) {
+        static std::atomic_int type_id(0);
+        if (const int id = type_id.load()) {
+            return id;
+        }
+        const int id = Variant::registerUserTypeImpl(
+            {
+                [](IStream &stream) -> void * {
+                    auto p = new T();
+                    stream >> *p;
+                    if (stream.fail()) {
+                        delete p;
+                        return nullptr;
+                    }
+                    return p;
+                },
+                [](const void *buf, OStream &stream) -> bool {
+                    auto &val = *reinterpret_cast<const T *>(buf);
+                    stream << val;
+                    return stream.good();
+                },
+                [](const void *buf) -> void * {
+                    return buf ? new T(*reinterpret_cast<const T *>(buf)) : new T();
+                },
+                [](void *buf) {
+                    delete reinterpret_cast<T *>(buf); //
+                },
+            },
+            hint);
+        type_id.store(id);
+        return id;
+    }
+
+#define SUBSTATE_STATIC_PRIMITIVE_TYPE(TYPE, ID)                                                   \
+    template <>                                                                                    \
+    inline int Variant::typeId<TYPE>(int hint) {                                                   \
+        (void) hint;                                                                               \
+        return ID;                                                                                 \
+    }
+
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(bool, Variant::Boolean)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(int8_t, Variant::Byte)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(int16_t, Variant::Int16)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(int32_t, Variant::Int32)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(int64_t, Variant::Int64)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(uint8_t, Variant::UByte)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(uint16_t, Variant::UInt16)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(uint32_t, Variant::UInt32)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(uint64_t, Variant::UInt64)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(float, Variant::Single)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(double, Variant::Double)
+    SUBSTATE_STATIC_PRIMITIVE_TYPE(std::string, Variant::String)
 }
 
 #endif // VARIANT_H
