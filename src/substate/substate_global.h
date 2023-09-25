@@ -23,10 +23,10 @@
 // Qt style P-IMPL
 #define SUBSTATE_DECL_PRIVATE(Class)                                                               \
     inline Class##Private *d_func() {                                                              \
-        return static_cast<Class##Private *>(d_ptr.get());                                         \
+        return reinterpret_cast<Class##Private *>(d_ptr.get());                                    \
     }                                                                                              \
     inline const Class##Private *d_func() const {                                                  \
-        return static_cast<const Class##Private *>(d_ptr.get());                                   \
+        return reinterpret_cast<const Class##Private *>(d_ptr.get());                              \
     }                                                                                              \
     friend class Class##Private;
 

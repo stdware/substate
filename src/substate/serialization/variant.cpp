@@ -32,7 +32,7 @@ namespace Substate {
         std::shared_lock<std::shared_mutex> lock(handlerLock);
         auto it = handlerManager.find(type);
         if (it == handlerManager.end()) {
-            throw std::exception("Substate::Variant: Unknown type");
+            throw std::runtime_error("Substate::Variant: Unknown variant type " + std::to_string(type));
         }
         return it->second;
     }
@@ -406,11 +406,8 @@ namespace Substate {
         Returns the variant's internal data pointer, use this function to cast to the user value.
     */
     void *Variant::data() {
-        if (d.type < String)
-            return &d.data;
-        if (!d.is_shared)
-            return nullptr;
-        return d.data.shared->ptr;
+        detach();
+        return const_cast<void *>(constData());
     }
 
     /*!
@@ -486,7 +483,8 @@ namespace Substate {
     /*!
         \internal
     */
-    int Variant::registerUserTypeImpl(const type_info &info, const Handler &handler, int hint) {
+    int Variant::registerUserTypeImpl(const std::type_info &info, const Handler &handler,
+                                      int hint) {
         static std::unordered_map<std::string, int> names;
         static int max = User;
 

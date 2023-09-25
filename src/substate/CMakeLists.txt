@@ -23,6 +23,7 @@ endif()
 add_library(substate::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 qtmediate_configure_target(${PROJECT_NAME}
     SOURCES ${_src}
+    INCLUDE_PRIVATE .
 )
 
 # Set global definitions

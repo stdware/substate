@@ -22,8 +22,7 @@ namespace Substate {
         }
 
         static bool write(const void *buf, OStream &stream) {
-            auto &val = *reinterpret_cast<const T *>(buf);
-            stream << val;
+            stream << *reinterpret_cast<const T *>(buf);
             return stream.good();
         }
 
@@ -163,7 +162,7 @@ namespace Substate {
     protected:
         Private d;
 
-        static int registerUserTypeImpl(const type_info &info, const Handler &handler,
+        static int registerUserTypeImpl(const std::type_info &info, const Handler &handler,
                                         int hint = -1);
     };
 
@@ -200,14 +199,17 @@ namespace Substate {
 
     template <class T>
     inline T Variant::value() const {
-        if (d.type != typeId<T>()) {
-            return T{};
-        }
-        return *reinterpret_cast<const T *>(constData());
+        // Storing a pointer is not supported
+        static_assert(!std::is_pointer<T>::value, "T is a pointer");
+        
+        return d.type == typeId<T>() ? *reinterpret_cast<const T *>(constData()) : T();
     }
 
     template <class T>
     inline int Variant::typeId(int hint) {
+        // Storing a pointer is not supported
+        static_assert(!std::is_pointer<T>::value, "T is a pointer");
+
         static std::atomic_int type_id(0);
         int id = type_id.load();
         if (id > 0) {
@@ -244,6 +246,7 @@ namespace Substate {
     SUBSTATE_STATIC_PRIMITIVE_TYPE(float, Variant::Single)
     SUBSTATE_STATIC_PRIMITIVE_TYPE(double, Variant::Double)
     SUBSTATE_STATIC_PRIMITIVE_TYPE(std::string, Variant::String)
+
 }
 
 #endif // VARIANT_H

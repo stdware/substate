@@ -61,6 +61,10 @@ static void testUserType() {
         assert(p.x == 2 && p.y == 3);
     }
 
+    {
+        Variant var1 = Variant::fromValue(uintptr_t(&ss));
+    }
+
     assert(Point::g_count() == 0);
 }
 
