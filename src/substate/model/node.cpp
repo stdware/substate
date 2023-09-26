@@ -9,6 +9,8 @@
 #include "sheetnode_p.h"
 #include "vectornode_p.h"
 
+#include "model.h"
+
 namespace Substate {
 
     static std::shared_mutex factoryLock;
@@ -96,6 +98,22 @@ namespace Substate {
     }
 
     void Node::childDestroyed(Node *node) {
+    }
+
+    void Node::addChild(Node *node) {
+        Q_D(Node);
+        
+        node->d_func()->parent = d->parent;
+    }
+
+    void Node::removeChild(Node *node) {
+    }
+
+    void Node::dispatch(Operation *op, bool done) {
+        Q_D(Node);
+        if (!d->model)
+            return;
+        d->model->dispatch(op, done);
     }
 
     Node::Node(NodePrivate &d) : d_ptr(&d) {

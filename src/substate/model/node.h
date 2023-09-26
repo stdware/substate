@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include <substate/operation.h>
 #include <substate/stream.h>
 
 namespace Substate {
@@ -45,8 +46,13 @@ namespace Substate {
         virtual void childDestroyed(Node *node);
 
     protected:
-        std::unique_ptr<NodePrivate> d_ptr;
+        void addChild(Node *node);
+        void removeChild(Node *node);
+        
+        void dispatch(Operation *op, bool done);
 
+    protected:
+        std::unique_ptr<NodePrivate> d_ptr;
         Node(NodePrivate &d);
     };
 

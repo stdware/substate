@@ -1,6 +1,9 @@
 #ifndef MODEL_P_H
 #define MODEL_P_H
 
+#include <list>
+#include <unordered_map>
+
 #include <substate/model.h>
 
 namespace Substate {
@@ -14,6 +17,11 @@ namespace Substate {
         void init();
 
         Model *q_ptr;
+
+        std::list<Subscriber *> subscribers;
+        std::unordered_map<Subscriber *, decltype(subscribers)::iterator> subscriberIndexes;
+
+        Model::State state;
     };
 
 }

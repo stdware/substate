@@ -10,7 +10,7 @@ namespace Substate {
 
     class SUBSTATE_EXPORT Operation {
     public:
-        explicit Operation(int type);
+        inline Operation(int type);
         virtual ~Operation();
 
         inline int type() const;
@@ -21,6 +21,9 @@ namespace Substate {
     protected:
         int t;
     };
+
+    inline Operation::Operation(int type) : t(type) {
+    }
 
     int Operation::type() const {
         return t;
