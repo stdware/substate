@@ -32,7 +32,8 @@ namespace Substate {
         std::shared_lock<std::shared_mutex> lock(handlerLock);
         auto it = handlerManager.find(type);
         if (it == handlerManager.end()) {
-            throw std::runtime_error("Substate::Variant: Unknown variant type " + std::to_string(type));
+            throw std::runtime_error("Substate::Variant: Unknown variant type " +
+                                     std::to_string(type));
         }
         return it->second;
     }
@@ -78,32 +79,9 @@ namespace Substate {
     }
 
     /*!
-        \struct VariantHelper
-
-        This struct encompasses the basic handlers for the storage and serialization of a class.
-
-        \property VariantHelper::read
-        \brief Reads the data from the input stream and deserializes it into an instance of the
-        class, allocates a new block of space to store it, and returns the pointer of the
-        block.
-
-        \property VariantHelper::write
-        \brief Serializes the instance of the class and writes the data into the output
-        stream.
-
-        \property VariantHelper::construct
-        \brief Constructs a new instance of the class, allocates a new block of space to store
-        it, and returns the pointer of the block. If the given instance is null, constructs a
-        default one, otherwise uses the copy constructor.
-
-        \property VariantHelper::destroy
-        \brief Deletes the instance of the class.
-    */
-
-    /*!
         \class Variant
 
-        Variant is a storage class for C++ classes, providing a general serialization feature
+        Variant is a storage class for C++ classes, providing a general serialization functionality
         for each type.
     */
 

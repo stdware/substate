@@ -10,9 +10,7 @@ namespace Substate {
     public:
         NodePrivate(int type);
         virtual ~NodePrivate();
-
         void init();
-
         Node *q_ptr;
 
         int type;

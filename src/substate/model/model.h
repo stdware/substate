@@ -1,6 +1,7 @@
 #ifndef MODEL_H
 #define MODEL_H
 
+#include <substate/engine.h>
 #include <substate/node.h>
 
 namespace Substate {
@@ -16,27 +17,13 @@ namespace Substate {
         virtual ~Model();
 
     public:
-        enum StateFlag {
-            TransactionFlag = 1,
-            UndoRedoFlag = 2,
-            UndoFlag = 4,
-            RedoFlag = 8,
-        };
-
-        enum State {
-            Idle = 0,
-            Transaction = TransactionFlag,
-            Undo = UndoFlag | UndoRedoFlag,
-            Redo = RedoFlag | UndoRedoFlag,
-        };
-
-        State state() const;
+        Engine::State state() const;
         inline bool inTransaction() const;
         inline bool stepChanging() const;
 
         void beginTransaction();
         void abortTransaction();
-        void commitTransaction();
+        void commitTransaction(const Variant &message);
 
     public:
         void addSubscriber(Subscriber *sub);
@@ -53,11 +40,11 @@ namespace Substate {
     };
 
     inline bool Model::inTransaction() const {
-        return state() == Transaction;
+        return state() == Engine::Transaction;
     }
 
     inline bool Model::stepChanging() const {
-        return state() & UndoRedoFlag;
+        return state() & Engine::UndoRedoFlag;
     }
 
     class SUBSTATE_EXPORT Subscriber {

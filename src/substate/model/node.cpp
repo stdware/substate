@@ -102,11 +102,16 @@ namespace Substate {
 
     void Node::addChild(Node *node) {
         Q_D(Node);
-        
+
+        // Assign parent
         node->d_func()->parent = d->parent;
     }
 
     void Node::removeChild(Node *node) {
+        Q_D(Node);
+
+        // Unassign parent
+        node->d_func()->parent = d->parent;
     }
 
     void Node::dispatch(Operation *op, bool done) {

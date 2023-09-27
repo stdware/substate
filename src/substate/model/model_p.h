@@ -13,15 +13,13 @@ namespace Substate {
     public:
         ModelPrivate();
         virtual ~ModelPrivate();
-
         void init();
-
         Model *q_ptr;
 
         std::list<Subscriber *> subscribers;
         std::unordered_map<Subscriber *, decltype(subscribers)::iterator> subscriberIndexes;
 
-        Model::State state;
+        Engine *engine;
     };
 
 }

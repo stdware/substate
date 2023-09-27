@@ -13,7 +13,6 @@ namespace Substate {
     public:
         SheetNodePrivate(int type);
         ~SheetNodePrivate();
-
         void init();
 
         static SheetNode *read(IStream &stream);

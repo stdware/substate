@@ -11,7 +11,6 @@ namespace Substate {
     public:
         MappingNodePrivate(int type);
         ~MappingNodePrivate();
-
         void init();
 
         static MappingNode *read(IStream &stream);

@@ -4,7 +4,7 @@
 namespace Substate {
 
     ModelPrivate::ModelPrivate() {
-        state = Model::Idle;
+        engine = nullptr;
     }
 
     ModelPrivate::~ModelPrivate() {
@@ -21,18 +21,24 @@ namespace Substate {
     Model::~Model() {
     }
 
-    Model::State Model::state() const {
+    Engine::State Model::state() const {
         Q_D(const Model);
-        return d->state;
+        return d->engine->state();
     }
 
     void Model::beginTransaction() {
+        Q_D(Model);
+        d->engine->beginTransaction();
     }
 
     void Model::abortTransaction() {
+        Q_D(Model);
+        d->engine->abortTransaction();
     }
 
-    void Model::commitTransaction() {
+    void Model::commitTransaction(const Variant &message) {
+        Q_D(Model);
+        d->engine->commitTransaction(message);
     }
 
     void Model::addSubscriber(Subscriber *sub) {
@@ -66,7 +72,7 @@ namespace Substate {
         }
 
         if (done) {
-            // TODO: Commit to backend
+            d->engine->commitOperation(op);
         }
     }
 

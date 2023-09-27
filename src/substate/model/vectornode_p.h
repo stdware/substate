@@ -11,7 +11,6 @@ namespace Substate {
     public:
         VectorNodePrivate(int type);
         ~VectorNodePrivate();
-
         void init();
 
         static VectorNode *read(IStream &stream);

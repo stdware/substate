@@ -13,7 +13,33 @@ namespace Substate {
         inline Operation(int type);
         virtual ~Operation();
 
-        inline int type() const;
+        enum Type {
+            BytesReplace,
+            BytesInsert,
+            BytesRemove,
+
+            VectorInsert,
+            VectorMove,
+            VectorRemove,
+            
+            RecordInsert,
+            RecordRemove,
+            
+            MappingInsert,
+            MappingRemove,
+            
+            RootChange,
+
+            User = 1024,
+        };
+
+        inline Type type() const;
+        inline int userType() const;
+
+        typedef Operation *(*Factory)(IStream &);
+
+        static Operation *read(IStream &stream);
+        static bool registerFactory(int type, Factory fac);
 
     public:
         virtual void execute(bool undo) = 0;
@@ -25,7 +51,11 @@ namespace Substate {
     inline Operation::Operation(int type) : t(type) {
     }
 
-    int Operation::type() const {
+    inline Operation::Type Operation::type() const {
+        return t >= User ? User : static_cast<Type>(t);
+    }
+
+    inline int Operation::userType() const {
         return t;
     }
 
