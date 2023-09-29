@@ -29,6 +29,16 @@ namespace Substate {
         }
     };
 
+    inline bool validateArrayQueryArguments(int index, int size) {
+        return index >= 0 && index <= size;
+    }
+
+    inline bool validateArrayRemoveArguments(int index, int &count, int size) {
+        return (index >= 0 && index <= size)                                     // index bound
+               && ((count = std::min(count, size - index)) > 0 && count <= size) // count bound
+            ;
+    }
+
 }
 
 #endif // NODE_P_H

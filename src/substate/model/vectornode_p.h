@@ -15,6 +15,10 @@ namespace Substate {
 
         static VectorNode *read(IStream &stream);
 
+        void insertRows_helper(int index, const std::vector<Node *> &items);
+        void moveRows_helper(int index, int count, int dest);
+        void removeRows_helper(int index, int count);
+
         std::vector<Node *> vector;
     };
 

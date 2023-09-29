@@ -7,6 +7,10 @@
 
 namespace Substate {
 
+    class VectorMoveAction;
+
+    class VectorInsDelAction;
+
     class VectorNodePrivate;
 
     class SUBSTATE_EXPORT VectorNode : public Node {
@@ -43,6 +47,9 @@ namespace Substate {
 
     protected:
         VectorNode(VectorNodePrivate &d);
+
+        friend class VectorMoveAction;
+        friend class VectorInsDelAction;
     };
 
     bool VectorNode::prepend(Node *node) {
@@ -75,6 +82,69 @@ namespace Substate {
 
     int VectorNode::count() const {
         return size();
+    }
+
+    class SUBSTATE_EXPORT VectorAction : public NodeAction {
+    public:
+        VectorAction(Type type, Node *parent, int index);
+        ~VectorAction();
+
+    public:
+        inline int index() const;
+
+    public:
+        int m_index;
+    };
+
+    inline int VectorAction::index() const {
+        return m_index;
+    }
+
+    class SUBSTATE_EXPORT VectorMoveAction : public VectorAction {
+    public:
+        VectorMoveAction(Node *parent, int index, int count, int dest);
+        ~VectorMoveAction();
+
+    public:
+        Action *clone() const override;
+        void execute(bool undo) override;
+
+    public:
+        inline int count() const;
+        inline int destination() const;
+
+    protected:
+        int cnt, dest;
+    };
+
+    inline int VectorMoveAction::count() const {
+        return cnt;
+    }
+
+    inline int VectorMoveAction::destination() const {
+        return dest;
+    }
+
+    class SUBSTATE_EXPORT VectorInsDelAction : public VectorAction {
+    public:
+        VectorInsDelAction(Type type, Node *parent, int index, const std::vector<Node *> &children);
+        ~VectorInsDelAction();
+
+    public:
+        Action *clone() const override;
+        void execute(bool undo) override;
+
+        virtual void virtual_hook(int id, void *data) override;
+
+    public:
+        inline const std::vector<Node *> &children() const;
+
+    protected:
+        std::vector<Node *> m_children;
+    };
+
+    inline const std::vector<Node *> &VectorInsDelAction::children() const {
+        return m_children;
     }
 
 }

@@ -37,3 +37,7 @@ cmake -B build -G Ninja \
 
 cmake --build build --target all
 ```
+
+## License
+
+Substate Library is licenced under the Apache 2.0 License.

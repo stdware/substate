@@ -1,21 +1,9 @@
 #include "bytesnode.h"
 #include "bytesnode_p.h"
 
-#include "nodehelper.h"
-
 #include <cassert>
 
 namespace Substate {
-
-    static bool validateArrayQueryArguments(int index, int size) {
-        return index >= 0 && index <= size;
-    }
-
-    static bool validateArrayRemoveArguments(int index, int &count, int size) {
-        return (index >= 0 && index <= size)                                     // index bound
-               && ((count = std::min(count, size - index)) > 0 && count <= size) // count bound
-            ;
-    }
 
     BytesNodePrivate::BytesNodePrivate() : NodePrivate(Node::Bytes) {
     }
@@ -172,7 +160,7 @@ namespace Substate {
     void BytesAction::execute(bool undo) {
         switch (t) {
             case BytesReplace: {
-                auto d = static_cast<BytesNodePrivate *>(NodeHelper::get(m_parent));
+                auto d = static_cast<BytesNode *>(m_parent)->d_func();
                 if (undo) {
                     d->replaceBytes_helper(m_index, oldb.data(), oldb.size());
 
@@ -188,7 +176,7 @@ namespace Substate {
             }
             case BytesInsert:
             case BytesRemove: {
-                auto d = static_cast<BytesNodePrivate *>(NodeHelper::get(m_parent));
+                auto d = static_cast<BytesNode *>(m_parent)->d_func();
                 ((t == BytesRemove) ^ undo) ? d->removeBytes_helper(m_index, b.size())
                                             : d->insertBytes_helper(m_index, b.data(), b.size());
                 break;

@@ -7,6 +7,8 @@
 
 namespace Substate {
 
+    class BytesAction;
+
     class BytesNodePrivate;
 
     class SUBSTATE_EXPORT BytesNode : public Node {
@@ -32,6 +34,8 @@ namespace Substate {
 
     protected:
         Node *clone(bool user) const override;
+
+        friend class BytesAction;
     };
 
     inline bool BytesNode::prepend(const char *data, int size) {
@@ -60,9 +64,10 @@ namespace Substate {
                     const ByteArray &oldBytes = {});
         ~BytesAction();
 
-        Action *clone() const override;
-
     public:
+        Action *clone() const override;
+        void execute(bool undo) override;
+
         inline int index() const;
         inline ByteArray bytes() const;
         inline ByteArray oldBytes() const;
@@ -70,8 +75,6 @@ namespace Substate {
     protected:
         int m_index;
         ByteArray b, oldb;
-
-        void execute(bool undo) override;
     };
 
     int BytesAction::index() const {
