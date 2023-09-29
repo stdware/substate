@@ -22,6 +22,11 @@ namespace Substate {
 
         void setManaged(bool _managed);
         void propagateModel(Model *_model);
+
+        bool testModifiable() const;
+        inline bool testInsertable(const Node *item) const {
+            return item && item->isFree();
+        }
     };
 
 }

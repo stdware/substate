@@ -70,11 +70,15 @@ namespace Substate {
     void NodePrivate::propagateModel(Substate::Model *_model) {
         Q_Q(Node);
         auto model_d = _model->d_func();
-        q->propagate([q, &_model, &model_d](Node *node) {
+        q->propagate([&_model, &model_d](Node *node) {
             auto d = node->d_func();
             d->index = model_d->addIndex(node, d->index);
             d->model = _model;
         });
+    }
+
+    bool NodePrivate::testModifiable() const {
+        return !managed && (!model || model->isWritable());
     }
 
     Node::Node(int type) : Node(*new NodePrivate(type)) {

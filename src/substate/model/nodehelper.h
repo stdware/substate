@@ -8,6 +8,7 @@ namespace Substate {
     class SUBSTATE_EXPORT NodeHelper {
     public:
         static inline NodePrivate *get(Node *node);
+
         static inline Node *clone(Node *node, bool user);
 
         static void setIndex(Node *node, int index);

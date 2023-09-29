@@ -62,7 +62,6 @@ namespace Substate {
         sub->m_sender = nullptr;
     }
 
-
     /*!
         Returns true if the sender is in destruction.
     */

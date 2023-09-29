@@ -17,6 +17,10 @@ namespace Substate {
         static BytesNode *read(IStream &stream);
 
         std::vector<char> byteArray;
+
+        void replaceBytes_helper(int index, const char *data, int size);
+        void insertBytes_helper(int index, const char *data, int size);
+        void removeBytes_helper(int index, int size);
     };
 
 }

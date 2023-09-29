@@ -10,6 +10,8 @@
 
 namespace Substate {
 
+    class Node;
+
     class ActionHelper;
 
     class SUBSTATE_EXPORT Action {
@@ -70,6 +72,21 @@ namespace Substate {
 
     inline int Action::userType() const {
         return t;
+    }
+
+    class SUBSTATE_EXPORT NodeAction : public Action {
+    public:
+        NodeAction(int type, Node *parent);
+        ~NodeAction();
+
+        inline Node *parent() const;
+
+    protected:
+        Node *m_parent;
+    };
+
+    Node *NodeAction::parent() const {
+        return m_parent;
     }
 
     class SUBSTATE_EXPORT ActionNotification : public Notification {

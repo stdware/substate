@@ -50,6 +50,12 @@ namespace Substate {
     void Action::virtual_hook(int id, void *data) {
     }
 
+    NodeAction::NodeAction(int type, Node *parent): Action(type),m_parent(parent)  {
+    }
+
+    NodeAction::~NodeAction() {
+    }
+
     ActionNotification::ActionNotification(Notification::Type type, Action *action)
         : Notification(type), a(action) {
     }
