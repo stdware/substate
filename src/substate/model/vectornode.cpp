@@ -45,21 +45,21 @@ namespace Substate {
         return nullptr;
     }
 
-    void VectorNodePrivate::insertRows_helper(int index, const std::vector<Node *> &items) {
+    void VectorNodePrivate::insertRows_helper(int index, const std::vector<Node *> &nodes) {
         Q_Q(VectorNode);
         q->beginAction();
 
         // Do change
-        vector.insert(vector.begin() + index, items.size(), nullptr);
-        for (int i = 0; i < items.size(); ++i) {
-            auto item = items[i];
+        vector.insert(vector.begin() + index, nodes.size(), nullptr);
+        for (int i = 0; i < nodes.size(); ++i) {
+            auto item = nodes[i];
             vector[index + i] = item;
             q->addChild(item);
         }
 
         // Propagate signal
         {
-            VectorInsDelAction a(Action::VectorInsert, q, index, items);
+            VectorInsDelAction a(Action::VectorInsert, q, index, nodes);
             ActionNotification n(Notification::ActionTriggered, &a);
             q->dispatch(&n);
         }
@@ -185,6 +185,7 @@ namespace Substate {
             SUBSTATE_WARNING("trying to remove a null node from %p", this);
             return false;
         }
+
         decltype(d->vector)::const_iterator it;
         if (node->parent() != this ||
             (it = std::find(d->vector.begin(), d->vector.end(), node)) == d->vector.end()) {
@@ -234,8 +235,9 @@ namespace Substate {
         d2->vector.reserve(d->vector.size());
         for (auto &child : d->vector) {
             auto newChild = NodeHelper::clone(child, user);
-            d2->vector.push_back(newChild);
             node->addChild(newChild);
+
+            d2->vector.push_back(newChild);
         }
         return node;
     }
@@ -286,10 +288,11 @@ namespace Substate {
 
     VectorInsDelAction::VectorInsDelAction(Type type, Node *parent, int index,
                                            const std::vector<Node *> &children)
-        : VectorAction(type, parent, index), m_children(children) {
+        : VectorAction(type, parent, index), m_children(children), m_tempIds(nullptr) {
     }
 
     VectorInsDelAction::~VectorInsDelAction() {
+        delete m_tempIds;
     }
 
     Action *VectorInsDelAction::clone() const {
@@ -297,18 +300,47 @@ namespace Substate {
     }
 
     void VectorInsDelAction::execute(bool undo) {
+        auto d = static_cast<VectorNode *>(m_parent)->d_func();
+        ((t == VectorRemove) ^ undo) ? d->removeRows_helper(m_index, m_children.size())
+                                     : d->insertRows_helper(m_index, m_children);
     }
 
     void VectorInsDelAction::virtual_hook(int id, void *data) {
         switch (id) {
-            case CleanNodesHook:
+            case CleanNodesHook: {
+                if (t == VectorInsert) {
+                    for (const auto &child : std::as_const(m_children)) {
+                        if (child->isManaged())
+                            NodeHelper::forceDelete(child);
+                    }
+                }
                 break;
-            case InsertedNodesHook:
+            }
+            case InsertedNodesHook: {
+                if (t == VectorInsert) {
+                    auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
+                    res.reserve(m_children.size());
+                    for (const auto &child : std::as_const(m_children)) {
+                        res.push_back(child);
+                    }
+                }
                 break;
-            case RemovedNodesHook:
+            }
+            case RemovedNodesHook: {
+                if (t == VectorRemove) {
+                    auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
+                    res.reserve(m_children.size());
+                    for (const auto &child : std::as_const(m_children)) {
+                        res.push_back(child);
+                    }
+                }
                 break;
-            case AcquireInsertedNodesHook:
+            }
+            case AcquireInsertedNodesHook: {
+                if (t == VectorInsert) {
+                }
                 break;
+            }
             default:
                 break;
         }

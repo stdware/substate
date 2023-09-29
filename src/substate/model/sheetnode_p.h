@@ -17,6 +17,9 @@ namespace Substate {
 
         static SheetNode *read(IStream &stream);
 
+        void addRecord_helper(int id, Node *node);
+        void removeRecord_helper(int id);
+
         std::unordered_map<int, Node *> records;
         std::unordered_map<Node *, int> recordIndexes;
 

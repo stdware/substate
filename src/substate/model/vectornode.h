@@ -133,14 +133,14 @@ namespace Substate {
     public:
         Action *clone() const override;
         void execute(bool undo) override;
-
-        virtual void virtual_hook(int id, void *data) override;
+        void virtual_hook(int id, void *data) override;
 
     public:
         inline const std::vector<Node *> &children() const;
 
     protected:
         std::vector<Node *> m_children;
+        std::vector<int *> *m_tempIds;
     };
 
     inline const std::vector<Node *> &VectorInsDelAction::children() const {

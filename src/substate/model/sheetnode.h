@@ -8,6 +8,8 @@
 
 namespace Substate {
 
+    class SheetAction;
+
     class SheetNodePrivate;
 
     class SUBSTATE_EXPORT SheetNode : public Node {
@@ -37,10 +39,39 @@ namespace Substate {
 
     protected:
         SheetNode(SheetNodePrivate &d);
+
+        friend class SheetAction;
     };
 
     int SheetNode::count() const {
         return size();
+    }
+
+    class SUBSTATE_EXPORT SheetAction : public NodeAction {
+    public:
+        SheetAction(Type type, Node *parent, int id, Node *child);
+        ~SheetAction();
+
+    public:
+        Action *clone() const override;
+        void execute(bool undo) override;
+        void virtual_hook(int id, void *data) override;
+
+    public:
+        inline int id() const;
+        inline Node *child() const;
+
+    protected:
+        int m_id;
+        Node *m_child;
+    };
+
+    inline int SheetAction::id() const {
+        return m_id;
+    }
+
+    inline Node *SheetAction::child() const {
+        return m_child;
     }
 
 }

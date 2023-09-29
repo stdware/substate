@@ -88,6 +88,12 @@ namespace Substate {
     }
 
     /*!
+        \fn void Engine::execute(bool undo)
+
+        Executes undo or redo and updates engine's internal state.
+    */
+
+    /*!
         Sets the minimum step.
     */
     void Engine::setMinimum(int value) {
