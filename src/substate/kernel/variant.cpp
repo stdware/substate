@@ -80,9 +80,8 @@ namespace Substate {
 
     /*!
         \class Variant
-
-        Variant is a storage class for C++ classes, providing a general serialization functionality
-        for each type.
+        \brief Variant is a storage class for C++ classes, providing a general serialization
+        functionality for each type.
     */
 
     /*!
@@ -434,25 +433,25 @@ namespace Substate {
     }
 
     /*!
-        \fn Variant fromValue(const T &val)
+        \fn Variant Variant::fromValue(const T &val)
 
         Returns a variant containing a copy of value.
     */
 
     /*!
-        \fn void setValue(const T &val)
+        \fn void Variant::setValue(const T &val)
 
         Stores a copy of value.
     */
 
     /*!
-        \fn T value() const
+        \fn T Variant::value() const
 
         Returns the stored value if the type matches.
     */
 
     /*!
-        \fn int typeId(int hint)
+        \fn int Variant::typeId(int hint)
 
         Returns the id of the type. Registers the type if the type wasn't registered before, the
         hint provided will be used if it is available.

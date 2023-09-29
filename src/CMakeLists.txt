@@ -37,7 +37,7 @@ if(SUBSTATE_BUILD_DOCUMENTATIONS)
         DESCRIPTION "${SUBSTATE_PROJECT_DESCRIPTION}"
         MDFILE ../README.md
         OUTPUT_DIR ${CMAKE_BUILD_SHARE_DIR}/doc/${SUBSTATE_INSTALL_NAME}
-        INPUT corelib gui widgets widgettools
+        INPUT substate
         TARGETS ${_doc_targets}
         DEPENDS ${_doc_targets}
         NO_EXPAND_MACROS Q_OBJECT Q_GADGET Q_DECLARE_TR_FUNCTIONS

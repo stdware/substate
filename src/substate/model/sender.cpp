@@ -19,8 +19,7 @@ namespace Substate {
 
     /*!
         \class Sender
-
-        Sender is used to broadcast action messages to subscribers.
+        \brief Sender is used to broadcast action messages to subscribers.
     */
 
     /*!
@@ -87,8 +86,7 @@ namespace Substate {
 
     /*!
         \class Subscriber
-
-        Subscriber receives action messages from Sender.
+        \brief Subscriber receives action messages from Sender.
     */
 
     /*!

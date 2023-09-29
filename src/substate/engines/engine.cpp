@@ -17,8 +17,7 @@ namespace Substate {
 
     /*!
         \class Engine
-
-        Engine manages the internal state of the model and the lifecycle of the nodes.
+        \brief Engine manages the internal state of the model and the lifecycle of the nodes.
     */
 
     /*!

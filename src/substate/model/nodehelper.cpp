@@ -5,8 +5,7 @@ namespace Substate {
 
     /*!
         \class NodeHelper
-
-        Node private functions provided for user derived node classes.
+        \brief Node private functions provided for user derived node classes.
     */
 
     /*!
