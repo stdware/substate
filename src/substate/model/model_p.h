@@ -21,6 +21,8 @@ namespace Substate {
         std::unordered_map<int, Node *> indexes;
         int maxIndex;
 
+        Node *root;
+
         int addIndex(Node *node, int idx = 0);
         void removeIndex(int index);
     };

@@ -60,20 +60,20 @@ namespace Substate {
     void NodePrivate::init() {
     }
 
-    void NodePrivate::setManaged(bool managed) {
+    void NodePrivate::setManaged(bool _managed) {
         Q_Q(Node);
-        q->propagate([&managed](Node *node) {
-            node->d_func()->managed = managed; // Change managed flag recursively
+        q->propagate([&_managed](Node *node) {
+            node->d_func()->managed = _managed; // Change managed flag recursively
         });
     }
 
-    void NodePrivate::propagateModel(Substate::Model *model) {
+    void NodePrivate::propagateModel(Substate::Model *_model) {
         Q_Q(Node);
-        auto model_d = model->d_func();
-        q->propagate([q, &model, &model_d](Node *node) {
+        auto model_d = _model->d_func();
+        q->propagate([q, &_model, &model_d](Node *node) {
             auto d = node->d_func();
             d->index = model_d->addIndex(node, d->index);
-            d->model = model;
+            d->model = _model;
         });
     }
 
@@ -94,7 +94,8 @@ namespace Substate {
     }
 
     int Node::index() const {
-        return 0;
+        Q_D(const Node);
+        return d->index;
     }
 
     Node::Type Node::type() const {
@@ -159,6 +160,23 @@ namespace Substate {
         return true;
     }
 
+    void Node::dispatch(Notification *n) {
+        Sender::dispatch(n);
+
+        Q_D(Node);
+        switch (n->type()) {
+            case Notification::ActionAboutToTrigger:
+            case Notification::ActionTriggered: {
+                if (d->model) {
+                    d->model->dispatch(n);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
     void Node::childDestroyed(Node *node) {
     }
 
@@ -171,10 +189,6 @@ namespace Substate {
         d2->parent = d->parent;
         if (d2->managed) {
             d2->setManaged(false);
-        }
-
-        if (d->model && !d2->model) {
-            d2->propagateModel(d->model);
         }
     }
 
@@ -195,15 +209,6 @@ namespace Substate {
     void Node::endAction() {
         Q_D(Node);
         d->model->d_func()->lockedNode = nullptr;
-    }
-
-    void Node::dispatch(Action *action, bool done) {
-        Q_D(Node);
-        Sender::dispatch(action, done);
-
-        if (!d->model)
-            return;
-        d->model->dispatch(action, done);
     }
 
     void Node::propagate(const std::function<void(Node *)> &func) {

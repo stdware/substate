@@ -37,6 +37,12 @@ namespace Substate {
         inline bool inTransaction() const;
         inline bool stepChanging() const;
 
+        bool isWritable() const;
+        Node *indexOf(int index) const;
+
+        Node *root() const;
+        void setRoot(Node *node);
+
         void beginTransaction();
         void abortTransaction();
         void commitTransaction(const Variant &message);
@@ -44,10 +50,8 @@ namespace Substate {
         void undo();
         void redo();
 
-        bool isWritable() const;
-
-    protected:
-        void dispatch(Action *action, bool done) override;
+    public:
+        void dispatch(Notification *n) override;
 
     protected:
         Model(ModelPrivate &d);

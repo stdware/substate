@@ -1,9 +1,12 @@
 #include "engine.h"
 #include "engine_p.h"
 
+#include "model/nodehelper.h"
+
 namespace Substate {
 
     EnginePrivate::EnginePrivate() {
+        model = nullptr;
         min = 0;
         max = 0;
         current = 0;
@@ -24,6 +27,14 @@ namespace Substate {
         Destructor.
     */
     Engine::~Engine() {
+    }
+
+    /*!
+        Returns the model related to the engine.
+    */
+    Model *Engine::model() const {
+        Q_D(const Engine);
+        return d->model;
     }
 
     /*!
@@ -48,6 +59,32 @@ namespace Substate {
     int Engine::current() const {
         Q_D(const Engine);
         return d->current;
+    }
+
+    /*!
+        Sets up the engine with the specified model.
+    */
+    void Engine::setup(Model *model) {
+        Q_D(Engine);
+        d->model = model;
+    }
+
+    /*!
+        Commits a list of actions with a message to the engine.
+    */
+    void Engine::commit(const std::vector<Action *> &actions, const Variant &message) {
+        Q_D(Engine);
+
+        // Collect inserted nodes and get ownership
+        std::vector<Node *> nodes;
+        for (auto a : actions) {
+            std::vector<Node *> curNodes;
+            a->virtual_hook(Action::InsertedNodesHook, &curNodes);
+            nodes.insert(nodes.end(), curNodes.begin(), curNodes.end());
+        }
+        for (auto n : std::as_const(nodes)) {
+            NodeHelper::propagateModel(n, d->model);
+        }
     }
 
     /*!

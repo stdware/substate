@@ -7,7 +7,7 @@
 
 namespace Substate {
 
-    class Action;
+    class Notification;
 
     class Subscriber;
 
@@ -24,8 +24,8 @@ namespace Substate {
 
         bool isBeingDestroyed() const;
 
-    protected:
-        virtual void dispatch(Action *action, bool done);
+    public:
+        virtual void dispatch(Notification *n);
 
     protected:
         std::unique_ptr<SenderPrivate> d_ptr;
@@ -46,7 +46,7 @@ namespace Substate {
         inline Sender *sender() const;
 
     protected:
-        virtual void action(Action *action, bool done) = 0;
+        virtual void notified(Notification *n) = 0;
 
     private:
         Sender *m_sender;
@@ -61,10 +61,11 @@ namespace Substate {
         return m_sender;
     }
 
-    class Notification {
+    class SUBSTATE_EXPORT Notification {
     public:
         enum Type {
-            Action,
+            ActionAboutToTrigger,
+            ActionTriggered,
             StepChange,
         };
 

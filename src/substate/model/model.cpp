@@ -25,12 +25,26 @@ namespace Substate {
         indexes.erase(index);
     }
 
+    /*!
+        \class Model
+        \brief The model maintains the root node and interacts with the engine.
+    */
+
+    /*!
+        Constructor.
+    */
     Model::Model() : Model(*new ModelPrivate()) {
     }
 
+    /*!
+        Destructor.
+    */
     Model::~Model() {
     }
 
+    /*!
+        Returns the engine.
+    */
     Engine *Model::engine() const {
         Q_D(const Model);
         return d->engine;
@@ -45,6 +59,41 @@ namespace Substate {
     }
 
     /*!
+        Returns \a true if the model is writable.
+
+        The model is writable only if it's in transaction state and no node holds the meta-action
+        lock.
+    */
+    bool Model::isWritable() const {
+        Q_D(const Model);
+        return d->state == Transaction && !d->lockedNode;
+    }
+
+    /*!
+        Returns the node to the index points to if found.
+    */
+    Node *Model::indexOf(int index) const {
+        Q_D(const Model);
+        auto it = d->indexes.find(index);
+        if (it == d->indexes.end())
+            return nullptr;
+        return it->second;
+    }
+
+    /*!
+        Returns the root node of the model.
+    */
+    Node *Model::root() const {
+        return nullptr;
+    }
+
+    /*!
+        Sets the root node of the model.
+    */
+    void Model::setRoot(Node *node) {
+    }
+
+    /*!
         Enters the transaction state.
 
         A fatal error will be raised if called when the engine is not in idle state.
@@ -53,7 +102,6 @@ namespace Substate {
         Q_D(Model);
         if (d->state != Idle) {
             SUBSTATE_FATAL("Attempt to begin a transaction at an invalid state.\n");
-            return;
         }
         d->state = Transaction;
     }
@@ -67,7 +115,6 @@ namespace Substate {
         Q_D(Model);
         if (d->state != Transaction) {
             SUBSTATE_FATAL("Cannot abort the transaction without an ongoing transaction.\n");
-            return;
         }
     }
 
@@ -80,51 +127,69 @@ namespace Substate {
         Q_D(Model);
         if (d->state != Transaction) {
             SUBSTATE_FATAL("Cannot commit the transaction without an ongoing transaction.\n");
-            return;
         }
         if (d->txActions.empty())
             return;
 
         d->engine->commit(d->txActions, message);
         d->txActions.clear();
+
+        Notification n(Notification::StepChange);
+        dispatch(&n);
     }
 
+    /*!
+        Rollback to the previous step.
+    */
     void Model::undo() {
         Q_D(Model);
         if (d->state != Idle) {
             SUBSTATE_FATAL("Attempt to undo at an invalid state.\n");
-            return;
         }
         d->state = Undo;
         d->engine->execute(true);
         d->state = Idle;
+
+        Notification n(Notification::StepChange);
+        dispatch(&n);
     }
 
+    /*!
+        Redo to the previous step.
+    */
     void Model::redo() {
         Q_D(Model);
         if (d->state != Idle) {
             SUBSTATE_FATAL("Attempt to redo at an invalid state.\n");
-            return;
         }
         d->state = Redo;
         d->engine->execute(false);
         d->state = Idle;
+
+        Notification n(Notification::StepChange);
+        dispatch(&n);
     }
 
-    bool Model::isWritable() const {
-        Q_D(const Model);
-        return d->state == Transaction && !d->lockedNode;
-    }
-
-    void Model::dispatch(Action *action, bool done) {
-        Sender::dispatch(action, done);
+    void Model::dispatch(Notification *n) {
+        Sender::dispatch(n);
 
         Q_D(Model);
-        if (d->state == Transaction && done) {
-            d->txActions.push_back(action);
+        switch (n->type()) {
+            case Notification::ActionTriggered: {
+                auto n2 = static_cast<ActionNotification *>(n);
+                if (d->state == Transaction) {
+                    d->txActions.push_back(n2->action()->clone());
+                }
+                break;
+            }
+            default:
+                break;
         }
     }
 
+    /*!
+        \internal
+    */
     Model::Model(ModelPrivate &d) : Sender(d) {
         d.init();
     }

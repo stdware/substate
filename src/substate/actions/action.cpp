@@ -14,8 +14,7 @@ namespace Substate {
         std::shared_lock<std::shared_mutex> lock(factoryLock);
         auto it = factoryManager.find(type);
         if (it == factoryManager.end()) {
-            throw std::runtime_error("Substate::Node: Unknown Action type " +
-                                     std::to_string(type));
+            throw std::runtime_error("Substate::Node: Unknown Action type " + std::to_string(type));
         }
         return it->second;
     }
@@ -23,7 +22,7 @@ namespace Substate {
     Action::~Action() {
     }
 
-    Action *Action::read(IStream &stream) {
+    Action *Action::read(IStream &stream, bool brief) {
         int type;
         stream >> type;
         if (stream.fail())
@@ -34,7 +33,7 @@ namespace Substate {
                 break;
         }
 
-        return getFactory(type)(stream);
+        return getFactory(type)(stream, brief);
     }
 
     bool Action::registerFactory(int type, Factory fac) {
@@ -48,7 +47,14 @@ namespace Substate {
         return true;
     }
 
-    void Action::clean() {
+    void Action::virtual_hook(int id, void *data) {
+    }
+
+    ActionNotification::ActionNotification(Notification::Type type, Action *action)
+        : Notification(type), a(action) {
+    }
+
+    ActionNotification::~ActionNotification() {
     }
 
 }

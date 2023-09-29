@@ -52,6 +52,9 @@ namespace Substate {
         static Node *read(IStream &stream);
         static bool registerFactory(int type, Factory fac);
 
+    public:
+        void dispatch(Notification *n) override;
+
     protected:
         virtual Node *clone(bool user) const = 0;
 
@@ -65,7 +68,6 @@ namespace Substate {
         void beginAction();
         void endAction();
 
-        void dispatch(Action *action, bool done) override;
         void propagate(const std::function<void(Node *)> &func);
 
     protected:

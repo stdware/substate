@@ -19,7 +19,7 @@ namespace Substate {
 
     /*!
         \class Sender
-        \brief Sender is used to broadcast action messages to subscribers.
+        \brief Sender is used to broadcast notifications to subscribers.
     */
 
     /*!
@@ -33,6 +33,9 @@ namespace Substate {
     */
     void Sender::addSubscriber(Subscriber *sub) {
         Q_D(Sender);
+
+        std::unique_lock<std::shared_mutex> lock(d->shared_lock);
+
         auto it = d->subscriberIndexes.find(sub);
         if (it != d->subscriberIndexes.end())
             return;
@@ -47,6 +50,9 @@ namespace Substate {
     */
     void Sender::removeSubscriber(Subscriber *sub) {
         Q_D(Sender);
+
+        std::unique_lock<std::shared_mutex> lock(d->shared_lock);
+
         auto it = d->subscriberIndexes.find(sub);
         if (it == d->subscriberIndexes.end())
             return;
@@ -68,11 +74,11 @@ namespace Substate {
     /*!
         Notifies all subscribers of the action message.
     */
-    void Sender::dispatch(Action *action, bool done) {
+    void Sender::dispatch(Notification *n) {
         Q_D(Sender);
 
         for (const auto &sub : std::as_const(d->subscribers)) {
-            sub->action(action, done);
+            sub->notified(n);
         }
     }
 
@@ -86,7 +92,7 @@ namespace Substate {
 
     /*!
         \class Subscriber
-        \brief Subscriber receives action messages from Sender.
+        \brief Subscriber receives notifications from Sender.
     */
 
     /*!
@@ -115,9 +121,20 @@ namespace Substate {
         Processes the current action massage.
     */
 
+    /*!
+        \class Notification
+        \brief Notification is the message transmission medium in Substate framework.
+    */
+
+    /*!
+        Constructor.
+    */
     Notification::Notification(int type) : t(type) {
     }
 
+    /*!
+        Destructor.
+    */
     Notification::~Notification() {
     }
 

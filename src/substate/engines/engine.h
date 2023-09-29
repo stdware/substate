@@ -10,6 +10,8 @@
 
 namespace Substate {
 
+    class Model;
+
     class EngineHelper;
 
     class EnginePrivate;
@@ -20,11 +22,14 @@ namespace Substate {
         virtual ~Engine();
 
     public:
+        Model *model() const;
+
         int minimum() const;
         int maximum() const;
         int current() const;
 
-        virtual void commit(const std::vector<Action *> &actions, const Variant &message) = 0;
+        virtual void setup(Model *model);
+        virtual void commit(const std::vector<Action *> &actions, const Variant &message);
         virtual void execute(bool undo) = 0;
 
     protected:

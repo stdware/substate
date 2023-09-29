@@ -12,7 +12,7 @@ namespace Substate {
 
         static void setIndex(Node *node, int index);
         static void setManaged(Node *node, bool managed);
-        
+
         static void propagateModel(Node *node, Model *model);
         static void forceDelete(Node *node);
     };

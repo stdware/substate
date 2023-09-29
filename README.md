@@ -12,6 +12,12 @@ Such workflow is not only time-consuming, but also tightly tied to the specific 
 
 We propose a flexible and efficient undo framework which not only allows developers to implement undo/redo features in less time, but also strictly ensures the **crash consistency** of the application.
 
+## Highlights
+
++ Universality
++ Crash Consitency
++ Delayed Deletion
+
 ## Requirements
 
 | Component | Requirement |               Detailed               |
