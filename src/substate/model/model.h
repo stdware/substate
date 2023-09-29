@@ -10,14 +10,30 @@ namespace Substate {
 
     class ModelPrivate;
 
-    class SUBSTATE_EXPORT Model {
+    class SUBSTATE_EXPORT Model : public Sender {
         SUBSTATE_DECL_PRIVATE(Model)
     public:
         Model();
-        virtual ~Model();
+        ~Model();
 
     public:
-        Engine::State state() const;
+        Engine *engine() const;
+
+        enum StateFlag {
+            TransactionFlag = 1,
+            UndoRedoFlag = 2,
+            UndoFlag = 4,
+            RedoFlag = 8,
+        };
+
+        enum State {
+            Idle = 0,
+            Transaction = TransactionFlag,
+            Undo = UndoFlag | UndoRedoFlag,
+            Redo = RedoFlag | UndoRedoFlag,
+        };
+
+        State state() const;
         inline bool inTransaction() const;
         inline bool stepChanging() const;
 
@@ -25,42 +41,28 @@ namespace Substate {
         void abortTransaction();
         void commitTransaction(const Variant &message);
 
-    public:
-        void addSubscriber(Subscriber *sub);
-        void removeSubscriber(Subscriber *sub);
+        void undo();
+        void redo();
+
+        bool isWritable() const;
 
     protected:
-        void dispatch(Operation *op, bool done);
+        void dispatch(Action *action, bool done) override;
 
     protected:
-        std::unique_ptr<ModelPrivate> d_ptr;
         Model(ModelPrivate &d);
 
         friend class Node;
+        friend class NodePrivate;
     };
 
     inline bool Model::inTransaction() const {
-        return state() == Engine::Transaction;
+        return state() == Transaction;
     }
 
     inline bool Model::stepChanging() const {
-        return state() & Engine::UndoRedoFlag;
+        return state() & UndoRedoFlag;
     }
-
-    class SUBSTATE_EXPORT Subscriber {
-    public:
-        Subscriber();
-        virtual ~Subscriber();
-
-    protected:
-        virtual void operation(Operation *op, bool done) = 0;
-
-    private:
-        Model *m_model;
-
-        friend class Model;
-        friend class ModelPrivate;
-    };
 
 }
 

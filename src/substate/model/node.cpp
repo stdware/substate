@@ -9,7 +9,7 @@
 #include "sheetnode_p.h"
 #include "vectornode_p.h"
 
-#include "model.h"
+#include "model_p.h"
 
 namespace Substate {
 
@@ -26,22 +26,61 @@ namespace Substate {
         return it->second;
     }
 
-    NodePrivate::NodePrivate(int type) : type(type), parent(nullptr), model(nullptr) {
+    NodePrivate::NodePrivate(int type)
+        : type(type), parent(nullptr), model(nullptr), index(0), managed(false),
+          allowDelete(false) {
     }
 
     NodePrivate::~NodePrivate() {
+        Q_Q(Node);
+
+        if (model) {
+            // The node is deleted by a wrong behavior in user code, the application must
+            // abort otherwise the user data may be corrupted.
+            if (!allowDelete) {
+                SUBSTATE_FATAL("Deleting a managed item, crash now!!!");
+            }
+
+            // The node is deleted forcefully, which is possibly due to the following reasons.
+            // 1. The node is no longer reachable
+            // 2. The node is deleted from memory temporarily
+
+            // We need to remove its reference in the index map except when the model is in
+            // destruction so that there's no need.
+            if (!model->isBeingDestroyed()) {
+                model->d_func()->removeIndex(index);
+            }
+        } else if (parent && !parent->isBeingDestroyed()) {
+            // The node is deleted when itself or its ancestor is free, simply release the
+            // reference.
+            parent->childDestroyed(q);
+        }
     }
 
     void NodePrivate::init() {
+    }
+
+    void NodePrivate::setManaged(bool managed) {
+        Q_Q(Node);
+        q->propagate([&managed](Node *node) {
+            node->d_func()->managed = managed; // Change managed flag recursively
+        });
+    }
+
+    void NodePrivate::propagateModel(Substate::Model *model) {
+        Q_Q(Node);
+        auto model_d = model->d_func();
+        q->propagate([q, &model, &model_d](Node *node) {
+            auto d = node->d_func();
+            d->index = model_d->addIndex(node, d->index);
+            d->model = model;
+        });
     }
 
     Node::Node(int type) : Node(*new NodePrivate(type)) {
     }
 
     Node::~Node() {
-        auto parent = this->parent();
-        if (parent)
-            parent->childDestroyed(this);
     }
 
     Node *Node::parent() const {
@@ -54,6 +93,10 @@ namespace Substate {
         return d->model;
     }
 
+    int Node::index() const {
+        return 0;
+    }
+
     Node::Type Node::type() const {
         Q_D(const Node);
         return d->type >= User ? User : static_cast<Type>(d->type);
@@ -62,6 +105,25 @@ namespace Substate {
     int Node::userType() const {
         Q_D(const Node);
         return d->type;
+    }
+
+    bool Node::isFree() const {
+        Q_D(const Node);
+        return !d->model && !d->parent; // The item is not free if it has parent or model
+    }
+
+    bool Node::isManaged() const {
+        Q_D(const Node);
+        return d->managed;
+    }
+
+    bool Node::isWritable() const {
+        Q_D(const Node);
+        return !d->model || d->model->isWritable();
+    }
+
+    Node *Node::clone() const {
+        return clone(true);
     }
 
     Node *Node::read(IStream &stream) {
@@ -100,29 +162,59 @@ namespace Substate {
     void Node::childDestroyed(Node *node) {
     }
 
+    void Node::propagateChildren(const std::function<void(Node *)> &func) {
+    }
+
     void Node::addChild(Node *node) {
         Q_D(Node);
+        auto d2 = node->d_func();
+        d2->parent = d->parent;
+        if (d2->managed) {
+            d2->setManaged(false);
+        }
 
-        // Assign parent
-        node->d_func()->parent = d->parent;
+        if (d->model && !d2->model) {
+            d2->propagateModel(d->model);
+        }
     }
 
     void Node::removeChild(Node *node) {
         Q_D(Node);
-
-        // Unassign parent
-        node->d_func()->parent = d->parent;
+        auto d2 = node->d_func();
+        d2->parent = nullptr;
+        if (d->model) {
+            d2->setManaged(true);
+        }
     }
 
-    void Node::dispatch(Operation *op, bool done) {
+    void Node::beginAction() {
         Q_D(Node);
+        d->model->d_func()->lockedNode = this;
+    }
+
+    void Node::endAction() {
+        Q_D(Node);
+        d->model->d_func()->lockedNode = nullptr;
+    }
+
+    void Node::dispatch(Action *action, bool done) {
+        Q_D(Node);
+        Sender::dispatch(action, done);
+
         if (!d->model)
             return;
-        d->model->dispatch(op, done);
+        d->model->dispatch(action, done);
     }
 
-    Node::Node(NodePrivate &d) : d_ptr(&d) {
-        d.q_ptr = this;
+    void Node::propagate(const std::function<void(Node *)> &func) {
+        func(this);
+        propagateChildren(func);
+    }
+
+    /*!
+        \internal
+    */
+    Node::Node(NodePrivate &d) : Sender(d) {
         d.init();
     }
 

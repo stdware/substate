@@ -27,62 +27,57 @@ namespace Substate {
     Engine::~Engine() {
     }
 
-    Engine::State Engine::state() const {
-        Q_D(const Engine);
-        return d->state;
-    }
-
-    void Engine::beginTransaction() {
-        Q_D(Engine);
-        if (d->state != Idle) {
-            SUBSTATE_ERROR("Attempt to begin a transaction at an invalid state.\n");
-            return;
-        }
-        d->state = Transaction;
-    }
-
-    void Engine::abortTransaction() {
-        Q_D(Engine);
-        if (d->state != Transaction) {
-            SUBSTATE_ERROR("Cannot abort the transaction without an ongoing transaction.\n");
-            return;
-        }
-    }
-
-    void Engine::commitTransaction(const Variant &message) {
-        Q_D(Engine);
-        if (d->state != Transaction) {
-            SUBSTATE_ERROR("Cannot commit the transaction without an ongoing transaction.\n");
-            return;
-        }
-        commited(d->txOperations, message);
-        d->txOperations.clear();
-    }
-
-    void Engine::commitOperation(Operation *op) {
-        Q_D(Engine);
-        if (d->state != Transaction) {
-            SUBSTATE_ERROR("Cannot commit the operation without an ongoing transaction.\n");
-            return;
-        }
-        d->txOperations.push_back(op);
-    }
-
+    /*!
+        Returns the minimum step the engine can reach by executing undo.
+    */
     int Engine::minimum() const {
         Q_D(const Engine);
         return d->min;
     }
 
+    /*!
+        Returns the maximum step the engine can reach by executing redo.
+    */
     int Engine::maximum() const {
         Q_D(const Engine);
         return d->max;
     }
 
+    /*!
+        Returns the current step.
+    */
     int Engine::current() const {
         Q_D(const Engine);
         return d->current;
     }
 
+    /*!
+        Sets the minimum step.
+    */
+    void Engine::setMinimum(int value) {
+        Q_D(Engine);
+        d->min = value;
+    }
+
+    /*!
+        Sets the maximum step.
+    */
+    void Engine::setMaximum(int value) {
+        Q_D(Engine);
+        d->max = value;
+    }
+
+    /*!
+        Sets the current step.
+    */
+    void Engine::setCurrent(int value) {
+        Q_D(Engine);
+        d->current = value;
+    }
+
+    /*!
+        \internal
+    */
     Engine::Engine(EnginePrivate &d) : d_ptr(&d) {
         d.q_ptr = this;
         d.init();

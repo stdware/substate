@@ -43,7 +43,7 @@ namespace Substate {
         bool own_stream;
         std::streambuf *buf;
 
-        SUBSTATE_DISABLE_COPY(IStream)
+        SUBSTATE_DISABLE_COPY_MOVE(IStream)
     };
 
     inline std::istream *IStream::device() const {
@@ -100,7 +100,7 @@ namespace Substate {
         bool own_stream;
         std::streambuf *buf;
 
-        SUBSTATE_DISABLE_COPY(OStream)
+        SUBSTATE_DISABLE_COPY_MOVE(OStream)
     };
 
     inline std::ostream *OStream::device() const {

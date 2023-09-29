@@ -201,7 +201,7 @@ namespace Substate {
     inline T Variant::value() const {
         // Storing a pointer is not supported
         static_assert(!std::is_pointer<T>::value, "T is a pointer");
-        
+
         return d.type == typeId<T>() ? *reinterpret_cast<const T *>(constData()) : T();
     }
 

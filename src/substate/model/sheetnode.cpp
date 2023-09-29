@@ -14,7 +14,7 @@ namespace Substate {
     void SheetNodePrivate::init() {
     }
 
-    SheetNode *SheetNodePrivate::read(Substate::IStream &stream) {
+    SheetNode *SheetNodePrivate::read(IStream &stream) {
         return nullptr;
     }
 
@@ -75,7 +75,7 @@ namespace Substate {
     void SheetNode::write(OStream &stream) const {
     }
 
-    Node *SheetNode::clone() const {
+    Node *SheetNode::clone(bool user) const {
         return nullptr;
     }
 

@@ -64,7 +64,7 @@ namespace Substate {
     void VectorNode::write(OStream &stream) const {
     }
 
-    Node *VectorNode::clone() const {
+    Node *VectorNode::clone(bool user) const {
         return nullptr;
     }
 

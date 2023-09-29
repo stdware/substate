@@ -27,7 +27,9 @@ namespace Substate {
 
     public:
         void write(OStream &stream) const override;
-        Node *clone() const override;
+
+    protected:
+        Node *clone(bool user) const override;
     };
 
     inline bool BytesNode::prepend(const char *buf, int size) {

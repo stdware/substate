@@ -2,11 +2,15 @@
 #define ENGINE_H
 
 #include <memory>
+#include <vector>
 
-#include <substate/operation.h>
+#include <substate/action.h>
+#include <substate/node.h>
 #include <substate/variant.h>
 
 namespace Substate {
+
+    class EngineHelper;
 
     class EnginePrivate;
 
@@ -16,34 +20,12 @@ namespace Substate {
         virtual ~Engine();
 
     public:
-        enum StateFlag {
-            TransactionFlag = 1,
-            UndoRedoFlag = 2,
-            UndoFlag = 4,
-            RedoFlag = 8,
-        };
-
-        enum State {
-            Idle = 0,
-            Transaction = TransactionFlag,
-            Undo = UndoFlag | UndoRedoFlag,
-            Redo = RedoFlag | UndoRedoFlag,
-        };
-
-        State state() const;
-
-        void beginTransaction();
-        void abortTransaction();
-        void commitTransaction(const Variant &message);
-
-        void commitOperation(Operation *op);
-
         int minimum() const;
         int maximum() const;
         int current() const;
 
-    protected:
-        virtual void commited(const std::vector<Operation *> ops, const Variant &message) = 0;
+        virtual void commit(const std::vector<Action *> &actions, const Variant &message) = 0;
+        virtual void execute(bool undo) = 0;
 
     protected:
         void setMinimum(int value);
@@ -53,6 +35,10 @@ namespace Substate {
     protected:
         std::unique_ptr<EnginePrivate> d_ptr;
         Engine(EnginePrivate &d);
+
+        friend class EngineHelper;
+
+        SUBSTATE_DISABLE_COPY_MOVE(Engine)
     };
 
 }

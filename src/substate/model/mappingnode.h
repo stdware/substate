@@ -50,9 +50,10 @@ namespace Substate {
 
     public:
         void write(OStream &stream) const override;
-        Node *clone() const override;
 
     protected:
+        Node *clone(bool user) const override;
+
         void childDestroyed(Node *node) override;
 
     protected:

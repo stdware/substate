@@ -44,7 +44,7 @@ namespace Substate {
     void BytesNode::write(OStream &stream) const {
     }
 
-    Node *BytesNode::clone() const {
+    Node *BytesNode::clone(bool user) const {
         return nullptr;
     }
 

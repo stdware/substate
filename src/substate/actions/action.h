@@ -1,17 +1,20 @@
-#ifndef OPERATION_H
-#define OPERATION_H
+#ifndef ACTION_H
+#define ACTION_H
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <substate/stream.h>
 
 namespace Substate {
 
-    class SUBSTATE_EXPORT Operation {
+    class ActionHelper;
+
+    class SUBSTATE_EXPORT Action {
     public:
-        inline Operation(int type);
-        virtual ~Operation();
+        inline Action(int type);
+        virtual ~Action();
 
         enum Type {
             BytesReplace,
@@ -21,13 +24,13 @@ namespace Substate {
             VectorInsert,
             VectorMove,
             VectorRemove,
-            
+
             RecordInsert,
             RecordRemove,
-            
+
             MappingInsert,
             MappingRemove,
-            
+
             RootChange,
 
             User = 1024,
@@ -36,29 +39,37 @@ namespace Substate {
         inline Type type() const;
         inline int userType() const;
 
-        typedef Operation *(*Factory)(IStream &);
+        typedef Action *(*Factory)(IStream &);
 
-        static Operation *read(IStream &stream);
+        static Action *read(IStream &stream);
         static bool registerFactory(int type, Factory fac);
 
     public:
+        virtual Action *clone() const = 0;
+
+    protected:
         virtual void execute(bool undo) = 0;
+        virtual void clean();
 
     protected:
         int t;
+
+        friend class ActionHelper;
+
+        SUBSTATE_DISABLE_COPY_MOVE(Action)
     };
 
-    inline Operation::Operation(int type) : t(type) {
+    inline Action::Action(int type) : t(type) {
     }
 
-    inline Operation::Type Operation::type() const {
+    inline Action::Type Action::type() const {
         return t >= User ? User : static_cast<Type>(t);
     }
 
-    inline int Operation::userType() const {
+    inline int Action::userType() const {
         return t;
     }
 
 }
 
-#endif // OPERATION_H
+#endif // ACTION_H

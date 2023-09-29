@@ -64,20 +64,16 @@ namespace Substate {
     void MappingNode::write(OStream &stream) const {
     }
 
-    Node *MappingNode::clone() const {
+    Node *MappingNode::clone(bool user) const {
         return nullptr;
     }
 
     void MappingNode::childDestroyed(Node *node) {
         Q_D(MappingNode);
-        for (auto it = d->mapping.begin(); it != d->mapping.end(); ++it) {
-            if (it->second.is_variant)
-                continue;
-            if (it->second.node == node) {
-                d->mapping.erase(it);
-                break;
-            }
-        }
+        auto it = d->mappingIndexes.find(node);
+        if (it == d->mappingIndexes.end())
+            return;
+        d->mapping.erase(it->second);
     }
 
     MappingNode::MappingNode(MappingNodePrivate &d) : Node(d) {

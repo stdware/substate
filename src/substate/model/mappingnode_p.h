@@ -21,6 +21,7 @@ namespace Substate {
             bool is_variant;
         };
         std::unordered_map<std::string, Data> mapping;
+        std::unordered_map<Node *, std::string> mappingIndexes;
     };
 
 }

@@ -1,6 +1,12 @@
 set(_generate_include_dir "${CMAKE_CURRENT_BINARY_DIR}/include")
 file(GLOB_RECURSE _src *.h *.cpp)
 
+set(_cxx_flags)
+
+if(MSVC)
+    list(APPEND _cxx_flags "/Zc:preprocessor")
+endif()
+
 # Set language options
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED on)
@@ -24,6 +30,7 @@ add_library(substate::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 qtmediate_configure_target(${PROJECT_NAME}
     SOURCES ${_src}
     INCLUDE_PRIVATE .
+    CCFLAGS ${_cxx_flags}
 )
 
 # Set global definitions
