@@ -12,12 +12,43 @@ namespace Substate {
     }
 
     SheetNodePrivate::~SheetNodePrivate() {
+        for (const auto &pair : std::as_const(records)) {
+            delete pair.second;
+        }
     }
 
     void SheetNodePrivate::init() {
     }
 
     SheetNode *SheetNodePrivate::read(IStream &stream) {
+        auto node = new SheetNode();
+        auto d = node->d_func();
+
+        int size;
+        stream >> d->index >> size;
+        if (stream.fail()) {
+            goto abort;
+        }
+
+        d->records.reserve(size);
+        d->recordIndexes.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            int id;
+            stream >> id;
+            auto child = read(stream);
+            if (!child) {
+                goto abort;
+            }
+
+            node->addChild(child);
+            d->records.insert(std::make_pair(id, child));
+            d->recordIds.insert(id);
+            d->recordIndexes.insert(std::make_pair(child, id));
+        }
+        return node;
+
+    abort:
+        delete node;
         return nullptr;
     }
 
@@ -164,6 +195,16 @@ namespace Substate {
     }
 
     void SheetNode::write(OStream &stream) const {
+        Q_D(const SheetNode);
+        // Write index
+        stream << d->index;
+
+        // Write children
+        stream << int(d->records.size());
+        for (const auto &pair : d->records) {
+            stream << pair.first;
+            pair.second->write(stream);
+        }
     }
 
     Node *SheetNode::clone(bool user) const {
@@ -192,6 +233,13 @@ namespace Substate {
         remove(node);
     }
 
+    void SheetNode::propagateChildren(const std::function<void(Node *)> &func) {
+        Q_D(SheetNode);
+        for (const auto &pair : std::as_const(d->records)) {
+            func(pair.second);
+        }
+    }
+
     SheetNode::SheetNode(SheetNodePrivate &d) : Node(d) {
         d.init();
     }
@@ -201,6 +249,9 @@ namespace Substate {
     }
 
     SheetAction::~SheetAction() {
+    }
+
+    void SheetAction::write(OStream &stream) const {
     }
 
     Action *SheetAction::clone() const {
@@ -232,11 +283,6 @@ namespace Substate {
                 if (t == SheetRemove) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.push_back(m_child);
-                }
-                break;
-            }
-            case AcquireInsertedNodesHook: {
-                if (t == SheetInsert) {
                 }
                 break;
             }

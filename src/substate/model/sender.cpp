@@ -9,7 +9,6 @@ namespace Substate {
 
     SenderPrivate::~SenderPrivate() {
         is_clearing = true;
-
         for (const auto &sub : std::as_const(subscribers))
             sub->m_sender = nullptr;
     }
@@ -76,6 +75,7 @@ namespace Substate {
     void Sender::dispatch(Notification *n) {
         Q_D(Sender);
 
+        std::shared_lock<std::shared_mutex> lock(d->shared_lock);
         for (const auto &sub : std::as_const(d->subscribers)) {
             sub->notified(n);
         }

@@ -31,9 +31,6 @@ namespace Substate {
         std::unique_ptr<SenderPrivate> d_ptr;
         Sender(SenderPrivate &d);
 
-        friend class Node;
-        friend class NodePrivate;
-
         SUBSTATE_DISABLE_COPY_MOVE(Sender)
     };
 

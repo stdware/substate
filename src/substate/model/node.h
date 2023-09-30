@@ -31,15 +31,14 @@ namespace Substate {
         explicit Node(int type);
         ~Node();
 
+        int type() const;
+
         typedef Node *(*Factory)(IStream &);
 
     public:
         Node *parent() const;
         Model *model() const;
         int index() const;
-
-        Type type() const;
-        int userType() const;
 
         bool isFree() const;
         inline bool isObsolete() const;
@@ -78,6 +77,48 @@ namespace Substate {
 
     inline bool Node::isObsolete() const {
         return isManaged();
+    }
+
+    class SUBSTATE_EXPORT NodeAction : public Action {
+    public:
+        NodeAction(int type, Node *parent);
+        ~NodeAction();
+
+        inline Node *parent() const;
+
+    protected:
+        Node *m_parent;
+    };
+
+    inline Node *NodeAction::parent() const {
+        return m_parent;
+    }
+
+    class SUBSTATE_EXPORT RootChangeAction : public Action {
+    public:
+        RootChangeAction(Node *root, Node *oldRoot);
+        ~RootChangeAction();
+
+    public:
+        void write(OStream &stream) const override;
+        Action *clone() const override;
+        void execute(bool undo) override;
+        void virtual_hook(int id, void *data) override;
+
+    public:
+        inline Node *root() const;
+        inline Node *oldRoot() const;
+
+    protected:
+        Node *r, *oldr;
+    };
+
+    inline Node *RootChangeAction::root() const {
+        return r;
+    }
+
+    inline Node *RootChangeAction::oldRoot() const {
+        return oldr;
     }
 
 }

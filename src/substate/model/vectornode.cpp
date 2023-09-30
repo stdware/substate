@@ -36,12 +36,37 @@ namespace Substate {
     }
 
     VectorNodePrivate::~VectorNodePrivate() {
+        for (const auto &node : std::as_const(vector)) {
+            delete node;
+        }
     }
 
     void VectorNodePrivate::init() {
     }
 
     VectorNode *VectorNodePrivate::read(IStream &stream) {
+        auto node = new VectorNode();
+        auto d = node->d_func();
+
+        int size;
+        stream >> d->index >> size;
+        if (stream.fail()) {
+            goto abort;
+        }
+
+        d->vector.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            auto child = read(stream);
+            if (!child) {
+                goto abort;
+            }
+            node->addChild(child);
+            d->vector.push_back(node);
+        }
+        return node;
+
+    abort:
+        delete node;
         return nullptr;
     }
 
@@ -221,6 +246,15 @@ namespace Substate {
     }
 
     void VectorNode::write(OStream &stream) const {
+        Q_D(const VectorNode);
+        // Write index
+        stream << d->index;
+
+        // Write children
+        stream << int(d->vector.size());
+        for (const auto &node : d->vector) {
+            node->write(stream);
+        }
     }
 
     Node *VectorNode::clone(bool user) const {
@@ -246,6 +280,13 @@ namespace Substate {
         remove(node);
     }
 
+    void VectorNode::propagateChildren(const std::function<void(Node *)> &func) {
+        Q_D(VectorNode);
+        for (const auto &node : std::as_const(d->vector)) {
+            func(node);
+        }
+    }
+
     VectorNode::VectorNode(VectorNodePrivate &d) : Node(d) {
         d.init();
     }
@@ -262,6 +303,9 @@ namespace Substate {
     }
 
     VectorMoveAction::~VectorMoveAction() {
+    }
+
+    void VectorMoveAction::write(OStream &stream) const {
     }
 
     Action *VectorMoveAction::clone() const {
@@ -293,6 +337,9 @@ namespace Substate {
 
     VectorInsDelAction::~VectorInsDelAction() {
         delete m_tempIds;
+    }
+
+    void VectorInsDelAction::write(OStream &stream) const {
     }
 
     Action *VectorInsDelAction::clone() const {
@@ -333,11 +380,6 @@ namespace Substate {
                     for (const auto &child : std::as_const(m_children)) {
                         res.push_back(child);
                     }
-                }
-                break;
-            }
-            case AcquireInsertedNodesHook: {
-                if (t == VectorInsert) {
                 }
                 break;
             }

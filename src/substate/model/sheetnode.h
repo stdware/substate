@@ -36,6 +36,7 @@ namespace Substate {
         Node *clone(bool user) const override;
 
         void childDestroyed(Node *node) override;
+        void propagateChildren(const std::function<void(Node *)> &func) override;
 
     protected:
         SheetNode(SheetNodePrivate &d);
@@ -53,6 +54,7 @@ namespace Substate {
         ~SheetAction();
 
     public:
+        void write(OStream &stream) const override;
         Action *clone() const override;
         void execute(bool undo) override;
         void virtual_hook(int id, void *data) override;

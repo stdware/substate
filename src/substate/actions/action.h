@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 #include <substate/sender.h>
 #include <substate/stream.h>
@@ -11,8 +12,6 @@
 namespace Substate {
 
     class Node;
-
-    class ActionHelper;
 
     class SUBSTATE_EXPORT Action {
     public:
@@ -38,27 +37,23 @@ namespace Substate {
             CleanNodesHook = 1,
             InsertedNodesHook,
             RemovedNodesHook,
-            AcquireInsertedNodesHook,
         };
 
-        inline Type type() const;
-        inline int userType() const;
+        inline int type() const;
 
-        typedef Action *(*Factory)(IStream &, bool brief);
+        typedef Action *(*Factory)(IStream &, const std::unordered_map<int, Node *> &);
 
-        static Action *read(IStream &stream, bool brief = false);
+        static Action *read(IStream &stream, const std::unordered_map<int, Node *> &existingNodes);
         static bool registerFactory(int type, Factory fac);
 
     public:
+        virtual void write(OStream &stream) const = 0;
         virtual Action *clone() const = 0;
         virtual void execute(bool undo) = 0;
-
         virtual void virtual_hook(int id, void *data);
 
     protected:
         int t;
-
-        friend class ActionHelper;
 
         SUBSTATE_DISABLE_COPY_MOVE(Action)
     };
@@ -66,27 +61,8 @@ namespace Substate {
     inline Action::Action(int type) : t(type) {
     }
 
-    inline Action::Type Action::type() const {
-        return t >= User ? User : static_cast<Type>(t);
-    }
-
-    inline int Action::userType() const {
+    inline int Action::type() const {
         return t;
-    }
-
-    class SUBSTATE_EXPORT NodeAction : public Action {
-    public:
-        NodeAction(int type, Node *parent);
-        ~NodeAction();
-
-        inline Node *parent() const;
-
-    protected:
-        Node *m_parent;
-    };
-
-    Node *NodeAction::parent() const {
-        return m_parent;
     }
 
     class SUBSTATE_EXPORT ActionNotification : public Notification {

@@ -10,6 +10,7 @@
 #include "vectornode_p.h"
 
 #include "model_p.h"
+#include "nodehelper.h"
 
 namespace Substate {
 
@@ -87,6 +88,11 @@ namespace Substate {
     Node::~Node() {
     }
 
+    int Node::type() const {
+        Q_D(const Node);
+        return d->type;
+    }
+
     Node *Node::parent() const {
         Q_D(const Node);
         return d->parent;
@@ -100,16 +106,6 @@ namespace Substate {
     int Node::index() const {
         Q_D(const Node);
         return d->index;
-    }
-
-    Node::Type Node::type() const {
-        Q_D(const Node);
-        return d->type >= User ? User : static_cast<Type>(d->type);
-    }
-
-    int Node::userType() const {
-        Q_D(const Node);
-        return d->type;
     }
 
     bool Node::isFree() const {
@@ -225,6 +221,56 @@ namespace Substate {
     */
     Node::Node(NodePrivate &d) : Sender(d) {
         d.init();
+    }
+
+
+
+    NodeAction::NodeAction(int type, Node *parent) : Action(type), m_parent(parent) {
+    }
+
+    NodeAction::~NodeAction() {
+    }
+
+    RootChangeAction::RootChangeAction(Node *root, Node *oldRoot)
+        : Action(RootChange), r(root), oldr(oldRoot) {
+    }
+
+    RootChangeAction::~RootChangeAction() {
+    }
+
+    void RootChangeAction::write(OStream &stream) const {
+    }
+
+    Action *RootChangeAction::clone() const {
+        return new RootChangeAction(r, oldr);
+    }
+
+    void RootChangeAction::execute(bool undo) {
+    }
+
+    void RootChangeAction::virtual_hook(int id, void *data) {
+        switch (id) {
+            case CleanNodesHook: {
+                NodeHelper::forceDelete(r);
+                break;
+            }
+            case InsertedNodesHook: {
+                if (r) {
+                    auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
+                    res.push_back(r);
+                }
+                break;
+            }
+            case RemovedNodesHook: {
+                if (oldr) {
+                    auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
+                    res.push_back(oldr);
+                }
+                break;
+            }
+            default:
+                break;
+        }
     }
 
 }

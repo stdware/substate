@@ -12,6 +12,25 @@ namespace Substate {
     }
 
     BytesNode *BytesNodePrivate::read(IStream &stream) {
+        auto node = new BytesNode();
+        auto d = node->d_func();
+
+        int size;
+        stream >> d->index >> size;
+        if (stream.fail()) {
+            goto abort;
+        }
+
+        d->byteArray.resize(size);
+        stream.readRawData(d->byteArray.data(), size);
+
+        if (stream.fail()) {
+            goto abort;
+        }
+        return node;
+
+    abort:
+        delete node;
         return nullptr;
     }
 
@@ -132,6 +151,14 @@ namespace Substate {
     }
 
     void BytesNode::write(OStream &stream) const {
+        Q_D(const BytesNode);
+
+        // Write index
+        stream << d->index;
+
+        // Write data
+        stream << int(d->byteArray.size());
+        stream.writeRawData(d->byteArray.data(), d->byteArray.size());
     }
 
     Node *BytesNode::clone(bool user) const {
@@ -151,6 +178,9 @@ namespace Substate {
     }
 
     BytesAction::~BytesAction() {
+    }
+
+    void BytesAction::write(OStream &stream) const {
     }
 
     Action *BytesAction::clone() const {

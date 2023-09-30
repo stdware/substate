@@ -55,6 +55,7 @@ namespace Substate {
         Node *clone(bool user) const override;
 
         void childDestroyed(Node *node) override;
+        void propagateChildren(const std::function<void(Node *)> &func) override;
 
     protected:
         MappingNode(MappingNodePrivate &d);

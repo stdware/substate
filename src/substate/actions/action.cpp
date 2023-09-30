@@ -1,8 +1,6 @@
 #include "action.h"
 
-#include <mutex>
 #include <shared_mutex>
-#include <unordered_map>
 
 namespace Substate {
 
@@ -22,7 +20,7 @@ namespace Substate {
     Action::~Action() {
     }
 
-    Action *Action::read(IStream &stream, bool brief) {
+    Action *Action::read(IStream &stream, const std::unordered_map<int, Node *> &existingNodes) {
         int type;
         stream >> type;
         if (stream.fail())
@@ -33,7 +31,7 @@ namespace Substate {
                 break;
         }
 
-        return getFactory(type)(stream, brief);
+        return getFactory(type)(stream, existingNodes);
     }
 
     bool Action::registerFactory(int type, Factory fac) {
@@ -48,12 +46,6 @@ namespace Substate {
     }
 
     void Action::virtual_hook(int id, void *data) {
-    }
-
-    NodeAction::NodeAction(int type, Node *parent): Action(type),m_parent(parent)  {
-    }
-
-    NodeAction::~NodeAction() {
     }
 
     ActionNotification::ActionNotification(Notification::Type type, Action *action)

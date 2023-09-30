@@ -33,7 +33,6 @@ namespace Substate {
 
         if (it->second.is_variant)
             return {const_cast<Variant *>(&it->second.variant)};
-
         return {it->second.node};
     }
 
@@ -74,6 +73,13 @@ namespace Substate {
         if (it == d->mappingIndexes.end())
             return;
         d->mapping.erase(it->second);
+    }
+
+    void MappingNode::propagateChildren(const std::function<void(Node *)> &func) {
+        Q_D(MappingNode);
+        for (const auto &pair : std::as_const(d->mappingIndexes)) {
+            func(pair.first);
+        }
     }
 
     MappingNode::MappingNode(MappingNodePrivate &d) : Node(d) {
