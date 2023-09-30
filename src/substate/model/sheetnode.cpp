@@ -35,7 +35,7 @@ namespace Substate {
         for (int i = 0; i < size; ++i) {
             int id;
             stream >> id;
-            auto child = read(stream);
+            auto child = Node::read(stream);
             if (!child) {
                 goto abort;
             }
@@ -80,9 +80,10 @@ namespace Substate {
         auto it = records.find(id);
         auto node = it->second;
 
+        SheetAction a(Action::SheetRemove, q, id, node);
+
         // Pre-Propagate signal
         {
-            SheetAction a(Action::SheetRemove, q, id, node);
             ActionNotification n(Notification::ActionAboutToTrigger, &a);
             q->dispatch(&n);
         }
@@ -95,7 +96,6 @@ namespace Substate {
 
         // Propagate signal
         {
-            SheetAction a(Action::SheetRemove, q, id, node);
             ActionNotification n(Notification::ActionTriggered, &a);
             q->dispatch(&n);
         }

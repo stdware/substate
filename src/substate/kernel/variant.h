@@ -26,6 +26,14 @@ namespace Substate {
             return stream.good();
         }
 
+        static bool null(const void *buf) {
+            return *reinterpret_cast<const T *>(buf) == T();
+        }
+
+        static bool equal(const void *buf, const void *buf2) {
+            return *reinterpret_cast<const T *>(buf) == *reinterpret_cast<const T *>(buf2);
+        }
+
         static void *construct(const void *buf) {
             return buf ? new T(*reinterpret_cast<const T *>(buf)) : new T();
         }
@@ -78,9 +86,14 @@ namespace Substate {
         inline Variant &operator=(Variant &&other) noexcept;
         inline void swap(Variant &other) noexcept;
 
-        bool isValid() const;
+        bool operator==(const Variant &other) const;
+        inline bool operator!=(const Variant &other) const;
+
         Type type() const;
         int userType() const;
+
+        bool isValid() const;
+        bool isNull() const;
 
         bool toBool() const;
         int8_t toByte() const;
@@ -155,6 +168,8 @@ namespace Substate {
         struct Handler {
             void *(*read)(IStream &);
             bool (*write)(const void *, OStream &);
+            bool (*null)(const void *);
+            bool (*equal)(const void *, const void *);
             void *(*construct)(const void *);
             void (*destroy)(void *);
         };
@@ -180,6 +195,10 @@ namespace Substate {
 
     inline void Variant::swap(Variant &other) noexcept {
         std::swap(d, other.d);
+    }
+
+    bool Variant::operator!=(const Variant &other) const {
+        return !(*this == other);
     }
 
     template <class T>
@@ -219,6 +238,8 @@ namespace Substate {
                                            {
                                                TypeFunctionHelper<T>::read,
                                                TypeFunctionHelper<T>::write,
+                                               TypeFunctionHelper<T>::null,
+                                               TypeFunctionHelper<T>::equal,
                                                TypeFunctionHelper<T>::construct,
                                                TypeFunctionHelper<T>::destroy,
                                            },

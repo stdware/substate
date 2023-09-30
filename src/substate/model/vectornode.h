@@ -53,35 +53,35 @@ namespace Substate {
         friend class VectorInsDelAction;
     };
 
-    bool VectorNode::prepend(Node *node) {
+    inline bool VectorNode::prepend(Node *node) {
         return insert(0, node);
     }
 
-    bool VectorNode::prepend(const std::vector<Node *> &nodes) {
+    inline bool VectorNode::prepend(const std::vector<Node *> &nodes) {
         return insert(0, nodes);
     }
 
-    bool VectorNode::append(Node *node) {
+    inline bool VectorNode::append(Node *node) {
         return insert(size(), node);
     }
 
-    bool VectorNode::append(const std::vector<Node *> &nodes) {
+    inline bool VectorNode::append(const std::vector<Node *> &nodes) {
         return insert(size(), nodes);
     }
 
-    bool VectorNode::insert(int index, Node *node) {
+    inline bool VectorNode::insert(int index, Node *node) {
         return insert(size(), std::vector<Node *>({node}));
     }
 
-    bool VectorNode::removeOne(int index) {
+    inline bool VectorNode::removeOne(int index) {
         return remove(index, 1);
     }
 
-    bool VectorNode::move2(int index, int count, int dest) {
+    inline bool VectorNode::move2(int index, int count, int dest) {
         return move(index, count, (dest <= index) ? dest : (dest + count));
     }
 
-    int VectorNode::count() const {
+    inline int VectorNode::count() const {
         return size();
     }
 

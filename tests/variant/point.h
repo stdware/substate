@@ -15,6 +15,8 @@ public:
     friend Substate::IStream &operator>>(Substate::IStream &stream, Point &p);
     friend Substate::OStream &operator<<(Substate::OStream &stream, const Point &p);
 
+    bool operator==(const Point &other) const;
+
     static int g_count();
 };
 

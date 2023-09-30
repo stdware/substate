@@ -19,6 +19,10 @@ Point::~Point() {
     g_cnt--;
 }
 
+bool Point::operator==(const Point &other) const {
+    return x == other.x && y == other.y;
+}
+
 Substate::IStream &operator>>(Substate::IStream &stream, Point &p) {
     stream >> p.x >> p.y;
     return stream;

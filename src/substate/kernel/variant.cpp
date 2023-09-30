@@ -23,6 +23,8 @@ namespace Substate {
          {
                 TypeFunctionHelper<std::string>::read,
                 TypeFunctionHelper<std::string>::write,
+                TypeFunctionHelper<std::string>::null,
+                TypeFunctionHelper<std::string>::equal,
                 TypeFunctionHelper<std::string>::construct,
                 TypeFunctionHelper<std::string>::destroy,
             }, }
@@ -260,6 +262,46 @@ namespace Substate {
         return *this;
     }
 
+    bool Variant::operator==(const Variant &other) const {
+        const auto &data = d.data;
+        const auto &other_data = other.d.data;
+
+        if (!d.is_shared && !other.d.is_shared) {
+            switch (d.type) {
+                case Invalid:
+                case Null:
+                    return d.type == other.d.type;
+                case Variant::Boolean:
+                    return d.data.b == other.toBool();
+                case Variant::Byte:
+                    return d.data.c == other.toByte();
+                case Variant::Int16:
+                    return d.data.s == other.toInt16();
+                case Variant::Int32:
+                    return d.data.i == other.toInt32();
+                case Variant::Int64:
+                    return d.data.l == other.toInt64();
+                case Variant::UByte:
+                    return d.data.uc == other.toUByte();
+                case Variant::UInt16:
+                    return d.data.us == other.toUInt16();
+                case Variant::UInt32:
+                    return d.data.u == other.toUInt32();
+                case Variant::UInt64:
+                    return d.data.ul == other.toUInt64();
+                case Variant::Single:
+                    return d.data.f == other.toSingle();
+                case Variant::Double:
+                    return d.data.d == other.toDouble();
+                default:
+                    break;
+            }
+        }
+
+        return d.type == other.d.type &&
+               getHandler(d.type).equal(data.shared->ptr, other_data.shared->ptr);
+    }
+
     /*!
         \fn void Variant::swap(QVariant &other)
 
@@ -271,6 +313,43 @@ namespace Substate {
     */
     bool Variant::isValid() const {
         return d.type != Invalid;
+    }
+
+    /*!
+        Returns \c true if the storage type of this variant is an empty value, otherwise returns \c
+       false.
+    */
+    bool Variant::isNull() const {
+        switch (d.type) {
+            case Invalid:
+            case Null:
+                return true;
+            case Variant::Boolean:
+                return !d.data.b;
+            case Variant::Byte:
+                return !d.data.c;
+            case Variant::Int16:
+                return !d.data.s;
+            case Variant::Int32:
+                return !d.data.i;
+            case Variant::Int64:
+                return !d.data.l;
+            case Variant::UByte:
+                return !d.data.uc;
+            case Variant::UInt16:
+                return !d.data.us;
+            case Variant::UInt32:
+                return !d.data.u;
+            case Variant::UInt64:
+                return !d.data.ul;
+            case Variant::Single:
+                return d.data.f == 0;
+            case Variant::Double:
+                return d.data.d == 0;
+            default:
+                break;
+        }
+        return getHandler(d.type).null(d.data.shared->ptr);
     }
 
     /*!
@@ -492,7 +571,8 @@ namespace Substate {
 
         switch (type) {
             case Variant::Invalid:
-                break;
+            case Variant::Null:
+                return stream;
             case Variant::Boolean: {
                 // Use 1 byte
                 int8_t tmp;
@@ -601,6 +681,7 @@ namespace Substate {
 
         switch (d.type) {
             case Variant::Invalid:
+            case Variant::Null:
                 return stream;
             case Variant::Boolean: {
                 // Use 1 byte

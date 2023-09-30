@@ -56,7 +56,7 @@ namespace Substate {
 
         d->vector.reserve(size);
         for (int i = 0; i < size; ++i) {
-            auto child = read(stream);
+            auto child = Node::read(stream);
             if (!child) {
                 goto abort;
             }
@@ -96,9 +96,10 @@ namespace Substate {
         Q_Q(VectorNode);
         q->beginAction();
 
+        VectorMoveAction a(q, index, count, dest);
+
         // Pre-Propagate signal
         {
-            VectorMoveAction a(q, index, count, dest);
             ActionNotification n(Notification::ActionAboutToTrigger, &a);
             q->dispatch(&n);
         }
@@ -108,7 +109,6 @@ namespace Substate {
 
         // Propagate signal
         {
-            VectorMoveAction a(q, index, count, dest);
             ActionNotification n(Notification::ActionTriggered, &a);
             q->dispatch(&n);
         }
@@ -124,9 +124,10 @@ namespace Substate {
         tmp.resize(count);
         std::copy(vector.begin() + index, vector.begin() + index + count, tmp.begin());
 
+        VectorInsDelAction a(Action::VectorRemove, q, index, tmp);
+
         // Pre-Propagate signal
         {
-            VectorInsDelAction a(Action::VectorRemove, q, index, tmp);
             ActionNotification n(Notification::ActionAboutToTrigger, &a);
             q->dispatch(&n);
         }
@@ -139,7 +140,6 @@ namespace Substate {
 
         // Propagate signal
         {
-            VectorInsDelAction a(Action::VectorRemove, q, index, tmp);
             ActionNotification n(Notification::ActionTriggered, &a);
             q->dispatch(&n);
         }

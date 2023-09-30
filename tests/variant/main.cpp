@@ -24,6 +24,8 @@ static void testInt() {
         stream >> var2;
         assert(var2.toInt32() == 12);
     }
+
+    assert(Variant(uint64_t(198)) == Variant(int16_t(198)));
 }
 
 static void testString() {
@@ -41,6 +43,8 @@ static void testString() {
         stream >> var2;
         assert(var2.toString() == "what");
     }
+
+    assert(Variant("which") == Variant("which"));
 }
 
 static void testUserType() {
@@ -61,8 +65,7 @@ static void testUserType() {
         assert(p.x == 2 && p.y == 3);
     }
 
-    { Variant var1 = Variant::fromValue(uint64_t(&ss)); }
-
+    assert(Variant::fromValue(Point(1, 2)) == Variant::fromValue(Point(1, 2)));
     assert(Point::g_count() == 0);
 }
 

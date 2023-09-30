@@ -44,7 +44,7 @@ namespace Substate {
         friend class SheetAction;
     };
 
-    int SheetNode::count() const {
+    inline int SheetNode::count() const {
         return size();
     }
 

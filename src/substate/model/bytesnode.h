@@ -79,15 +79,15 @@ namespace Substate {
         ByteArray b, oldb;
     };
 
-    int BytesAction::index() const {
+    inline int BytesAction::index() const {
         return m_index;
     }
 
-    ByteArray BytesAction::bytes() const {
+    inline ByteArray BytesAction::bytes() const {
         return b;
     }
 
-    ByteArray BytesAction::oldBytes() const {
+    inline ByteArray BytesAction::oldBytes() const {
         return oldb;
     }
 

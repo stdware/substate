@@ -27,8 +27,7 @@ namespace Substate {
             VectorRemove,
             SheetInsert,
             SheetRemove,
-            MappingInsert,
-            MappingRemove,
+            MappingSet,
             RootChange,
             User = 1024,
         };
@@ -76,7 +75,7 @@ namespace Substate {
         Action *a;
     };
 
-    Action *ActionNotification::action() const {
+    inline Action *ActionNotification::action() const {
         return a;
     }
 
