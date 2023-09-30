@@ -18,7 +18,7 @@ namespace Substate {
     SqliteEngine::~SqliteEngine() {
     }
 
-    SqliteEngine::SqliteEngine(SqliteEnginePrivate &d) : MemEngine(d) {
+    SqliteEngine::SqliteEngine(SqliteEnginePrivate &d) : MemoryEngine(d) {
         d.init();
     }
 

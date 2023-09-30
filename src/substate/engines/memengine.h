@@ -7,17 +7,17 @@ namespace Substate {
 
     class MemEnginePrivate;
 
-    class SUBSTATE_EXPORT MemEngine : public Engine {
+    class SUBSTATE_EXPORT MemoryEngine : public Engine {
     public:
-        MemEngine();
-        ~MemEngine();
+        MemoryEngine();
+        ~MemoryEngine();
 
     public:
         void commit(const std::vector<Action *> &actions, const Variant &message) override;
         void execute(bool undo) override;
 
     protected:
-        MemEngine(MemEnginePrivate &d);
+        MemoryEngine(MemEnginePrivate &d);
     };
 
 }

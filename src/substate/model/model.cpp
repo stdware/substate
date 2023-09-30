@@ -67,7 +67,7 @@ namespace Substate {
     /*!
         Constructor. By default, the model will create an MemEngine as the backend
     */
-    Model::Model() : Model(*new ModelPrivate(new MemEngine())) {
+    Model::Model() : Model(*new ModelPrivate(new MemoryEngine())) {
     }
 
     /*!

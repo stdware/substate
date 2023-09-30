@@ -12,8 +12,6 @@ namespace Substate {
 
     class Model;
 
-    class EngineHelper;
-
     class EnginePrivate;
 
     class SUBSTATE_EXPORT Engine {
@@ -40,8 +38,6 @@ namespace Substate {
     protected:
         std::unique_ptr<EnginePrivate> d_ptr;
         Engine(EnginePrivate &d);
-
-        friend class EngineHelper;
 
         SUBSTATE_DISABLE_COPY_MOVE(Engine)
     };

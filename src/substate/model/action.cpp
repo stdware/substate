@@ -2,10 +2,10 @@
 
 #include <shared_mutex>
 
-#include "model/bytesnode_p.h"
-#include "model/mappingnode_p.h"
-#include "model/sheetnode_p.h"
-#include "model/vectornode_p.h"
+#include "bytesnode_p.h"
+#include "mappingnode_p.h"
+#include "sheetnode_p.h"
+#include "vectornode_p.h"
 
 namespace Substate {
 

@@ -18,7 +18,7 @@ namespace Substate {
     FileSystemEngine::~FileSystemEngine() {
     }
 
-    FileSystemEngine::FileSystemEngine(FileSystemEnginePrivate &d) : MemEngine(d) {
+    FileSystemEngine::FileSystemEngine(FileSystemEnginePrivate &d) : MemoryEngine(d) {
         d.init();
     }
 

@@ -7,7 +7,7 @@ namespace Substate {
 
     class FileSystemEnginePrivate;
 
-    class SUBSTATE_EXPORT FileSystemEngine : public MemEngine {
+    class SUBSTATE_EXPORT FileSystemEngine : public MemoryEngine {
     public:
         FileSystemEngine();
         ~FileSystemEngine();

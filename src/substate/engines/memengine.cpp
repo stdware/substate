@@ -12,23 +12,23 @@ namespace Substate {
     void MemEnginePrivate::init() {
     }
 
-    MemEngine::MemEngine() : MemEngine(*new MemEnginePrivate()) {
+    MemoryEngine::MemoryEngine() : MemoryEngine(*new MemEnginePrivate()) {
     }
 
-    MemEngine::~MemEngine() {
+    MemoryEngine::~MemoryEngine() {
     }
 
-    void MemEngine::commit(const std::vector<Action *> &actions, const Variant &message) {
+    void MemoryEngine::commit(const std::vector<Action *> &actions, const Variant &message) {
         Engine::commit(actions, message);
     }
 
-    void MemEngine::execute(bool undo) {
+    void MemoryEngine::execute(bool undo) {
     }
 
     /*!
         \internal
     */
-    MemEngine::MemEngine(MemEnginePrivate &d) : Engine(d) {
+    MemoryEngine::MemoryEngine(MemEnginePrivate &d) : Engine(d) {
         d.init();
     }
 }
