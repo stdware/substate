@@ -2,7 +2,7 @@
 #include "fsengine_p.h"
 
 namespace Substate {
-    
+
     FileSystemEnginePrivate::FileSystemEnginePrivate() {
     }
 
@@ -10,6 +10,23 @@ namespace Substate {
     }
 
     void FileSystemEnginePrivate::init() {
+    }
+
+    bool FileSystemEnginePrivate::acceptChangeMaxSteps(int steps) const {
+        return MemoryEnginePrivate::acceptChangeMaxSteps(steps);
+    }
+
+    void FileSystemEnginePrivate::afterCurrentChange() {
+        MemoryEnginePrivate::afterCurrentChange();
+    }
+
+    void FileSystemEnginePrivate::afterCommit(const std::vector<Action *> &actions,
+                                              const Engine::StepMessage &message) {
+        MemoryEnginePrivate::afterCommit(actions, message);
+    }
+
+    void FileSystemEnginePrivate::afterReset() {
+        MemoryEnginePrivate::afterReset();
     }
 
     FileSystemEngine::FileSystemEngine() {

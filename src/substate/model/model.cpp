@@ -187,7 +187,7 @@ namespace Substate {
     }
 
     /*!
-        Commits the current transaction.
+        Commits the current transaction with a message.
 
         A fatal error will be raised if called when the engine is not in transaction state.
     */

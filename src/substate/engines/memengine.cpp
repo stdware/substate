@@ -16,7 +16,7 @@ namespace Substate {
     void MemoryEnginePrivate::init() {
     }
 
-    void MemoryEnginePrivate::removeActions(size_t b, size_t e) {
+    void MemoryEnginePrivate::removeActions(int b, int e) {
         if (b >= e) {
             return;
         }
@@ -130,6 +130,7 @@ namespace Substate {
         d->stack.clear(); // All nodes have been deleted in Engine::reset()
         d->min = 0;
         d->current = 0;
+
         d->afterReset();
     }
 

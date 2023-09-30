@@ -13,8 +13,18 @@ namespace Substate {
         ~FileSystemEnginePrivate();
         void init();
 
+        // The maximum number of checkpoints kept in filesystem
         int maxCheckPoints;
+
+        // The directory containing the journal files
         std::filesystem::path dir;
+
+        // Override functions
+        bool acceptChangeMaxSteps(int steps) const override;
+        void afterCurrentChange() override;
+        void afterCommit(const std::vector<Action *> &actions,
+                         const Engine::StepMessage &message) override;
+        void afterReset() override;
     };
 
 }
