@@ -25,6 +25,8 @@ namespace Substate {
 
         int addIndex(Node *node, int idx = 0);
         void removeIndex(int index);
+
+        void setRootItem_helper(Node *node);
     };
 
 }

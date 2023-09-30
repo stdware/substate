@@ -58,6 +58,8 @@ namespace Substate {
 
         friend class Node;
         friend class NodePrivate;
+        friend class NodeHelper;
+        friend class RootChangeAction;
     };
 
     inline bool Model::inTransaction() const {

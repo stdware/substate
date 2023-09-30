@@ -1,5 +1,7 @@
 #include "nodehelper.h"
+
 #include "node_p.h"
+#include "model_p.h"
 
 namespace Substate {
 
@@ -36,6 +38,18 @@ namespace Substate {
     */
     void NodeHelper::setManaged(Node *node, bool managed) {
         node->d_func()->setManaged(managed);
+    }
+
+    /*!
+        Sets the root item of the model without triggering any action.
+    */
+    void NodeHelper::setModelRoot(Node *node, Model *model) {
+        if (node) {
+            if (node->isManaged())
+                node->d_func()->setManaged(false);
+            propagateModel(node, model);
+        }
+        model->d_func()->root = node;
     }
 
     /*!

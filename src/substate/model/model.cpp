@@ -1,6 +1,10 @@
 #include "model.h"
 #include "model_p.h"
 
+#include <cassert>
+
+#include "node_p.h"
+
 namespace Substate {
 
     ModelPrivate::ModelPrivate() {
@@ -23,6 +27,33 @@ namespace Substate {
 
     void ModelPrivate::removeIndex(int index) {
         indexes.erase(index);
+    }
+
+    void ModelPrivate::setRootItem_helper(Substate::Node *node) {
+        Q_Q(Model);
+
+        RootChangeAction a(node, root);
+
+        // Pre-Propagate
+        {
+            ActionNotification n(Notification::ActionAboutToTrigger, &a);
+            q->dispatch(&n);
+        }
+
+        // Do change
+        if (root) {
+            root->d_func()->setManaged(true);
+        }
+        if (node && node->isManaged()) {
+            node->d_func()->setManaged(false);
+        }
+        root = node;
+
+        // Propagate signal
+        {
+            ActionNotification n(Notification::ActionTriggered, &a);
+            q->dispatch(&n);
+        }
     }
 
     /*!
@@ -84,13 +115,18 @@ namespace Substate {
         Returns the root node of the model.
     */
     Node *Model::root() const {
-        return nullptr;
+        Q_D(const Model);
+        return d->root;
     }
 
     /*!
         Sets the root node of the model.
     */
     void Model::setRoot(Node *node) {
+        Q_D(Model);
+        assert(isWritable());
+        assert(!node || node->isFree());
+        d->setRootItem_helper(node);
     }
 
     /*!

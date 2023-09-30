@@ -103,6 +103,27 @@ namespace Substate {
         q->endAction();
     }
 
+    Action *readSheetAction(Action::Type type, IStream &stream,
+                            const std::unordered_map<int, Node *> &existingNodes) {
+        int parentIndex, id, index;
+        stream >> parentIndex >> id >> index;
+        if (stream.fail())
+            return nullptr;
+
+        auto it = existingNodes.find(parentIndex);
+        if (it == existingNodes.end()) {
+            return nullptr;
+        }
+        Node *parent = it->second;
+
+        auto it2 = existingNodes.find(index);
+        if (it == existingNodes.end()) {
+            return nullptr;
+        }
+
+        return new SheetAction(type, parent, id, it2->second);
+    }
+
     SheetNode::SheetNode() : SheetNode(*new SheetNodePrivate(Sheet)) {
     }
 

@@ -2,7 +2,10 @@
 
 #include <shared_mutex>
 
+#include "model/bytesnode_p.h"
 #include "model/mappingnode_p.h"
+#include "model/sheetnode_p.h"
+#include "model/vectornode_p.h"
 
 namespace Substate {
 
@@ -29,10 +32,22 @@ namespace Substate {
             return nullptr;
 
         switch (type) {
+            case BytesInsert:
+            case BytesRemove:
             case BytesReplace:
-                return nullptr;
+                return readBytesAction(static_cast<Type>(type), stream, existingNodes);
+            case SheetInsert:
+            case SheetRemove:
+                return readSheetAction(static_cast<Type>(type), stream, existingNodes);
+            case VectorInsert:
+            case VectorRemove:
+                return readVectorInsDelAction(static_cast<Type>(type), stream, existingNodes);
+            case VectorMove:
+                return readVectorMoveAction(stream, existingNodes);
             case MappingSet:
                 return readMappingAction(stream, existingNodes);
+            case RootChange:
+                return readRootChangeAction(stream, existingNodes);
             default:
                 break;
         }

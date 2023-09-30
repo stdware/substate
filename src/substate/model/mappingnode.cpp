@@ -199,18 +199,18 @@ namespace Substate {
 
     Action *readMappingAction(IStream &stream,
                               const std::unordered_map<int, Node *> &existingNodes) {
-        int parent;
+        int parentIndex;
         std::string key;
 
-        stream >> parent >> key;
+        stream >> parentIndex >> key;
         if (stream.fail())
             return nullptr;
 
-        auto it = existingNodes.find(parent);
+        auto it = existingNodes.find(parentIndex);
         if (it == existingNodes.end()) {
             return nullptr;
         }
-        Node *parentNode = it->second;
+        Node *parent = it->second;
 
         auto orgData = readMappingActionValue(stream, existingNodes);
         if (stream.fail())
@@ -228,7 +228,7 @@ namespace Substate {
                                       ? MappingNodePrivate::createValue(&newData.variant)
                                       : MappingNodePrivate::createValue(newData.node);
 
-        return new MappingAction(parentNode, key, v, oldv);
+        return new MappingAction(parent, key, v, oldv);
     }
 
     MappingNode::MappingNode() : Node(*new MappingNodePrivate(Mapping)) {

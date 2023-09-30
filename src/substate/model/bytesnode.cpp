@@ -92,6 +92,25 @@ namespace Substate {
         q->endAction();
     }
 
+    Action *readBytesAction(Action::Type type, IStream &stream,
+                            const std::unordered_map<int, Node *> &existingNodes) {
+        int parent;
+        int index;
+        ByteArray b, oldb;
+
+        stream >> parent >> index >> b >> oldb;
+        if (stream.fail())
+            return nullptr;
+
+        auto it = existingNodes.find(parent);
+        if (it == existingNodes.end()) {
+            return nullptr;
+        }
+        Node *parentNode = it->second;
+
+        return new BytesAction(type, parentNode, index, b, oldb);
+    }
+
     BytesNode::BytesNode() : Node(*new BytesNodePrivate()) {
     }
 

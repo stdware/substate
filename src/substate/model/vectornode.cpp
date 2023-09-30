@@ -145,6 +145,50 @@ namespace Substate {
         }
     }
 
+    Action *readVectorMoveAction(IStream &stream,
+                                 const std::unordered_map<int, Node *> &existingNodes) {
+        int parentIndex, index, cnt, dest;
+        stream >> parentIndex >> index >> cnt >> dest;
+        if (stream.fail())
+            return nullptr;
+
+        auto it = existingNodes.find(parentIndex);
+        if (it == existingNodes.end()) {
+            return nullptr;
+        }
+        Node *parent = it->second;
+
+        return new VectorMoveAction(parent, index, cnt, dest);
+    }
+
+    Action *readVectorInsDelAction(Action::Type type, IStream &stream,
+                                   const std::unordered_map<int, Node *> &existingNodes) {
+        int parentIndex, index, size;
+        stream >> parentIndex >> index >> size;
+        if (stream.fail())
+            return nullptr;
+
+        auto it = existingNodes.find(parentIndex);
+        if (it == existingNodes.end()) {
+            return nullptr;
+        }
+        Node *parent = it->second;
+
+        std::vector<Node *> children;
+        children.reserve(size);
+        for (int i = 0; i < size; ++i) {
+            int childIndex;
+            stream >> childIndex;
+
+            auto it2 = existingNodes.find(childIndex);
+            if (it2 == existingNodes.end()) {
+                return nullptr;
+            }
+            children.push_back(it2->second);
+        }
+        return new VectorInsDelAction(type, parent, index, children);
+    }
+
     VectorNode::VectorNode() : VectorNode(*new VectorNodePrivate(Vector)) {
     }
 
@@ -340,7 +384,7 @@ namespace Substate {
     }
 
     void VectorInsDelAction::write(OStream &stream) const {
-        stream << m_parent->index() << m_index;
+        stream << m_parent->index() << m_index << int(m_children.size());
         for (const auto &node : m_children) {
             stream << node->index();
         }

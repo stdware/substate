@@ -82,6 +82,30 @@ namespace Substate {
         return !managed && (!model || model->isWritable());
     }
 
+    Action *readRootChangeAction(IStream &stream,
+                                 const std::unordered_map<int, Node *> &existingNodes) {
+        int oldRootIndex, newRootIndex;
+        stream >> oldRootIndex >> newRootIndex;
+
+        Node *oldRoot = nullptr, *newRoot = nullptr;
+
+        if (oldRootIndex != 0) {
+            auto it = existingNodes.find(oldRootIndex);
+            if (it == existingNodes.end())
+                return nullptr;
+            oldRoot = it->second;
+        }
+
+        if (newRootIndex != 0) {
+            auto it = existingNodes.find(newRootIndex);
+            if (it == existingNodes.end())
+                return nullptr;
+            newRoot = it->second;
+        }
+
+        return new RootChangeAction(newRoot, oldRoot);
+    }
+
     Node::Node(int type) : Node(*new NodePrivate(type)) {
     }
 
@@ -223,8 +247,6 @@ namespace Substate {
         d.init();
     }
 
-
-
     NodeAction::NodeAction(int type, Node *parent) : Action(type), m_parent(parent) {
     }
 
@@ -239,6 +261,7 @@ namespace Substate {
     }
 
     void RootChangeAction::write(OStream &stream) const {
+        stream << (oldr ? oldr->index() : 0) << (r ? r->index() : 0);
     }
 
     Action *RootChangeAction::clone() const {
@@ -246,6 +269,8 @@ namespace Substate {
     }
 
     void RootChangeAction::execute(bool undo) {
+        auto d = (r ? r->model() : oldr->model())->d_func();
+        d->setRootItem_helper(undo ? oldr : r);
     }
 
     void RootChangeAction::virtual_hook(int id, void *data) {

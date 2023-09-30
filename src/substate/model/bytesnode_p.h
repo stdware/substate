@@ -23,6 +23,9 @@ namespace Substate {
         std::vector<char> byteArray;
     };
 
+    Action *readBytesAction(Action::Type type, IStream &stream,
+                            const std::unordered_map<int, Node *> &existingNodes);
+
 }
 
 #endif // BYTESNODE_P_H

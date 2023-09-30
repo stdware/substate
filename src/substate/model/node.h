@@ -13,6 +13,8 @@ namespace Substate {
 
     class Model;
 
+    class ModelPrivate;
+
     class NodeHelper;
 
     class NodePrivate;
@@ -72,6 +74,8 @@ namespace Substate {
     protected:
         Node(NodePrivate &d);
 
+        friend class Model;
+        friend class ModelPrivate;
         friend class NodeHelper;
     };
 
