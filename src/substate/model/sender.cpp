@@ -70,7 +70,7 @@ namespace Substate {
     }
 
     /*!
-        Notifies all subscribers of the action message.
+        Notifies all subscribers of the notification.
     */
     void Sender::dispatch(Notification *n) {
         Q_D(Sender);
@@ -115,9 +115,9 @@ namespace Substate {
     */
 
     /*!
-        \fn void Subscriber::action(Action *action, bool done)
+        \fn void Subscriber::notified(Notification *n)
 
-        Processes the current action massage.
+        Processes the current notification.
     */
 
     /*!

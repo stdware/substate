@@ -143,7 +143,6 @@ namespace Substate {
 
     protected:
         std::vector<Node *> m_children;
-        std::vector<int *> *m_tempIds;
     };
 
     inline const std::vector<Node *> &VectorInsDelAction::children() const {

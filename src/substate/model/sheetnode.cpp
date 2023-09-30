@@ -252,6 +252,7 @@ namespace Substate {
     }
 
     void SheetAction::write(OStream &stream) const {
+        stream << m_parent->index() << m_id << m_child->index();
     }
 
     Action *SheetAction::clone() const {

@@ -306,6 +306,7 @@ namespace Substate {
     }
 
     void VectorMoveAction::write(OStream &stream) const {
+        stream << m_parent->index() << m_index << cnt << dest;
     }
 
     Action *VectorMoveAction::clone() const {
@@ -332,14 +333,17 @@ namespace Substate {
 
     VectorInsDelAction::VectorInsDelAction(Type type, Node *parent, int index,
                                            const std::vector<Node *> &children)
-        : VectorAction(type, parent, index), m_children(children), m_tempIds(nullptr) {
+        : VectorAction(type, parent, index), m_children(children) {
     }
 
     VectorInsDelAction::~VectorInsDelAction() {
-        delete m_tempIds;
     }
 
     void VectorInsDelAction::write(OStream &stream) const {
+        stream << m_parent->index() << m_index;
+        for (const auto &node : m_children) {
+            stream << node->index();
+        }
     }
 
     Action *VectorInsDelAction::clone() const {

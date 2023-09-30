@@ -181,6 +181,7 @@ namespace Substate {
     }
 
     void BytesAction::write(OStream &stream) const {
+        stream << m_parent->index() << m_index << b << oldb;
     }
 
     Action *BytesAction::clone() const {

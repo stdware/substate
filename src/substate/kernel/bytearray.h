@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include <substate/substate_global.h>
+#include <substate/stream.h>
 
 namespace Substate {
 
@@ -16,9 +16,15 @@ namespace Substate {
         inline const char *data() const;
         inline int size() const;
 
+        bool operator==(const ByteArray &other) const;
+        bool operator!=(const ByteArray &other) const;
+
     protected:
         std::shared_ptr<char> m_data;
         int m_size;
+
+        SUBSTATE_EXPORT friend IStream &operator>>(IStream &stream, ByteArray &a);
+        SUBSTATE_EXPORT friend OStream &operator<<(OStream &stream, const ByteArray &a);
     };
 
     inline const char *ByteArray::data() const {

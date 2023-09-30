@@ -21,13 +21,12 @@ namespace Substate {
             bool is_variant;
 
             Data(const Variant &var) : variant(var), node(nullptr), is_variant(true){};
-            Data(Node *node) : node(node), is_variant(false){};
+            Data(Node *node = nullptr) : node(node), is_variant(false){};
         };
         std::unordered_map<std::string, Data> mapping;
         std::unordered_map<Node *, std::string> mappingIndexes;
 
         void setProperty_helper(const std::string &key, const Data &data);
-
 
         static inline MappingNode::Value createValue(Node *node) {
             return node;
@@ -37,6 +36,9 @@ namespace Substate {
             return var;
         }
     };
+
+    Action *readMappingAction(IStream &stream,
+                              const std::unordered_map<int, Node *> &existingNodes);
 
 }
 

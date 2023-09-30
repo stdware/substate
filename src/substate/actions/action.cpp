@@ -2,6 +2,8 @@
 
 #include <shared_mutex>
 
+#include "model/mappingnode_p.h"
+
 namespace Substate {
 
     static std::shared_mutex factoryLock;
@@ -27,6 +29,10 @@ namespace Substate {
             return nullptr;
 
         switch (type) {
+            case BytesReplace:
+                return nullptr;
+            case MappingSet:
+                return readMappingAction(stream, existingNodes);
             default:
                 break;
         }

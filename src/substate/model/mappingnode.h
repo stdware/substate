@@ -28,7 +28,7 @@ namespace Substate {
             inline bool isVariant() const;
             inline bool isNode() const;
 
-            inline Variant variant() const;
+            inline const Variant &variant() const;
             inline Node *node() const;
 
             inline void *internalPointer() const;
@@ -85,8 +85,9 @@ namespace Substate {
         return data && !is_variant;
     }
 
-    inline Variant MappingNode::Value::variant() const {
-        return is_variant ? *reinterpret_cast<Variant *>(data) : Variant();
+    inline const Variant &MappingNode::Value::variant() const {
+        static Variant var;
+        return is_variant ? *reinterpret_cast<Variant *>(data) : var;
     }
 
     inline Node *MappingNode::Value::node() const {
