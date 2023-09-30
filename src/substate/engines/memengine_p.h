@@ -6,11 +6,30 @@
 
 namespace Substate {
 
-    class SUBSTATE_EXPORT MemEnginePrivate : public EnginePrivate {
+    class SUBSTATE_EXPORT MemoryEnginePrivate : public EnginePrivate {
+        SUBSTATE_DECL_PUBLIC(MemoryEngine)
     public:
-        MemEnginePrivate();
-        ~MemEnginePrivate();
+        MemoryEnginePrivate();
+        ~MemoryEnginePrivate();
         void init();
+
+        int maxSteps;
+        int min;
+        int current;
+
+        struct TransactionData {
+            std::vector<Action *> actions;
+            Engine::StepMessage message;
+        };
+        std::vector<TransactionData> stack;
+
+        void removeActions(size_t begin, size_t end);
+
+        virtual bool acceptChangeMaxSteps(int steps) const;
+        virtual void afterCurrentChange();
+        virtual void afterCommit(const std::vector<Action *> &actions,
+                                 const Engine::StepMessage &message);
+        virtual void afterReset();
     };
 
 }

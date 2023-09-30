@@ -44,12 +44,21 @@ namespace Substate {
         Node *root() const;
         void setRoot(Node *node);
 
+        void reset();
+
         void beginTransaction();
         void abortTransaction();
-        void commitTransaction(const Variant &message);
+        void commitTransaction(const Engine::StepMessage &message);
 
         void undo();
         void redo();
+
+        inline bool canUndo() const;
+        inline bool canRedo() const;
+
+        int minimumStep() const;
+        int maximumStep() const;
+        int currentStep() const;
 
     public:
         void dispatch(Notification *n) override;
@@ -57,6 +66,7 @@ namespace Substate {
     protected:
         Model(ModelPrivate &d);
 
+        friend class Engine;
         friend class Node;
         friend class NodePrivate;
         friend class NodeHelper;
@@ -69,6 +79,14 @@ namespace Substate {
 
     inline bool Model::stepChanging() const {
         return state() & UndoRedoFlag;
+    }
+
+    inline bool Model::canUndo() const {
+        return currentStep() > minimumStep();
+    }
+
+    inline bool Model::canRedo() const {
+        return currentStep() < maximumStep();
     }
 
 }

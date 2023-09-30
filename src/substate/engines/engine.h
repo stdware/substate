@@ -19,21 +19,20 @@ namespace Substate {
     public:
         virtual ~Engine();
 
+        using StepMessage = std::unordered_map<std::string, Variant>;
+
     public:
         Model *model() const;
 
-        int minimum() const;
-        int maximum() const;
-        int current() const;
-
         virtual void setup(Model *model);
-        virtual void commit(const std::vector<Action *> &actions, const Variant &message);
+        virtual void commit(const std::vector<Action *> &actions, const StepMessage &message);
         virtual void execute(bool undo) = 0;
+        virtual void reset();
 
-    protected:
-        void setMinimum(int value);
-        void setMaximum(int value);
-        void setCurrent(int value);
+        virtual int minimum() const = 0;
+        virtual int maximum() const = 0;
+        virtual int current() const = 0;
+        virtual StepMessage stepMessage(int step) const = 0;
 
     protected:
         std::unique_ptr<EnginePrivate> d_ptr;

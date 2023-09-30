@@ -64,6 +64,7 @@ namespace Substate {
             ActionAboutToTrigger,
             ActionTriggered,
             StepChange,
+            AboutToReset,
         };
 
         explicit Notification(int type);

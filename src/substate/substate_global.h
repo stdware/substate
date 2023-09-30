@@ -101,4 +101,7 @@
 #  endif
 #endif
 
+// Utils
+#define SUBSTATE_UNUSED(X) (void) X;
+
 #endif // SUBSTATE_GLOBAL_H

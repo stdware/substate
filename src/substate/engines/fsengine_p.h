@@ -6,11 +6,15 @@
 
 namespace Substate {
 
-    class SUBSTATE_EXPORT FileSystemEnginePrivate : public MemEnginePrivate {
+    class SUBSTATE_EXPORT FileSystemEnginePrivate : public MemoryEnginePrivate {
+        SUBSTATE_DECL_PUBLIC(FileSystemEngine)
     public:
         FileSystemEnginePrivate();
         ~FileSystemEnginePrivate();
         void init();
+
+        int maxCheckPoints;
+        std::filesystem::path dir;
     };
 
 }

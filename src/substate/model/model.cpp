@@ -138,6 +138,18 @@ namespace Substate {
         d->setRootItem_helper(node);
     }
 
+    void Model::reset() {
+        Q_D(Model);
+        if (d->state != Idle) {
+            SUBSTATE_FATAL("Attempt to reset at an invalid state");
+        }
+
+        Notification n(Notification::AboutToReset);
+        dispatch(&n);
+
+        d->engine->reset();
+    }
+
     /*!
         Enters the transaction state.
 
@@ -146,7 +158,7 @@ namespace Substate {
     void Model::beginTransaction() {
         Q_D(Model);
         if (d->state != Idle) {
-            SUBSTATE_FATAL("Attempt to begin a transaction at an invalid state.\n");
+            SUBSTATE_FATAL("Attempt to begin a transaction at an invalid state");
         }
         d->state = Transaction;
     }
@@ -159,8 +171,19 @@ namespace Substate {
     void Model::abortTransaction() {
         Q_D(Model);
         if (d->state != Transaction) {
-            SUBSTATE_FATAL("Cannot abort the transaction without an ongoing transaction.\n");
+            SUBSTATE_FATAL("Cannot abort the transaction without an ongoing transaction");
         }
+
+        auto &stack = d->txActions;
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            const auto &a = *it;
+            a->execute(true);
+            a->virtual_hook(Action::CleanNodesHook, nullptr); // Need to remove newly created items
+            delete a;
+        }
+        stack.clear();
+
+        d->state = Idle;
     }
 
     /*!
@@ -168,16 +191,18 @@ namespace Substate {
 
         A fatal error will be raised if called when the engine is not in transaction state.
     */
-    void Model::commitTransaction(const Variant &message) {
+    void Model::commitTransaction(const Engine::StepMessage &message) {
         Q_D(Model);
         if (d->state != Transaction) {
-            SUBSTATE_FATAL("Cannot commit the transaction without an ongoing transaction.\n");
+            SUBSTATE_FATAL("Cannot commit the transaction without an ongoing transaction");
         }
         if (d->txActions.empty())
             return;
 
         d->engine->commit(d->txActions, message);
         d->txActions.clear();
+
+        d->state = Idle;
 
         Notification n(Notification::StepChange);
         dispatch(&n);
@@ -189,7 +214,7 @@ namespace Substate {
     void Model::undo() {
         Q_D(Model);
         if (d->state != Idle) {
-            SUBSTATE_FATAL("Attempt to undo at an invalid state.\n");
+            SUBSTATE_FATAL("Attempt to undo at an invalid state");
         }
         d->state = Undo;
         d->engine->execute(true);
@@ -205,7 +230,7 @@ namespace Substate {
     void Model::redo() {
         Q_D(Model);
         if (d->state != Idle) {
-            SUBSTATE_FATAL("Attempt to redo at an invalid state.\n");
+            SUBSTATE_FATAL("Attempt to redo at an invalid state");
         }
         d->state = Redo;
         d->engine->execute(false);
@@ -213,6 +238,21 @@ namespace Substate {
 
         Notification n(Notification::StepChange);
         dispatch(&n);
+    }
+
+    int Model::minimumStep() const {
+        Q_D(const Model);
+        return d->engine->minimum();
+    }
+
+    int Model::maximumStep() const {
+        Q_D(const Model);
+        return d->engine->maximum();
+    }
+
+    int Model::currentStep() const {
+        Q_D(const Model);
+        return d->engine->current();
     }
 
     void Model::dispatch(Notification *n) {

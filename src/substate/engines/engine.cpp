@@ -2,14 +2,12 @@
 #include "engine_p.h"
 
 #include "model/nodehelper.h"
+#include "model/model_p.h"
 
 namespace Substate {
 
     EnginePrivate::EnginePrivate() {
         model = nullptr;
-        min = 0;
-        max = 0;
-        current = 0;
     }
 
     EnginePrivate::~EnginePrivate() {
@@ -38,30 +36,6 @@ namespace Substate {
     }
 
     /*!
-        Returns the minimum step the engine can reach by executing undo.
-    */
-    int Engine::minimum() const {
-        Q_D(const Engine);
-        return d->min;
-    }
-
-    /*!
-        Returns the maximum step the engine can reach by executing redo.
-    */
-    int Engine::maximum() const {
-        Q_D(const Engine);
-        return d->max;
-    }
-
-    /*!
-        Returns the current step.
-    */
-    int Engine::current() const {
-        Q_D(const Engine);
-        return d->current;
-    }
-
-    /*!
         Sets up the engine with the specified model.
     */
     void Engine::setup(Model *model) {
@@ -72,7 +46,7 @@ namespace Substate {
     /*!
         Commits a list of actions with a message to the engine.
     */
-    void Engine::commit(const std::vector<Action *> &actions, const Variant &message) {
+    void Engine::commit(const std::vector<Action *> &actions, const StepMessage &message) {
         Q_D(Engine);
 
         // Collect inserted nodes and get ownership
@@ -94,28 +68,52 @@ namespace Substate {
     */
 
     /*!
-        Sets the minimum step.
+        Resets the model.
     */
-    void Engine::setMinimum(int value) {
+    void Engine::reset() {
         Q_D(Engine);
-        d->min = value;
+
+        auto model_d = d->model->d_func();
+
+        // Skip removing index when deleting item to speed up
+        model_d->is_clearing = true;
+
+        // Remove all items
+        std::list<Node *> rootItems;
+        for (const auto &pair : std::as_const(model_d->indexes)) {
+            if (!pair.second->parent()) {
+                rootItems.push_back(pair.second);
+            }
+        }
+        for (const auto &node : std::as_const(rootItems)) {
+            NodeHelper::forceDelete(node);
+        }
+
+        // Remove root item
+        model_d->root = nullptr;
+
+        model_d->is_clearing = false;
+        model_d->indexes.clear();
+        model_d->maxIndex = 0;
     }
 
     /*!
-        Sets the maximum step.
+        \fn int Engine::minimum() const
+
+        Returns the minimum step the engine can reach by executing undo.
     */
-    void Engine::setMaximum(int value) {
-        Q_D(Engine);
-        d->max = value;
-    }
 
     /*!
-        Sets the current step.
+        \fn int Engine::maximum() const
+
+        Returns the maximum step the engine can reach by executing redo.
     */
-    void Engine::setCurrent(int value) {
-        Q_D(Engine);
-        d->current = value;
-    }
+
+    /*!
+        \fn int Engine::current() const
+
+        Returns the current step.
+    */
 
     /*!
         \internal

@@ -17,7 +17,6 @@ namespace Substate {
         Engine *q_ptr;
 
         Model *model;
-        int min, max, current;
     };
 
 }

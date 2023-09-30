@@ -5,19 +5,30 @@
 
 namespace Substate {
 
-    class MemEnginePrivate;
+    class MemoryEnginePrivate;
 
     class SUBSTATE_EXPORT MemoryEngine : public Engine {
+        SUBSTATE_DECL_PRIVATE(MemoryEngine)
     public:
         MemoryEngine();
         ~MemoryEngine();
 
     public:
-        void commit(const std::vector<Action *> &actions, const Variant &message) override;
+        int preservedSteps() const;
+        void setPreservedSteps(int steps);
+
+    public:
+        void commit(const std::vector<Action *> &actions, const StepMessage &message) override;
         void execute(bool undo) override;
+        void reset() override;
+
+        int minimum() const override;
+        int maximum() const override;
+        int current() const override;
+        StepMessage stepMessage(int step) const override;
 
     protected:
-        MemoryEngine(MemEnginePrivate &d);
+        MemoryEngine(MemoryEnginePrivate &d);
     };
 
 }
