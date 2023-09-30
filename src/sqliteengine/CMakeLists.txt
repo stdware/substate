@@ -1,5 +1,6 @@
-set(_generate_include_dir "${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME}")
-file(GLOB_RECURSE _src *.h *.cpp)
+project(sqliteengine VERSION ${SUBSTATE_VERSION} LANGUAGES C CXX)
+
+file(GLOB_RECURSE _src *.h *.c *.cpp)
 
 set(_cxx_flags)
 
@@ -44,17 +45,22 @@ if(SUBSTATE_INSTALL)
         ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" OPTIONAL
     )
 
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/${SUBSTATE_INSTALL_NAME}/${PROJECT_NAME}
+
+        FILES_MATCHING
+        PATTERN "*.h"
+        PATTERN "sqlite3*" EXCLUDE
+    )
+
     target_include_directories(${PROJECT_NAME} PUBLIC
         "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${SUBSTATE_INSTALL_NAME}>"
     )
-
-    set(_gen_include_options INSTALL_DIR "${CMAKE_INSTALL_INCLUDEDIR}/${SUBSTATE_INSTALL_NAME}/${PROJECT_NAME}")
-else()
-    set(_gen_include_options)
 endif()
 
-# Generate a standard include directory in build directory
-qtmediate_gen_include(. "${_generate_include_dir}/${PROJECT_NAME}" CLEAN ${_gen_include_options})
 target_include_directories(${PROJECT_NAME} PUBLIC
-    "$<BUILD_INTERFACE:${_generate_include_dir}>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>"
+    "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>"
 )
+
+target_link_libraries(${PROJECT_NAME} PUBLIC substate)

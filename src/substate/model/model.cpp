@@ -4,19 +4,22 @@
 #include <cassert>
 
 #include "node_p.h"
+#include "engines/memengine.h"
 
 namespace Substate {
 
-    ModelPrivate::ModelPrivate() {
-        engine = nullptr;
+    ModelPrivate::ModelPrivate(Engine *engine) : engine(engine) {
         lockedNode = nullptr;
         maxIndex = 0;
     }
 
     ModelPrivate::~ModelPrivate() {
+        delete engine;
     }
 
     void ModelPrivate::init() {
+        Q_Q(Model);
+        engine->setup(q);
     }
 
     int ModelPrivate::addIndex(Node *node, int idx) {
@@ -62,9 +65,15 @@ namespace Substate {
     */
 
     /*!
-        Constructor.
+        Constructor. By default, the model will create an MemEngine as the backend
     */
-    Model::Model() : Model(*new ModelPrivate()) {
+    Model::Model() : Model(*new ModelPrivate(new MemEngine())) {
+    }
+
+    /*!
+        Constructs with the given engine as the backend.
+    */
+    Model::Model(Engine *engine) : Model(*new ModelPrivate(engine)) {
     }
 
     /*!

@@ -14,6 +14,7 @@ namespace Substate {
         SUBSTATE_DECL_PRIVATE(Model)
     public:
         Model();
+        Model(Engine *engine);
         ~Model();
 
     public:

@@ -9,7 +9,7 @@ namespace Substate {
     class SUBSTATE_EXPORT ModelPrivate : public SenderPrivate {
         SUBSTATE_DECL_PUBLIC(Model)
     public:
-        ModelPrivate();
+        ModelPrivate(Engine *engine);
         virtual ~ModelPrivate();
         void init();
 

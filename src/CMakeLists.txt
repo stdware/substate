@@ -12,6 +12,8 @@ set(SUBSTATE_PROJECT_COPYRIGHT "Copyright 2019-2023 SineStriker")
 # ----------------------------------
 add_subdirectory(substate)
 
+add_subdirectory(sqliteengine)
+
 # ----------------------------------
 # Documentation
 # ----------------------------------

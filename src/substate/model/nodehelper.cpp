@@ -32,16 +32,16 @@ namespace Substate {
     }
 
     /*!
-        Set the node as managed.
-
-        Call this function only if the node is a copy of the previously destroyed one.
+        Set the node as managed. Call this function only if the node is a copy of the previously
+        destroyed one.
     */
     void NodeHelper::setManaged(Node *node, bool managed) {
         node->d_func()->setManaged(managed);
     }
 
     /*!
-        Sets the root item of the model without triggering any action.
+        Sets the root item of the model without triggering any action, this function is mainly
+        used to initialize the model at the beginning.
     */
     void NodeHelper::setModelRoot(Node *node, Model *model) {
         if (node) {
