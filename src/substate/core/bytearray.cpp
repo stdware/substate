@@ -1,5 +1,7 @@
 #include "bytearray.h"
 
+#include <cstring>
+
 namespace Substate {
 
     ByteArray::ByteArray() : m_data(nullptr), m_size(0) {

@@ -13,6 +13,9 @@ namespace Substate {
         ~FileSystemEnginePrivate();
         void init();
 
+        // If true, the journal files will be removed when destructs
+        bool finished;
+
         // The maximum number of checkpoints kept in filesystem
         int maxCheckPoints;
 

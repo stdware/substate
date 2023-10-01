@@ -4,9 +4,14 @@
 namespace Substate {
 
     FileSystemEnginePrivate::FileSystemEnginePrivate() {
+        finished = false;
+        maxCheckPoints = 1;
     }
 
     FileSystemEnginePrivate::~FileSystemEnginePrivate() {
+        if (finished) {
+            // Remove journal
+        }
     }
 
     void FileSystemEnginePrivate::init() {
@@ -40,6 +45,16 @@ namespace Substate {
     }
 
     void FileSystemEngine::setCheckpoints(int n) {
+    }
+
+    bool FileSystemEngine::finished() const {
+        Q_D(const FileSystemEngine);
+        return d->finished;
+    }
+
+    void FileSystemEngine::setFinished(bool finished) {
+        Q_D(FileSystemEngine);
+        d->finished = finished;
     }
 
     bool FileSystemEngine::start(const std::filesystem::path &dir) {

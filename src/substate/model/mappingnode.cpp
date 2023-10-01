@@ -8,63 +8,6 @@
 
 namespace Substate {
 
-    enum MappingActionValue : int32_t {
-        InvalidValue,
-        NodeValue,
-        VariantValue,
-    };
-
-    static inline void writeMappingActionValue(OStream &stream, const MappingNode::Value &value) {
-        if (!value.isValid()) {
-            stream << MappingActionValue::InvalidValue;
-        } else if (value.isNode()) {
-            stream << MappingActionValue::NodeValue;
-            stream << value.node()->index();
-        } else {
-            stream << MappingActionValue::VariantValue;
-            stream << value.variant();
-        }
-    }
-
-    static inline MappingNodePrivate::Data
-        readMappingActionValue(IStream &stream,
-                               const std::unordered_map<int, Node *> &existingNodes) {
-        int32_t type;
-        stream >> type;
-
-        MappingNodePrivate::Data value;
-        switch (type) {
-            case MappingActionValue::InvalidValue:
-                break;
-            case MappingActionValue::NodeValue: {
-                int index;
-                stream >> index;
-
-                auto it = existingNodes.find(index);
-                if (it == existingNodes.end()) {
-                    SUBSTATE_WARNING("non-existing reference to node id %d", index);
-                    stream.setState(std::ios::failbit);
-                    break;
-                }
-                value = it->second;
-                break;
-            }
-            case MappingActionValue::VariantValue: {
-                Variant var;
-                stream >> var;
-                if (stream.fail()) {
-                    break;
-                }
-                value = var;
-                break;
-            }
-            default:
-                stream.setState(std::ios::badbit);
-                break;
-        }
-        return value;
-    }
-
     MappingNodePrivate::MappingNodePrivate(int type) : NodePrivate(type) {
     }
 
@@ -127,40 +70,26 @@ namespace Substate {
         return nullptr;
     }
 
-    void MappingNodePrivate::setProperty_helper(const std::string &key, const Data &data) {
+    void MappingNodePrivate::setProperty_helper(const std::string &key, const Property &prop) {
         Q_Q(MappingNode);
         q->beginAction();
 
-        Node *oldNode = nullptr;
-        Variant oldValue;
-        MappingNode::Value val, oldVal;
-
-        if (data.variant.isValid()) {
-            val = const_cast<Variant *>(&data.variant);
-        } else {
-            val = data.node;
-        }
+        Property oldProp;
 
         auto it = mapping.find(key);
         if (it == mapping.end()) {
             // Nothing changes
-            if (!val.isValid())
+            if (!prop.isValid())
                 return;
         } else {
-            if (it->second.is_variant) {
-                oldValue = it->second.variant;
-                oldVal = &oldValue;
-            } else {
-                oldNode = it->second.node;
-                oldVal = oldNode;
-            }
-
             // Nothing changes
-            if (val == oldVal)
+            if (prop == it->second)
                 return;
+
+            oldProp = it->second;
         }
 
-        MappingAction a(q, key, val, oldVal);
+        MappingAction a(q, key, prop, oldProp);
 
         // Pre-Propagate signal
         {
@@ -170,22 +99,24 @@ namespace Substate {
 
         // Do change
         if (it == mapping.end()) {
-            mapping.insert(std::make_pair(key, data));
+            mapping.insert(std::make_pair(key, prop));
         } else {
-            if (val.isValid()) {
-                it->second = data;
+            if (prop.isValid()) {
+                it->second = prop;
             } else {
                 mapping.erase(it);
             }
         }
 
-        if (oldNode) {
+        if (oldProp.isNode()) {
+            auto oldNode = oldProp.node();
             mappingIndexes.erase(oldNode);
             q->removeChild(oldNode);
         }
-        if (data.node) {
-            mappingIndexes.insert(std::make_pair(data.node, key));
-            q->addChild(data.node);
+        if (prop.node()) {
+            auto node = prop.node();
+            mappingIndexes.insert(std::make_pair(node, key));
+            q->addChild(node);
         }
 
         // Propagate signal
@@ -212,21 +143,13 @@ namespace Substate {
         }
         Node *parent = it->second;
 
-        auto orgData = readMappingActionValue(stream, existingNodes);
+        auto v = Property::read(stream, existingNodes);
         if (stream.fail())
             return nullptr;
 
-        auto newData = readMappingActionValue(stream, existingNodes);
+        auto oldv = Property::read(stream, existingNodes);
         if (stream.fail())
             return nullptr;
-
-        MappingNode::Value v = orgData.is_variant
-                                   ? MappingNodePrivate::createValue(&orgData.variant)
-                                   : MappingNodePrivate::createValue(orgData.node);
-
-        MappingNode::Value oldv = newData.is_variant
-                                      ? MappingNodePrivate::createValue(&newData.variant)
-                                      : MappingNodePrivate::createValue(newData.node);
 
         return new MappingAction(parent, key, v, oldv);
     }
@@ -237,38 +160,28 @@ namespace Substate {
     MappingNode::~MappingNode() {
     }
 
-    MappingNode::Value MappingNode::property(const std::string &key) const {
+    Property MappingNode::property(const std::string &key) const {
         Q_D(const MappingNode);
         auto it = d->mapping.find(key);
         if (it == d->mapping.end()) {
             return {};
         }
-
-        if (it->second.is_variant)
-            return const_cast<Variant *>(&it->second.variant);
-        return it->second.node;
+        return it->second;
     }
 
-    void MappingNode::setProperty(const std::string &key, const Variant &value) {
+    void MappingNode::setProperty(const std::string &key, const Property &value) {
         Q_D(MappingNode);
         assert(d->testModifiable());
         d->setProperty_helper(key, value);
     }
 
-    void MappingNode::setProperty(const std::string &key, Node *node) {
-        Q_D(MappingNode);
-        assert(d->testModifiable());
-        d->setProperty_helper(key, node);
-    }
-
     std::vector<std::string> MappingNode::keys() const {
         Q_D(const MappingNode);
         std::vector<std::string> keys(d->mapping.size());
-        std::transform(
-            d->mapping.begin(), d->mapping.end(), keys.begin(),
-            [](const std::pair<const std::string &, const MappingNodePrivate::Data &> &pair) {
-                return pair.first;
-            });
+        std::transform(d->mapping.begin(), d->mapping.end(), keys.begin(),
+                       [](const std::pair<const std::string &, const Property &> &pair) {
+                           return pair.first;
+                       });
         return keys;
     }
 
@@ -292,11 +205,11 @@ namespace Substate {
         // Write variants
         stream << int(d->mapping.size() - d->mappingIndexes.size());
         for (const auto &pair : d->mapping) {
-            if (!pair.second.is_variant) {
+            if (!pair.second.isVariant()) {
                 continue;
             }
-            stream << pair.first;          // key
-            stream << pair.second.variant; // variant
+            stream << pair.first;            // key
+            stream << pair.second.variant(); // variant
         }
     }
 
@@ -314,12 +227,12 @@ namespace Substate {
             const auto &key = pair.first;
             const auto &data = pair.second;
 
-            if (data.is_variant) {
-                d2->mapping.insert(std::make_pair(key, data.variant));
+            if (data.isVariant()) {
+                d2->mapping.insert(std::make_pair(key, data.variant()));
                 continue;
             }
 
-            auto newChild = NodeHelper::clone(data.node, user);
+            auto newChild = NodeHelper::clone(data.node(), user);
             node->addChild(newChild);
 
             d2->mapping.insert(std::make_pair(key, newChild));
@@ -348,31 +261,18 @@ namespace Substate {
         d.init();
     }
 
-    MappingAction::MappingAction(Node *parent, const std::string &key,
-                                 const MappingNode::Value &value,
-                                 const MappingNode::Value &oldValue)
-        : NodeAction(MappingSet, parent), m_key(key) {
-        // Create copies
-        v = value.isVariant() ? MappingNodePrivate::createValue(new Variant(value.variant()))
-                              : MappingNodePrivate::createValue(value.node());
-        oldv = value.isVariant() ? MappingNodePrivate::createValue(new Variant(oldValue.variant()))
-                                 : MappingNodePrivate::createValue(oldValue.node());
+    MappingAction::MappingAction(Node *parent, const std::string &key, const Property &value,
+                                 const Property &oldValue)
+        : NodeAction(MappingSet, parent), m_key(key), v(value), oldv(oldValue) {
     }
 
     MappingAction::~MappingAction() {
-        // Destroy copies
-        if (v.isVariant()) {
-            delete reinterpret_cast<Variant *>(v.internalPointer());
-        }
-        if (oldv.isVariant()) {
-            delete reinterpret_cast<Variant *>(oldv.internalPointer());
-        }
     }
 
     void MappingAction::write(OStream &stream) const {
         stream << m_parent->index() << m_key;
-        writeMappingActionValue(stream, oldv);
-        writeMappingActionValue(stream, v);
+        v.write(stream);
+        oldv.write(stream);
     }
 
     Action *MappingAction::clone() const {
@@ -381,9 +281,7 @@ namespace Substate {
 
     void MappingAction::execute(bool undo) {
         auto d = static_cast<MappingNode *>(m_parent)->d_func();
-        auto &value = undo ? oldv : v;
-        d->setProperty_helper(m_key, value.isVariant() ? MappingNodePrivate::Data(value.variant())
-                                                       : MappingNodePrivate::Data(value.node()));
+        d->setProperty_helper(m_key, undo ? oldv : v);
     }
 
     void MappingAction::virtual_hook(int id, void *data) {
@@ -412,4 +310,5 @@ namespace Substate {
                 break;
         }
     }
+
 }

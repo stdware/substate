@@ -15,26 +15,10 @@ namespace Substate {
 
         static MappingNode *read(IStream &stream);
 
-        struct Data {
-            Variant variant;
-            Node *node;
-            bool is_variant;
-
-            Data(const Variant &var) : variant(var), node(nullptr), is_variant(true){};
-            Data(Node *node = nullptr) : node(node), is_variant(false){};
-        };
-        std::unordered_map<std::string, Data> mapping;
+        std::unordered_map<std::string, Property> mapping;
         std::unordered_map<Node *, std::string> mappingIndexes;
 
-        void setProperty_helper(const std::string &key, const Data &data);
-
-        static inline MappingNode::Value createValue(Node *node) {
-            return node;
-        }
-
-        static inline MappingNode::Value createValue(Variant *var) {
-            return var;
-        }
+        void setProperty_helper(const std::string &key, const Property &prop);
     };
 
     Action *readMappingAction(IStream &stream,

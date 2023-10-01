@@ -539,6 +539,14 @@ namespace Substate {
     /*!
         \internal
     */
+     const Variant &Variant::sharedNull() {
+        static Variant var;
+        return var;
+    }
+
+    /*!
+        \internal
+    */
     int Variant::registerUserTypeImpl(const std::type_info &info, const Handler &handler,
                                       int hint) {
         static std::unordered_map<std::string, int> names;

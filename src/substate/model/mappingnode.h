@@ -4,8 +4,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <substate/node.h>
-#include <substate/variant.h>
+#include <substate/property.h>
 
 namespace Substate {
 
@@ -20,36 +19,8 @@ namespace Substate {
         ~MappingNode();
 
     public:
-        class Value {
-        public:
-            inline Value();
-
-            inline bool isValid() const;
-            inline bool isVariant() const;
-            inline bool isNode() const;
-
-            inline const Variant &variant() const;
-            inline Node *node() const;
-
-            inline void *internalPointer() const;
-
-        public:
-            inline bool operator==(const Value &other) const;
-
-        private:
-            void *data;
-            bool is_variant;
-
-            inline Value(Node *node);
-            inline Value(Variant *variant);
-
-            friend class MappingNode;
-            friend class MappingNodePrivate;
-        };
-
-        Value property(const std::string &key) const;
-        void setProperty(const std::string &key, const Variant &value);
-        void setProperty(const std::string &key, Node *node);
+        Property property(const std::string &key) const;
+        void setProperty(const std::string &key, const Property &value);
         inline void clearProperty(const std::string &key);
         std::vector<std::string> keys() const;
         inline int count() const;
@@ -70,49 +41,8 @@ namespace Substate {
         friend class MappingAction;
     };
 
-    MappingNode::Value::Value() : data(nullptr), is_variant(false) {
-    }
-
-    inline bool MappingNode::Value::isValid() const {
-        return data != nullptr;
-    }
-
-    inline bool MappingNode::Value::isVariant() const {
-        return is_variant;
-    }
-
-    inline bool MappingNode::Value::isNode() const {
-        return data && !is_variant;
-    }
-
-    inline const Variant &MappingNode::Value::variant() const {
-        static Variant var;
-        return is_variant ? *reinterpret_cast<Variant *>(data) : var;
-    }
-
-    inline Node *MappingNode::Value::node() const {
-        return is_variant ? nullptr : reinterpret_cast<Node *>(data);
-    }
-
-    inline void *MappingNode::Value::internalPointer() const {
-        return data;
-    }
-
-    bool MappingNode::Value::operator==(const MappingNode::Value &other) const {
-        if (is_variant) {
-            return other.is_variant && variant() == other.variant();
-        }
-        return node() == other.node();
-    }
-
-    inline MappingNode::Value::Value(Node *node) : data(node), is_variant(true) {
-    }
-
-    inline MappingNode::Value::Value(Variant *variant) : data(variant), is_variant(false) {
-    }
-
     inline void MappingNode::clearProperty(const std::string &key) {
-        return setProperty(key, Variant());
+        return setProperty(key, {});
     }
 
     inline int MappingNode::count() const {
@@ -121,8 +51,8 @@ namespace Substate {
 
     class SUBSTATE_EXPORT MappingAction : public NodeAction {
     public:
-        MappingAction(Node *parent, const std::string &key, const MappingNode::Value &value,
-                      const MappingNode::Value &oldValue);
+        MappingAction(Node *parent, const std::string &key, const Property &value,
+                      const Property &oldValue);
         ~MappingAction();
 
     public:
@@ -133,23 +63,23 @@ namespace Substate {
 
     public:
         inline std::string key() const;
-        inline MappingNode::Value value() const;
-        inline MappingNode::Value oldValue() const;
+        inline Property value() const;
+        inline Property oldValue() const;
 
     public:
         std::string m_key;
-        MappingNode::Value v, oldv;
+        Property v, oldv;
     };
 
     inline std::string MappingAction::key() const {
         return m_key;
     }
 
-    inline MappingNode::Value MappingAction::value() const {
+    inline Property MappingAction::value() const {
         return v;
     }
 
-    inline MappingNode::Value MappingAction::oldValue() const {
+    inline Property MappingAction::oldValue() const {
         return oldv;
     }
 

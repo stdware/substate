@@ -174,6 +174,8 @@ namespace Substate {
             void (*destroy)(void *);
         };
 
+        static const Variant &sharedNull();
+
     protected:
         Private d;
 

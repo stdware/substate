@@ -1,0 +1,19 @@
+{
+    "type": "object",
+    "properties": {
+        "version": {
+            "type": "int32",
+            "default": 50
+        },
+        "projectName": {
+            "type": "string",
+            "default": "you-know-who"
+        },
+        "content": {
+            "type": "object",
+            "properties": {
+                
+            }
+        }
+    }
+}

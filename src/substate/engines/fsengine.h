@@ -19,6 +19,9 @@ namespace Substate {
         int checkpoints() const;
         void setCheckpoints(int n);
 
+        bool finished() const;
+        void setFinished(bool finished);
+
         bool start(const std::filesystem::path &dir);
         bool recover(const std::filesystem::path &dir);
         bool switchDir(const std::filesystem::path &dir);
