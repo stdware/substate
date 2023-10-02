@@ -32,11 +32,18 @@ namespace Substate {
     }
 
     /*!
-        Set the node as managed. Call this function only if the node is a copy of the previously
+        Sets the node as managed. Call this function only if the node is a copy of the previously
         destroyed one.
     */
     void NodeHelper::setManaged(Node *node, bool managed) {
         node->d_func()->setManaged(managed);
+    }
+
+    /*!
+        Set the node's special own subscriber, reserved for further use.
+    */
+    void NodeHelper::setExtra(Node *node, NodeExtra *extra) {
+        node->d_func()->extra = extra;
     }
 
     /*!

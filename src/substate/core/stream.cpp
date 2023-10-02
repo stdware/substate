@@ -1,8 +1,6 @@
 #include "stream.h"
 
-#include <fstream>
 #include <sstream>
-#include <istream>
 
 namespace Substate {
 

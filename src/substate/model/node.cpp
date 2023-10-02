@@ -28,8 +28,8 @@ namespace Substate {
     }
 
     NodePrivate::NodePrivate(int type)
-        : type(type), parent(nullptr), model(nullptr), index(0), managed(false),
-          allowDelete(false) {
+        : type(type), parent(nullptr), model(nullptr), index(0), managed(false), allowDelete(false),
+          extra(nullptr) {
     }
 
     NodePrivate::~NodePrivate() {
@@ -56,6 +56,8 @@ namespace Substate {
             // reference.
             parent->childDestroyed(q);
         }
+
+        delete extra;
     }
 
     void NodePrivate::init() {
@@ -185,9 +187,14 @@ namespace Substate {
     }
 
     void Node::dispatch(Notification *n) {
+        Q_D(Node);
+
         Sender::dispatch(n);
 
-        Q_D(Node);
+        if (d->extra) {
+            d->extra->notified(n);
+        }
+
         switch (n->type()) {
             case Notification::ActionAboutToTrigger:
             case Notification::ActionTriggered: {

@@ -1,12 +1,10 @@
 #ifndef STREAM_H
 #define STREAM_H
 
-#include <functional>
-#include <iostream>
-#include <sstream>
 #include <map>
 #include <set>
 #include <unordered_map>
+#include <iostream>
 
 #include <substate/substate_global.h>
 
@@ -204,19 +202,17 @@ namespace Substate {
 
     template <typename T>
     inline IStream &operator>>(IStream &s, std::set<T> &set) {
-        const auto &c = set;
-        c.clear();
+        set.clear();
         int n;
         s >> n;
-        c.reserve(n);
         for (int i = 0; i < n; ++i) {
             T t;
             s >> t;
             if (s.fail()) {
-                c.clear();
+                set.clear();
                 break;
             }
-            c.insert(t);
+            set.insert(t);
         }
         return s;
     }

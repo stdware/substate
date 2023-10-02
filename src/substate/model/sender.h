@@ -43,7 +43,7 @@ namespace Substate {
         inline Sender *sender() const;
 
     protected:
-        virtual void notified(Notification *n) = 0;
+        virtual void notified(Notification *n);
 
     private:
         Sender *m_sender;
@@ -65,6 +65,7 @@ namespace Substate {
             ActionTriggered,
             StepChange,
             AboutToReset,
+            SenderDestroyed,
         };
 
         explicit Notification(int type);

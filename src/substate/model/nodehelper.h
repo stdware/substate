@@ -5,6 +5,8 @@
 
 namespace Substate {
 
+    class NodeExtra;
+
     class SUBSTATE_EXPORT NodeHelper {
     public:
         static inline NodePrivate *get(Node *node);
@@ -12,6 +14,7 @@ namespace Substate {
 
         static void setIndex(Node *node, int index);
         static void setManaged(Node *node, bool managed);
+        static void setExtra(Node *node, NodeExtra *extra);
 
         static void setModelRoot(Node *node, Model *model);
         static void propagateModel(Node *node, Model *model);

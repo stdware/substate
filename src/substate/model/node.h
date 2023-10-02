@@ -84,6 +84,15 @@ namespace Substate {
         return isManaged();
     }
 
+    class NodeExtra : public Subscriber {
+    public:
+        ~NodeExtra() = default;
+
+    private:
+        friend class Node;
+        friend class NodePrivate;
+    };
+
     class SUBSTATE_EXPORT NodeAction : public Action {
     public:
         NodeAction(int type, Node *parent);

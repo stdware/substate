@@ -1,18 +1,64 @@
 {
-    "type": "object",
-    "properties": {
-        "version": {
-            "type": "int32",
-            "default": 50
-        },
-        "projectName": {
-            "type": "string",
-            "default": "you-know-who"
-        },
-        "content": {
-            "type": "object",
+    "include": {
+        "std::string": "string",
+        "QString": "QtCore/QString"
+    },
+    "namespace": "music",
+    "classes": {
+        "Track": {
+            "enums": {
+                "Type": [
+                    "Voice",
+                    "BGM"
+                ]
+            },
+            "ctor": null,
+            "ctor-d": {
+                "args": [
+                    {
+                        "type": "Type",
+                        "token": "type",
+                        "member": "type"
+                    }
+                ]
+            },
             "properties": {
-                
+                "name": "std::string",
+                "volume": {
+                    "type": "double",
+                    "default": 0
+                }
+            }
+        },
+        "VoiceTrack": {
+            "super": "Track",
+            "enums": {
+                "Gender": [
+                    "Male",
+                    "Female"
+                ]
+            },
+            "ctor-d": {
+                "super": [
+                    "Track"
+                ]
+            },
+            "properties": {
+                "gender": {
+                    "type": "Gender",
+                    "default": "VoiceTrack::Male"
+                },
+                "curves": "Substate::BytesNode<int16_t>",
+                "notes": "Substate::VectorNode<Note>"
+            }
+        },
+        "Note": {
+            "properties": {
+                "lyric": "std::string",
+                "keyNum": {
+                    "type": "int",
+                    "default": 60
+                }
             }
         }
     }

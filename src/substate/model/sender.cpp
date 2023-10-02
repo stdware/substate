@@ -8,6 +8,14 @@ namespace Substate {
     }
 
     SenderPrivate::~SenderPrivate() {
+        Q_Q(Sender);
+
+        // Notify
+        {
+            Notification n(Notification::SenderDestroyed);
+            q->dispatch(&n);
+        }
+
         is_clearing = true;
         for (const auto &sub : std::as_const(subscribers))
             sub->m_sender = nullptr;
@@ -75,8 +83,16 @@ namespace Substate {
     void Sender::dispatch(Notification *n) {
         Q_D(Sender);
 
-        std::shared_lock<std::shared_mutex> lock(d->shared_lock);
-        for (const auto &sub : std::as_const(d->subscribers)) {
+        decltype(d->subscribers) subs;
+
+        // Make a copy
+        {
+            std::shared_lock<std::shared_mutex> lock(d->shared_lock);
+            subs = d->subscribers;
+        }
+
+        // Notify
+        for (const auto &sub : std::as_const(subs)) {
             sub->notified(n);
         }
     }
@@ -115,10 +131,10 @@ namespace Substate {
     */
 
     /*!
-        \fn void Subscriber::notified(Notification *n)
-
         Processes the current notification.
     */
+    void Subscriber::notified(Notification *n) {
+    }
 
     /*!
         \class Notification

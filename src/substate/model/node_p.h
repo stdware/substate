@@ -20,6 +20,8 @@ namespace Substate {
         bool managed;
         bool allowDelete;
 
+        NodeExtra *extra;
+
         void setManaged(bool _managed);
         void propagateModel(Model *_model);
 
