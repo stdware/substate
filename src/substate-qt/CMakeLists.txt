@@ -63,7 +63,7 @@ else()
 endif()
 
 # Generate a standard include directory in build directory
-qtmediate_gen_include(. "${_generate_include_dir}/${PROJECT_NAME}" CLEAN ${_gen_include_options})
+qtmediate_gen_include(. "${_generate_include_dir}/${PROJECT_NAME}" ${_gen_include_options})
 target_include_directories(${PROJECT_NAME} PUBLIC
     "$<BUILD_INTERFACE:${_generate_include_dir}>"
 )

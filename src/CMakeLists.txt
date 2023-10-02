@@ -14,7 +14,9 @@ add_subdirectory(substate)
 
 add_subdirectory(sqliteengine)
 
-add_subdirectory(substate-qt)
+if(SUBSTATE_BUILD_QT_TARGETS)
+    add_subdirectory(substate-qt)
+endif()
 
 # ----------------------------------
 # Documentation

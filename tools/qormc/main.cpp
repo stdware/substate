@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("Substate Qt Classes Generator %1").arg(APP_VERSION));
+        QStringLiteral("Qt Substate Classes Generator %1").arg(APP_VERSION));
     parser.addHelpOption();
     parser.addVersionOption();
 

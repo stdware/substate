@@ -5,6 +5,20 @@
     },
     "namespace": "music",
     "classes": {
+        "Root": {
+            "properties": {
+                "version": {
+                    "type": "std::string",
+                    "default": "\"0.0.0.1\""
+                },
+                "author": {
+                    "type": "QString",
+                    "default": "\"you-know-who\""
+                },
+                "tracks": "Substate::VectorNode<Track>"
+            },
+            "fileName": "root.h"
+        },
         "Track": {
             "enums": {
                 "Type": [
@@ -23,12 +37,13 @@
                 ]
             },
             "properties": {
-                "name": "std::string",
+                "name": "QString",
                 "volume": {
                     "type": "double",
                     "default": 0
                 }
-            }
+            },
+            "fileName": "track.h"
         },
         "VoiceTrack": {
             "super": "Track",
@@ -49,17 +64,19 @@
                     "default": "VoiceTrack::Male"
                 },
                 "curves": "Substate::BytesNode<int16_t>",
-                "notes": "Substate::VectorNode<Note>"
-            }
+                "notes": "Substate::SheetNode<Note>"
+            },
+            "fileName": "track.h"
         },
         "Note": {
             "properties": {
-                "lyric": "std::string",
+                "lyric": "QString",
                 "keyNum": {
                     "type": "int",
                     "default": 60
                 }
-            }
+            },
+            "fileName": "note.h"
         }
     }
 }

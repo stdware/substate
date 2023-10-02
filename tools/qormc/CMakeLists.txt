@@ -9,3 +9,10 @@ qtmediate_configure_target(${PROJECT_NAME}
     QT_LINKS Core
     DEFINES APP_VERSION=\"${PROJECT_VERSION}\"
 )
+
+if(WIN32)
+    qtmediate_add_win_rc(${PROJECT_NAME}
+        DESCRIPTION "Qt Substate Classes Generator"
+        COPYRIGHT "${SUBSTATE_PROJECT_COPYRIGHT}"
+    )
+endif()
