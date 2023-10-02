@@ -1,8 +1,12 @@
 #ifndef STREAM_H
 #define STREAM_H
 
+#include <functional>
 #include <iostream>
 #include <sstream>
+#include <map>
+#include <set>
+#include <unordered_map>
 
 #include <substate/substate_global.h>
 
@@ -121,6 +125,137 @@ namespace Substate {
 
     bool OStream::fail() const {
         return out->fail();
+    }
+
+    template <class Container>
+    IStream &readArrayBasedContainer(IStream &s, Container &c) {
+        c.clear();
+        int n;
+        s >> n;
+        c.reserve(n);
+        for (int i = 0; i < n; ++i) {
+            typename Container::value_type t;
+            s >> t;
+            if (s.fail()) {
+                c.clear();
+                break;
+            }
+            c.push_back(t);
+        }
+        return s;
+    }
+
+    template <class Container>
+    IStream &readAssociativeContainer(IStream &s, Container &c) {
+        c.clear();
+        int n;
+        s >> n;
+        for (int i = 0; i < n; ++i) {
+            typename Container::key_type k;
+            typename Container::mapped_type t;
+            s >> k >> t;
+            if (s.fail()) {
+                c.clear();
+                break;
+            }
+            c.insert(std::make_pair(k, t));
+        }
+        return s;
+    }
+
+    template <class Container>
+    OStream &writeSequentialContainer(OStream &s, const Container &c) {
+        s << int(c.size());
+        for (const auto &t : c)
+            s << t;
+        return s;
+    }
+
+    template <class Container>
+    OStream &writeAssociativeContainer(OStream &s, const Container &c) {
+        s << int(c.size());
+        for (const auto &p : c) {
+            s << p.first << p.second;
+            if (s.fail())
+                break;
+        }
+        return s;
+    }
+
+    template <class T>
+    inline IStream &operator>>(IStream &s, std::list<T> &l) {
+        return readArrayBasedContainer(s, l);
+    }
+
+    template <typename T>
+    inline OStream &operator<<(OStream &s, const std::list<T> &l) {
+        return writeSequentialContainer(s, l);
+    }
+
+    template <typename T>
+    inline IStream &operator>>(IStream &s, std::vector<T> &v) {
+        return readArrayBasedContainer(s, v);
+    }
+
+    template <typename T>
+    inline OStream &operator<<(OStream &s, const std::vector<T> &v) {
+        return writeSequentialContainer(s, v);
+    }
+
+    template <typename T>
+    inline IStream &operator>>(IStream &s, std::set<T> &set) {
+        const auto &c = set;
+        c.clear();
+        int n;
+        s >> n;
+        c.reserve(n);
+        for (int i = 0; i < n; ++i) {
+            T t;
+            s >> t;
+            if (s.fail()) {
+                c.clear();
+                break;
+            }
+            c.insert(t);
+        }
+        return s;
+    }
+
+    template <typename T>
+    inline OStream &operator<<(OStream &s, const std::set<T> &set) {
+        return writeSequentialContainer(s, set);
+    }
+
+    template <class Key, class T>
+    inline IStream &operator>>(IStream &s, std::unordered_map<Key, T> &hash) {
+        return readAssociativeContainer(s, hash);
+    }
+
+    template <class Key, class T>
+    inline OStream &operator<<(OStream &s, const std::unordered_map<Key, T> &hash) {
+        return writeAssociativeContainer(s, hash);
+    }
+
+    template <class Key, class T>
+    inline IStream &operator>>(IStream &s, std::map<Key, T> &map) {
+        return readAssociativeContainer(s, map);
+    }
+
+    template <class Key, class T>
+    inline OStream &operator<<(OStream &s, const std::map<Key, T> &map) {
+        return writeAssociativeContainer(s, map);
+    }
+
+    template <class T1, class T2>
+    inline IStream &operator>>(IStream &s, std::pair<T1, T2> &p) {
+        s >> p.first >> p.second;
+        return s;
+    }
+
+    template <class T1, class T2>
+    inline OStream &operator<<(OStream &s, const std::pair<T1, T2> &p) {
+        s << p.first << p.second;
+        return s;
     }
 
 }

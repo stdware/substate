@@ -22,7 +22,10 @@ namespace Substate {
         Property property(const std::string &key) const;
         void setProperty(const std::string &key, const Property &value);
         inline void clearProperty(const std::string &key);
+        bool remove(Node *node);
+        std::string indexOf(Node *node) const;
         std::vector<std::string> keys() const;
+        const std::unordered_map<std::string, Property> &data() const;
         inline int count() const;
         int size() const;
 
@@ -49,7 +52,7 @@ namespace Substate {
         return size();
     }
 
-    class SUBSTATE_EXPORT MappingAction : public NodeAction {
+    class SUBSTATE_EXPORT MappingAction : public PropertyAction {
     public:
         MappingAction(Node *parent, const std::string &key, const Property &value,
                       const Property &oldValue);
@@ -59,28 +62,16 @@ namespace Substate {
         void write(OStream &stream) const override;
         Action *clone() const override;
         void execute(bool undo) override;
-        void virtual_hook(int id, void *data) override;
 
     public:
         inline std::string key() const;
-        inline Property value() const;
-        inline Property oldValue() const;
 
     public:
         std::string m_key;
-        Property v, oldv;
     };
 
     inline std::string MappingAction::key() const {
         return m_key;
-    }
-
-    inline Property MappingAction::value() const {
-        return v;
-    }
-
-    inline Property MappingAction::oldValue() const {
-        return oldv;
     }
 
 }

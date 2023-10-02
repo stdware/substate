@@ -39,8 +39,8 @@ namespace Substate {
             ;
     }
 
-    Action *readRootChangeAction(IStream &stream,
-                                 const std::unordered_map<int, Node *> &existingNodes);
+    RootChangeAction *readRootChangeAction(IStream &stream,
+                                           const std::unordered_map<int, Node *> &existingNodes);
 
 }
 

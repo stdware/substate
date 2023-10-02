@@ -92,7 +92,7 @@ namespace Substate {
         q->endAction();
     }
 
-    Action *readBytesAction(Action::Type type, IStream &stream,
+    BytesAction *readBytesAction(Action::Type type, IStream &stream,
                             const std::unordered_map<int, Node *> &existingNodes) {
         int parent;
         int index;

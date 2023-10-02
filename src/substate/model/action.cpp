@@ -5,6 +5,7 @@
 #include "bytesnode_p.h"
 #include "mappingnode_p.h"
 #include "sheetnode_p.h"
+#include "structnode_p.h"
 #include "vectornode_p.h"
 
 namespace Substate {
@@ -44,8 +45,10 @@ namespace Substate {
                 return readVectorInsDelAction(static_cast<Type>(type), stream, existingNodes);
             case VectorMove:
                 return readVectorMoveAction(stream, existingNodes);
-            case MappingSet:
+            case MappingAssign:
                 return readMappingAction(stream, existingNodes);
+            case StructAssign:
+                return readStructAction(stream, existingNodes);
             case RootChange:
                 return readRootChangeAction(stream, existingNodes);
             default:

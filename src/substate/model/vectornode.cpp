@@ -145,8 +145,8 @@ namespace Substate {
         }
     }
 
-    Action *readVectorMoveAction(IStream &stream,
-                                 const std::unordered_map<int, Node *> &existingNodes) {
+    VectorMoveAction *readVectorMoveAction(IStream &stream,
+                                           const std::unordered_map<int, Node *> &existingNodes) {
         int parentIndex, index, cnt, dest;
         stream >> parentIndex >> index >> cnt >> dest;
         if (stream.fail())
@@ -161,8 +161,9 @@ namespace Substate {
         return new VectorMoveAction(parent, index, cnt, dest);
     }
 
-    Action *readVectorInsDelAction(Action::Type type, IStream &stream,
-                                   const std::unordered_map<int, Node *> &existingNodes) {
+    VectorInsDelAction *
+        readVectorInsDelAction(Action::Type type, IStream &stream,
+                               const std::unordered_map<int, Node *> &existingNodes) {
         int parentIndex, index, size;
         stream >> parentIndex >> index >> size;
         if (stream.fail())

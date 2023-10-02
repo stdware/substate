@@ -27,6 +27,7 @@ namespace Substate {
             Vector,
             Mapping,
             Sheet,
+            Struct,
             User = 1024,
         };
 

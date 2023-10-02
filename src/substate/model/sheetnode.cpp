@@ -103,7 +103,7 @@ namespace Substate {
         q->endAction();
     }
 
-    Action *readSheetAction(Action::Type type, IStream &stream,
+    SheetAction *readSheetAction(Action::Type type, IStream &stream,
                             const std::unordered_map<int, Node *> &existingNodes) {
         int parentIndex, id, index;
         stream >> parentIndex >> id >> index;

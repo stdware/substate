@@ -22,10 +22,10 @@ namespace Substate {
         std::vector<Node *> vector;
     };
 
-    Action *readVectorMoveAction(IStream &stream,
+    VectorMoveAction *readVectorMoveAction(IStream &stream,
                                  const std::unordered_map<int, Node *> &existingNodes);
 
-    Action *readVectorInsDelAction(Action::Type type, IStream &stream,
+    VectorInsDelAction *readVectorInsDelAction(Action::Type type, IStream &stream,
                                    const std::unordered_map<int, Node *> &existingNodes);
 
 }

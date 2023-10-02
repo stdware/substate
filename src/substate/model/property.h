@@ -29,6 +29,9 @@ namespace Substate {
         static Property read(IStream &stream, const std::unordered_map<int, Node *> &existingNodes);
         void write(OStream &stream) const;
 
+        SUBSTATE_EXPORT friend IStream &operator>>(IStream &stream, Property &value);
+        SUBSTATE_EXPORT friend OStream &operator<<(OStream &stream, const Property &value);
+
     private:
         std::variant<std::monostate, Node *, Variant> var;
     };
@@ -70,6 +73,31 @@ namespace Substate {
 
     bool Property::operator!=(const Property &other) const {
         return var != other.var;
+    }
+
+    class SUBSTATE_EXPORT PropertyAction : public NodeAction {
+    public:
+        PropertyAction(Type type, Node *parent, const Property &value, const Property &oldValue);
+        ~PropertyAction();
+
+    public:
+        void virtual_hook(int id, void *data) override;
+
+    public:
+        inline Property value() const;
+        inline Property oldValue() const;
+
+    public:
+        std::string m_key;
+        Property v, oldv;
+    };
+
+    Property PropertyAction::value() const {
+        return v;
+    }
+
+    Property PropertyAction::oldValue() const {
+        return oldv;
     }
 
 }

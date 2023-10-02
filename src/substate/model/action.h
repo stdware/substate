@@ -27,7 +27,8 @@ namespace Substate {
             VectorRemove,
             SheetInsert,
             SheetRemove,
-            MappingSet,
+            MappingAssign,
+            StructAssign,
             RootChange,
             User = 1024,
         };

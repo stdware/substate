@@ -30,39 +30,18 @@ namespace Substate {
             goto abort;
         }
 
-        d->mappingIndexes.reserve(size);
+        d->mapping.reserve(size);
         for (int i = 0; i < size; ++i) {
             std::string key;
-            stream >> key;
-            if (stream.fail())
-                goto abort;
-            auto child = Node::read(stream);
-            if (!child) {
+            Property prop;
+            stream >> key >> prop;
+            if (stream.fail()) {
                 goto abort;
             }
-
-            node->addChild(child);
-            d->mappingIndexes.insert(std::make_pair(child, key));
+            if (prop.isNode())
+                d->mappingIndexes.insert(std::make_pair(prop.node(), key));
+            d->mapping.insert(std::make_pair(key, prop));
         }
-
-        stream >> size;
-        if (stream.fail())
-            goto abort;
-
-        d->mapping.reserve(d->mappingIndexes.size() + size);
-        for (int i = 0; i < size; ++i) {
-            std::string key;
-            Variant var;
-            stream >> key >> var;
-            if (stream.fail())
-                goto abort;
-            d->mapping.insert(std::make_pair(key, var));
-        }
-
-        for (const auto &pair : std::as_const(d->mappingIndexes)) {
-            d->mapping.insert(std::make_pair(pair.second, pair.first));
-        }
-
         return node;
 
     abort:
@@ -128,8 +107,8 @@ namespace Substate {
         q->endAction();
     }
 
-    Action *readMappingAction(IStream &stream,
-                              const std::unordered_map<int, Node *> &existingNodes) {
+    MappingAction *readMappingAction(IStream &stream,
+                                     const std::unordered_map<int, Node *> &existingNodes) {
         int parentIndex;
         std::string key;
 
@@ -175,6 +154,35 @@ namespace Substate {
         d->setProperty_helper(key, value);
     }
 
+    bool MappingNode::remove(Node *node) {
+        Q_D(MappingNode);
+        assert(d->testModifiable());
+
+        // Validate
+        if (!node) {
+            SUBSTATE_WARNING("trying to remove a null node from %p", this);
+            return false;
+        }
+
+        auto it = d->mappingIndexes.find(node);
+        if (it == d->mappingIndexes.end()) {
+            SUBSTATE_WARNING("node %p is not the child of %p", node, this);
+            return false;
+        }
+
+        d->setProperty_helper(it->second, {});
+        return true;
+    }
+
+    std::string MappingNode::indexOf(Node *node) const {
+        Q_D(const MappingNode);
+        auto it = d->mappingIndexes.find(node);
+        if (it == d->mappingIndexes.end()) {
+            return {};
+        }
+        return it->second;
+    }
+
     std::vector<std::string> MappingNode::keys() const {
         Q_D(const MappingNode);
         std::vector<std::string> keys(d->mapping.size());
@@ -185,6 +193,11 @@ namespace Substate {
         return keys;
     }
 
+    const std::unordered_map<std::string, Property> &MappingNode::data() const {
+        Q_D(const MappingNode);
+        return d->mapping;
+    }
+
     int MappingNode::size() const {
         Q_D(const MappingNode);
         return int(d->mapping.size());
@@ -192,25 +205,7 @@ namespace Substate {
 
     void MappingNode::write(OStream &stream) const {
         Q_D(const MappingNode);
-        // Write index
-        stream << d->index;
-
-        // Write nodes
-        stream << int(d->mappingIndexes.size());
-        for (const auto &pair : d->mappingIndexes) {
-            stream << pair.second;     // key
-            pair.first->write(stream); // node
-        }
-
-        // Write variants
-        stream << int(d->mapping.size() - d->mappingIndexes.size());
-        for (const auto &pair : d->mapping) {
-            if (!pair.second.isVariant()) {
-                continue;
-            }
-            stream << pair.first;            // key
-            stream << pair.second.variant(); // variant
-        }
+        stream << d->index << d->mapping;
     }
 
     Node *MappingNode::clone(bool user) const {
@@ -242,12 +237,7 @@ namespace Substate {
     }
 
     void MappingNode::childDestroyed(Node *node) {
-        Q_D(MappingNode);
-        auto it = d->mappingIndexes.find(node);
-        if (it == d->mappingIndexes.end())
-            return;
-        d->mappingIndexes.erase(node);
-        d->mapping.erase(it->second);
+        remove(node);
     }
 
     void MappingNode::propagateChildren(const std::function<void(Node *)> &func) {
@@ -263,7 +253,7 @@ namespace Substate {
 
     MappingAction::MappingAction(Node *parent, const std::string &key, const Property &value,
                                  const Property &oldValue)
-        : NodeAction(MappingSet, parent), m_key(key), v(value), oldv(oldValue) {
+        : PropertyAction(MappingAssign, parent, value, oldValue), m_key(key) {
     }
 
     MappingAction::~MappingAction() {
@@ -282,33 +272,6 @@ namespace Substate {
     void MappingAction::execute(bool undo) {
         auto d = static_cast<MappingNode *>(m_parent)->d_func();
         d->setProperty_helper(m_key, undo ? oldv : v);
-    }
-
-    void MappingAction::virtual_hook(int id, void *data) {
-        switch (id) {
-            case CleanNodesHook: {
-                if (v.isNode()) {
-                    NodeHelper::forceDelete(v.node());
-                }
-                break;
-            }
-            case InsertedNodesHook: {
-                if (v.isNode()) {
-                    auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
-                    res.push_back(v.node());
-                }
-                break;
-            }
-            case RemovedNodesHook: {
-                if (oldv.isNode()) {
-                    auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
-                    res.push_back(oldv.node());
-                }
-                break;
-            }
-            default:
-                break;
-        }
     }
 
 }
