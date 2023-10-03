@@ -1,14 +1,14 @@
 {
+    "namespace": "music",
     "include": {
-        "std::string": "string",
+        "QByteArray": "QtCore/QByteArray",
         "QString": "QtCore/QString"
     },
-    "namespace": "music",
     "classes": {
         "Root": {
             "properties": {
                 "version": {
-                    "type": "std::string",
+                    "type": "QByteArray",
                     "default": "\"0.0.0.1\""
                 },
                 "author": {
@@ -55,7 +55,7 @@
             },
             "ctor-d": {
                 "super": [
-                    "Track"
+                    "Voice"
                 ]
             },
             "properties": {
@@ -65,6 +65,18 @@
                 },
                 "curves": "Substate::BytesNode<int16_t>",
                 "notes": "Substate::SheetNode<Note>"
+            },
+            "fileName": "track.h"
+        },
+        "BGMTrack": {
+            "super": "Track",
+            "ctor-d": {
+                "super": [
+                    "BGM"
+                ]
+            },
+            "properties": {
+                "path": "QString"
             },
             "fileName": "track.h"
         },

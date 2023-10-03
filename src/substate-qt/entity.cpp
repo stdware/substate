@@ -15,7 +15,7 @@ namespace Substate {
     Entity::~Entity() {
     }
 
-    void Entity::notified(Substate::Notification *n) {
+    void Entity::notified(Notification *n) {
     }
 
     Entity::Entity(EntityPrivate &d, QObject *parent) : QObject(parent), d_ptr(&d) {

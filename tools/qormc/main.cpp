@@ -4,7 +4,7 @@
 
 static void error(const char *msg = "Invalid argument") {
     if (msg)
-        fprintf(stderr, "qormc:%s\n", msg);
+        fprintf(stderr, "qormc: %s\n", msg);
 }
 
 int main(int argc, char *argv[]) {
@@ -33,12 +33,15 @@ int main(int argc, char *argv[]) {
 
     const QStringList files = parser.positionalArguments();
     output = parser.value(outputOption);
-
+    
     if (files.size() > 1) {
         error(qPrintable(QLatin1String("Too many input files specified: '") +
                          files.join(QLatin1String("' '")) + QLatin1Char('\'')));
         parser.showHelp(1);
-    } else if (!files.isEmpty()) {
+    } else if (files.isEmpty()) {
+        error(qPrintable(QLatin1String("No input file specified'")));
+        parser.showHelp(1);
+    } else {
         filename = files.first();
     }
 

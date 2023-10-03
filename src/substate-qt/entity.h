@@ -17,7 +17,7 @@ namespace Substate {
         ~Entity();
 
     protected:
-        void notified(Substate::Notification *n) override;
+        void notified(Notification *n) override;
 
     protected:
         Entity(EntityPrivate &d, QObject *parent = nullptr);
