@@ -17,6 +17,8 @@ namespace Substate {
 
     class NodeHelper;
 
+    class NodeExtra;
+
     class NodePrivate;
 
     class SUBSTATE_EXPORT Node : public Sender {
@@ -78,20 +80,36 @@ namespace Substate {
         friend class Model;
         friend class ModelPrivate;
         friend class NodeHelper;
+        friend class NodeExtra;
     };
 
     inline bool Node::isObsolete() const {
         return isManaged();
     }
 
-    class NodeExtra : public Subscriber {
+    class SUBSTATE_EXPORT NodeExtra {
     public:
-        ~NodeExtra() = default;
+        NodeExtra();
+        NodeExtra(Node *node);
+        ~NodeExtra();
 
-    private:
+        inline Node *internalData() const;
+
+    protected:
+        void setInternalData(Node *node);
+
+        virtual void notified(Notification *n) = 0;
+
+    protected:
+        Node *m_node;
+
         friend class Node;
         friend class NodePrivate;
     };
+
+    inline Node *NodeExtra::internalData() const {
+        return m_node;
+    }
 
     class SUBSTATE_EXPORT NodeAction : public Action {
     public:

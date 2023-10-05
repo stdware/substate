@@ -5,10 +5,10 @@
 
 namespace Substate {
 
-    class QSUBSTATE_EXPORT EntityPrivate {
+    class QSUBSTATE_EXPORT EntityPrivate : public NodeExtra {
         Q_DECLARE_PUBLIC(Entity)
     public:
-        EntityPrivate();
+        EntityPrivate(Node *node);
         virtual ~EntityPrivate();
         void init();
         Entity *q_ptr;

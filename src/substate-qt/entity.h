@@ -10,14 +10,14 @@ namespace Substate {
 
     class EntityPrivate;
 
-    class QSUBSTATE_EXPORT Entity : public QObject, public NodeExtra {
+    class QSUBSTATE_EXPORT Entity : public QObject {
         Q_OBJECT
         Q_DECLARE_PRIVATE(Entity)
     public:
         ~Entity();
 
-    protected:
-        void notified(Notification *n) override;
+    public:
+        Node *internalData(Node *node) const;
 
     protected:
         Entity(EntityPrivate &d, QObject *parent = nullptr);

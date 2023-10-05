@@ -254,6 +254,28 @@ namespace Substate {
         d.init();
     }
 
+    NodeExtra::NodeExtra() : m_node(nullptr) {
+    }
+
+    NodeExtra::NodeExtra(Node *node) : m_node(node) {
+        m_node->d_func()->extra = nullptr;
+    }
+
+    NodeExtra::~NodeExtra() {
+        if (m_node)
+            m_node->d_func()->extra = nullptr;
+    }
+
+    void NodeExtra::setInternalData(Node *node) {
+        if (m_node) {
+            m_node->d_func()->extra = nullptr;
+        }
+        m_node = node;
+        if (m_node) {
+            m_node->d_func()->extra = this;
+        }
+    }
+
     NodeAction::NodeAction(int type, Node *parent) : Action(type), m_parent(parent) {
     }
 

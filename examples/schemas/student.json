@@ -1,11 +1,13 @@
 {
     "namespace": "music",
+    "dllexport": "SAMPLE_EXPORT",
     "include": {
         "QByteArray": "QtCore/QByteArray",
         "QString": "QtCore/QString"
     },
-    "classes": {
-        "Root": {
+    "classes": [
+        {
+            "name": "Root",
             "properties": {
                 "version": {
                     "type": "QByteArray",
@@ -19,19 +21,23 @@
             },
             "fileName": "root.h"
         },
-        "Track": {
-            "enums": {
-                "Type": [
-                    "Voice",
-                    "BGM"
-                ]
-            },
-            "ctor": null,
-            "ctor-d": {
+        {
+            "name": "Track",
+            "reserved": true,
+            "enums": [
+                {
+                    "name": "Type",
+                    "values": [
+                        "Voice",
+                        "BGM"
+                    ]
+                }
+            ],
+            "ctor": {
                 "args": [
                     {
                         "type": "Type",
-                        "token": "type",
+                        "name": "type",
                         "member": "type"
                     }
                 ]
@@ -45,15 +51,19 @@
             },
             "fileName": "track.h"
         },
-        "VoiceTrack": {
+        {
+            "name": "VoiceTrack",
             "super": "Track",
-            "enums": {
-                "Gender": [
-                    "Male",
-                    "Female"
-                ]
-            },
-            "ctor-d": {
+            "enums": [
+                {
+                    "name": "Gender",
+                    "values": [
+                        "Male",
+                        "Female"
+                    ]
+                }
+            ],
+            "ctor": {
                 "super": [
                     "Voice"
                 ]
@@ -63,12 +73,13 @@
                     "type": "Gender",
                     "default": "VoiceTrack::Male"
                 },
-                "curves": "Substate::BytesNode<int16_t>",
+                "curves": "Substate::BytesNode<Int16>",
                 "notes": "Substate::SheetNode<Note>"
             },
             "fileName": "track.h"
         },
-        "BGMTrack": {
+        {
+            "name": "BGMTrack",
             "super": "Track",
             "ctor-d": {
                 "super": [
@@ -80,7 +91,8 @@
             },
             "fileName": "track.h"
         },
-        "Note": {
+        {
+            "name": "Note",
             "properties": {
                 "lyric": "QString",
                 "keyNum": {
@@ -90,5 +102,5 @@
             },
             "fileName": "note.h"
         }
-    }
+    ]
 }
