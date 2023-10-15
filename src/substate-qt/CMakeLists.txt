@@ -1,6 +1,6 @@
 project(qsubstate VERSION ${SUBSTATE_VERSION} LANGUAGES C CXX)
 
-set(_generate_include_dir "${CMAKE_CURRENT_BINARY_DIR}/include/${PROJECT_NAME}")
+set(_generate_include_dir "${CMAKE_CURRENT_BINARY_DIR}/include/${SUBSTATE_INSTALL_NAME}")
 file(GLOB_RECURSE _src *.h *.cpp)
 
 set(_cxx_flags)
@@ -63,7 +63,7 @@ else()
 endif()
 
 # Generate a standard include directory in build directory
-qtmediate_gen_include(. "${_generate_include_dir}/${PROJECT_NAME}" ${_gen_include_options})
+qtmediate_sync_include(. "${_generate_include_dir}/${PROJECT_NAME}" ${_gen_include_options})
 target_include_directories(${PROJECT_NAME} PUBLIC
     "$<BUILD_INTERFACE:${_generate_include_dir}>"
 )

@@ -1,9 +1,18 @@
 {
     "namespace": "music",
-    "dllexport": "SAMPLE_EXPORT",
+    "dllexport": {
+        "token": "SAMPLE_EXPORT",
+        "exportPrivate": true
+    },
     "include": {
-        "QByteArray": "QtCore/QByteArray",
-        "QString": "QtCore/QString"
+        "import": {
+            "QByteArray": "QtCore/QByteArray",
+            "QString": "QtCore/QString"
+        },
+        "pattern": "#include <student/{}>",
+        "global": [
+            "#include <student/global.h>"
+        ]
     },
     "classes": [
         {
@@ -36,7 +45,7 @@
             "ctor": {
                 "args": [
                     {
-                        "type": "Type",
+                        "type": "Track::Type",
                         "name": "type",
                         "member": "type"
                     }
@@ -70,8 +79,9 @@
             },
             "properties": {
                 "gender": {
-                    "type": "Gender",
-                    "default": "VoiceTrack::Male"
+                    "type": "VoiceTrack::Gender",
+                    "default": "VoiceTrack::Male",
+                    "dataType": "qint32"
                 },
                 "curves": "Substate::BytesNode<Int16>",
                 "notes": "Substate::SheetNode<Note>"

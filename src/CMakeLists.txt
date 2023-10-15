@@ -1,9 +1,3 @@
-if(NOT DEFINED QTMEDIATE_CMAKE_MODULES_DIR)
-    message(FATAL_ERROR "QTMEDIATE_CMAKE_MODULES_DIR not defined!")
-endif()
-
-include("${QTMEDIATE_CMAKE_MODULES_DIR}/QtMediateAPI.cmake")
-
 set(SUBSTATE_PROJECT_DESCRIPTION "Crash Consistent Undo Framework")
 set(SUBSTATE_PROJECT_COPYRIGHT "Copyright 2019-2023 SineStriker")
 
