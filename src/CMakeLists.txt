@@ -82,10 +82,4 @@ if(SUBSTATE_INSTALL)
         NAMESPACE substate::
         DESTINATION ${_install_dir}
     )
-
-    # Install cmake modules
-    install(DIRECTORY ${SUBSTATE_MODULES_DIR}/
-        DESTINATION ${_install_dir}/cmake
-        PATTERN "__pycache__" EXCLUDE
-    )
 endif()

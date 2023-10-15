@@ -91,7 +91,7 @@ namespace Substate {
     public:
         NodeExtra();
         NodeExtra(Node *node);
-        ~NodeExtra();
+        virtual ~NodeExtra();
 
         inline Node *internalData() const;
 
