@@ -29,13 +29,12 @@ We propose a flexible and efficient undo framework which not only allows develop
 
 + [qtmediate-cmake-modules](https://github.com/SineStriker/qtmediate-cmake-modules)
 
-## Build From Source
+## Build & Install
 
 ```sh
-cmake -B build -G Ninja \
-    -DQTMEDIATE_CMAKE_MODULES_DIR:STRING=<dir>
-
+cmake -B build -G Ninja
 cmake --build build --target all
+cmake --build build --target install
 ```
 
 ## License
