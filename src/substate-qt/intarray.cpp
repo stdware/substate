@@ -101,17 +101,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(Int8Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const Int8Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint8 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(Int8Array);
-            auto data = reinterpret_cast<const Int8Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint8 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(Int8Array);
-            auto data = reinterpret_cast<const Int8Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint8 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -127,25 +127,25 @@ namespace Substate {
     Int8Array::~Int8Array() {
     }
 
-    QVector<Int8Array::value_type> Int8Array::mid(int index, int size) const {
+    QVector<qint8> Int8Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const qint8 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<Int8Array::value_type> Int8Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<qint8> Int8Array::values() const {
+        auto data = reinterpret_cast<const qint8 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void Int8Array::replace(int index, const QVector<value_type> &values) {
+    void Int8Array::replace(int index, const QVector<qint8> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void Int8Array::insert(int index, const QVector<value_type> &values) {
+    void Int8Array::insert(int index, const QVector<qint8> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
@@ -167,17 +167,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(UInt8Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const UInt8Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint8 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(UInt8Array);
-            auto data = reinterpret_cast<const UInt8Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint8 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(UInt8Array);
-            auto data = reinterpret_cast<const UInt8Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint8 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -193,25 +193,25 @@ namespace Substate {
     UInt8Array::~UInt8Array() {
     }
 
-    QVector<UInt8Array::value_type> UInt8Array::mid(int index, int size) const {
+    QVector<quint8> UInt8Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const quint8 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<UInt8Array::value_type> UInt8Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<quint8> UInt8Array::values() const {
+        auto data = reinterpret_cast<const quint8 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void UInt8Array::replace(int index, const QVector<value_type> &values) {
+    void UInt8Array::replace(int index, const QVector<quint8> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void UInt8Array::insert(int index, const QVector<value_type> &values) {
+    void UInt8Array::insert(int index, const QVector<quint8> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
@@ -234,17 +234,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(Int16Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const Int16Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint16 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(Int16Array);
-            auto data = reinterpret_cast<const Int16Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint16 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(Int16Array);
-            auto data = reinterpret_cast<const Int16Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint16 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -260,25 +260,25 @@ namespace Substate {
     Int16Array::~Int16Array() {
     }
 
-    QVector<Int16Array::value_type> Int16Array::mid(int index, int size) const {
+    QVector<qint16> Int16Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const qint16 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<Int16Array::value_type> Int16Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<qint16> Int16Array::values() const {
+        auto data = reinterpret_cast<const qint16 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void Int16Array::replace(int index, const QVector<value_type> &values) {
+    void Int16Array::replace(int index, const QVector<qint16> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void Int16Array::insert(int index, const QVector<value_type> &values) {
+    void Int16Array::insert(int index, const QVector<qint16> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
@@ -300,17 +300,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(UInt16Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const UInt16Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint16 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(UInt16Array);
-            auto data = reinterpret_cast<const UInt16Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint16 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(UInt16Array);
-            auto data = reinterpret_cast<const UInt16Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint16 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -326,25 +326,25 @@ namespace Substate {
     UInt16Array::~UInt16Array() {
     }
 
-    QVector<UInt16Array::value_type> UInt16Array::mid(int index, int size) const {
+    QVector<quint16> UInt16Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const quint16 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<UInt16Array::value_type> UInt16Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<quint16> UInt16Array::values() const {
+        auto data = reinterpret_cast<const quint16 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void UInt16Array::replace(int index, const QVector<value_type> &values) {
+    void UInt16Array::replace(int index, const QVector<quint16> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void UInt16Array::insert(int index, const QVector<value_type> &values) {
+    void UInt16Array::insert(int index, const QVector<quint16> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
@@ -366,17 +366,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(Int32Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const Int32Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint32 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(Int32Array);
-            auto data = reinterpret_cast<const Int32Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint32 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(Int32Array);
-            auto data = reinterpret_cast<const Int32Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint32 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -392,25 +392,25 @@ namespace Substate {
     Int32Array::~Int32Array() {
     }
 
-    QVector<Int32Array::value_type> Int32Array::mid(int index, int size) const {
+    QVector<qint32> Int32Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const qint32 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<Int32Array::value_type> Int32Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<qint32> Int32Array::values() const {
+        auto data = reinterpret_cast<const qint32 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void Int32Array::replace(int index, const QVector<value_type> &values) {
+    void Int32Array::replace(int index, const QVector<qint32> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void Int32Array::insert(int index, const QVector<value_type> &values) {
+    void Int32Array::insert(int index, const QVector<qint32> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
@@ -432,17 +432,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(UInt32Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const UInt32Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint32 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(UInt32Array);
-            auto data = reinterpret_cast<const UInt32Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint32 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(UInt32Array);
-            auto data = reinterpret_cast<const UInt32Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint32 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -458,25 +458,25 @@ namespace Substate {
     UInt32Array::~UInt32Array() {
     }
 
-    QVector<UInt32Array::value_type> UInt32Array::mid(int index, int size) const {
+    QVector<quint32> UInt32Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const quint32 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<UInt32Array::value_type> UInt32Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<quint32> UInt32Array::values() const {
+        auto data = reinterpret_cast<const quint32 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void UInt32Array::replace(int index, const QVector<value_type> &values) {
+    void UInt32Array::replace(int index, const QVector<quint32> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void UInt32Array::insert(int index, const QVector<value_type> &values) {
+    void UInt32Array::insert(int index, const QVector<quint32> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
@@ -498,17 +498,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(Int64Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const Int64Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint64 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(Int64Array);
-            auto data = reinterpret_cast<const Int64Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint64 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(Int64Array);
-            auto data = reinterpret_cast<const Int64Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const qint64 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -524,25 +524,25 @@ namespace Substate {
     Int64Array::~Int64Array() {
     }
 
-    QVector<Int64Array::value_type> Int64Array::mid(int index, int size) const {
+    QVector<qint64> Int64Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const qint64 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<Int64Array::value_type> Int64Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<qint64> Int64Array::values() const {
+        auto data = reinterpret_cast<const qint64 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void Int64Array::replace(int index, const QVector<value_type> &values) {
+    void Int64Array::replace(int index, const QVector<qint64> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void Int64Array::insert(int index, const QVector<value_type> &values) {
+    void Int64Array::insert(int index, const QVector<qint64> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
@@ -564,17 +564,17 @@ namespace Substate {
         void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
             Q_Q(UInt64Array);
             Q_UNUSED(oldBytes)
-            auto data = reinterpret_cast<const UInt64Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint64 *>(bytes.data());
             emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendInsert(int index, const ByteArray &bytes) override {
             Q_Q(UInt64Array);
-            auto data = reinterpret_cast<const UInt64Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint64 *>(bytes.data());
             emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
         void sendRemove(int index, const ByteArray &bytes) override {
             Q_Q(UInt64Array);
-            auto data = reinterpret_cast<const UInt64Array::value_type *>(bytes.data());
+            auto data = reinterpret_cast<const quint64 *>(bytes.data());
             emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
         }
     };
@@ -590,25 +590,25 @@ namespace Substate {
     UInt64Array::~UInt64Array() {
     }
 
-    QVector<UInt64Array::value_type> UInt64Array::mid(int index, int size) const {
+    QVector<quint64> UInt64Array::mid(int index, int size) const {
         if (index < 0 || index >= this->size()) {
             return {};
         }
         size = qMin(this->size() - index, size);
-        auto data = reinterpret_cast<const value_type *>(valuesImpl()) + index;
+        auto data = reinterpret_cast<const quint64 *>(valuesImpl()) + index;
         return {data, data + size};
     }
 
-    QVector<UInt64Array::value_type> UInt64Array::values() const {
-        auto data = reinterpret_cast<const value_type *>(valuesImpl());
+    QVector<quint64> UInt64Array::values() const {
+        auto data = reinterpret_cast<const quint64 *>(valuesImpl());
         return {data, data + size()};
     }
 
-    void UInt64Array::replace(int index, const QVector<value_type> &values) {
+    void UInt64Array::replace(int index, const QVector<quint64> &values) {
         replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 
-    void UInt64Array::insert(int index, const QVector<value_type> &values) {
+    void UInt64Array::insert(int index, const QVector<quint64> &values) {
         insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
     }
 

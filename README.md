@@ -15,7 +15,7 @@ We propose a flexible and efficient undo framework which not only allows develop
 ## Highlights
 
 + Universality
-+ Crash Consitency
++ Crash Consistency
 + Delayed Deletion
 
 ## Requirements
