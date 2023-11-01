@@ -42,8 +42,8 @@ namespace Substate {
 
     void MemoryEnginePrivate::afterCommit(const std::vector<Action *> &actions,
                                           const Engine::StepMessage &message) {
-        SUBSTATE_UNUSED(actions)
-        SUBSTATE_UNUSED(message)
+        QM_UNUSED(actions)
+        QM_UNUSED(message)
 
         if (current > 2 * maxSteps) {
             // Remove head
@@ -63,26 +63,26 @@ namespace Substate {
     }
 
     int MemoryEngine::preservedSteps() const {
-        Q_D(const MemoryEngine);
+        QM_D(const MemoryEngine);
         return d->maxSteps;
     }
 
     void MemoryEngine::setPreservedSteps(int steps) {
-        Q_D(MemoryEngine);
+        QM_D(MemoryEngine);
         if (d->model) {
-            SUBSTATE_WARNING("changing engine parameters after setup is prohibited");
+            QTMEDIATE_WARNING("changing engine parameters after setup is prohibited");
             return;
         }
 
         if (!d->acceptChangeMaxSteps(steps)) {
-            SUBSTATE_WARNING("specified steps %d is too small", steps);
+            QTMEDIATE_WARNING("specified steps %d is too small", steps);
             return;
         }
         d->maxSteps = steps;
     }
 
     void MemoryEngine::commit(const std::vector<Action *> &actions, const StepMessage &message) {
-        Q_D(MemoryEngine);
+        QM_D(MemoryEngine);
 
         // Truncate stack tail
         if (d->current < d->stack.size()) {
@@ -98,7 +98,7 @@ namespace Substate {
     }
 
     void MemoryEngine::execute(bool undo) {
-        Q_D(MemoryEngine);
+        QM_D(MemoryEngine);
         if (undo) {
             if (d->current == 0)
                 return;
@@ -126,7 +126,7 @@ namespace Substate {
     void MemoryEngine::reset() {
         Engine::reset();
 
-        Q_D(MemoryEngine);
+        QM_D(MemoryEngine);
         d->stack.clear(); // All nodes have been deleted in Engine::reset()
         d->min = 0;
         d->current = 0;
@@ -135,22 +135,22 @@ namespace Substate {
     }
 
     int MemoryEngine::minimum() const {
-        Q_D(const MemoryEngine);
+        QM_D(const MemoryEngine);
         return d->min;
     }
 
     int MemoryEngine::maximum() const {
-        Q_D(const MemoryEngine);
+        QM_D(const MemoryEngine);
         return d->min + int(d->stack.size());
     }
 
     int MemoryEngine::current() const {
-        Q_D(const MemoryEngine);
+        QM_D(const MemoryEngine);
         return d->min + d->current;
     }
 
     Engine::StepMessage MemoryEngine::stepMessage(int step) const {
-        Q_D(const MemoryEngine);
+        QM_D(const MemoryEngine);
         step -= d->min + 1;
         if (step < 0 || step >= d->stack.size())
             return {};

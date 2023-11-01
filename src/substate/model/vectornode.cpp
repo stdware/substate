@@ -71,7 +71,7 @@ namespace Substate {
     }
 
     void VectorNodePrivate::insertRows_helper(int index, const std::vector<Node *> &nodes) {
-        Q_Q(VectorNode);
+        QM_Q(VectorNode);
         q->beginAction();
 
         // Do change
@@ -93,7 +93,7 @@ namespace Substate {
     }
 
     void VectorNodePrivate::moveRows_helper(int index, int count, int dest) {
-        Q_Q(VectorNode);
+        QM_Q(VectorNode);
         q->beginAction();
 
         VectorMoveAction a(q, index, count, dest);
@@ -117,7 +117,7 @@ namespace Substate {
     }
 
     void VectorNodePrivate::removeRows_helper(int index, int count) {
-        Q_Q(VectorNode);
+        QM_Q(VectorNode);
         q->beginAction();
 
         std::vector<Node *> tmp;
@@ -197,17 +197,17 @@ namespace Substate {
     }
 
     bool VectorNode::insert(int index, const std::vector<Node *> &nodes) {
-        Q_D(VectorNode);
+        QM_D(VectorNode);
         assert(d->testModifiable());
 
         // Validate
         if (!validateArrayQueryArguments(index, d->vector.size()) || nodes.empty()) {
-            SUBSTATE_WARNING("invalid parameters");
+            QTMEDIATE_WARNING("invalid parameters");
             return false;
         }
         for (const auto &node : nodes) {
             if (!d->testInsertable(node)) {
-                SUBSTATE_WARNING("node %p is not able to be inserted", node);
+                QTMEDIATE_WARNING("node %p is not able to be inserted", node);
                 return false;
             }
         }
@@ -217,14 +217,14 @@ namespace Substate {
     }
 
     bool VectorNode::move(int index, int count, int dest) {
-        Q_D(VectorNode);
+        QM_D(VectorNode);
         assert(d->testModifiable());
 
         // Validate
         if (!validateArrayRemoveArguments(index, count, d->vector.size()) ||
             (dest >= index && dest <= index + count) // dest bound
         ) {
-            SUBSTATE_WARNING("invalid parameters");
+            QTMEDIATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -233,12 +233,12 @@ namespace Substate {
     }
 
     bool VectorNode::remove(int index, int count) {
-        Q_D(VectorNode);
+        QM_D(VectorNode);
         assert(d->testModifiable());
 
         // Validate
         if (!validateArrayRemoveArguments(index, count, d->vector.size())) {
-            SUBSTATE_WARNING("invalid parameters");
+            QTMEDIATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -247,19 +247,19 @@ namespace Substate {
     }
 
     bool VectorNode::remove(Node *node) {
-        Q_D(VectorNode);
+        QM_D(VectorNode);
         assert(d->testModifiable());
 
         // Validate
         if (!node) {
-            SUBSTATE_WARNING("trying to remove a null node from %p", this);
+            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         decltype(d->vector)::const_iterator it;
         if (node->parent() != this ||
             (it = std::find(d->vector.begin(), d->vector.end(), node)) == d->vector.end()) {
-            SUBSTATE_WARNING("node %p is not the child of %p", node, this);
+            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 
@@ -268,17 +268,17 @@ namespace Substate {
     }
 
     Node *VectorNode::at(int index) const {
-        Q_D(const VectorNode);
+        QM_D(const VectorNode);
         return d->vector.at(index);
     }
 
     const std::vector<Node *> &VectorNode::data() const {
-        Q_D(const VectorNode);
+        QM_D(const VectorNode);
         return d->vector;
     }
 
     int VectorNode::indexOf(Node *node) const {
-        Q_D(const VectorNode);
+        QM_D(const VectorNode);
         auto it = std::find(d->vector.begin(), d->vector.end(), node);
         if (it == d->vector.end())
             return -1;
@@ -286,12 +286,12 @@ namespace Substate {
     }
 
     int VectorNode::size() const {
-        Q_D(const VectorNode);
+        QM_D(const VectorNode);
         return int(d->vector.size());
     }
 
     void VectorNode::write(OStream &stream) const {
-        Q_D(const VectorNode);
+        QM_D(const VectorNode);
         // Write index
         stream << d->index;
 
@@ -303,7 +303,7 @@ namespace Substate {
     }
 
     Node *VectorNode::clone(bool user) const {
-        Q_D(const VectorNode);
+        QM_D(const VectorNode);
 
         auto node = new VectorNode();
         auto d2 = node->d_func();
@@ -326,7 +326,7 @@ namespace Substate {
     }
 
     void VectorNode::propagateChildren(const std::function<void(Node *)> &func) {
-        Q_D(VectorNode);
+        QM_D(VectorNode);
         for (const auto &node : std::as_const(d->vector)) {
             func(node);
         }

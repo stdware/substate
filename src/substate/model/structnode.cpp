@@ -49,7 +49,7 @@ namespace Substate {
     }
 
     void StructNodePrivate::assign_helper(int i, const Property &prop) {
-        Q_Q(StructNode);
+        QM_Q(StructNode);
         q->beginAction();
 
         Property oldProp = array.at(i);
@@ -121,11 +121,11 @@ namespace Substate {
     }
 
     bool StructNode::assign(int i, const Property &value) {
-        Q_D(StructNode);
+        QM_D(StructNode);
         assert(d->testModifiable());
 
         if (i < 0 || i >= d->array.size()) {
-            SUBSTATE_WARNING("index %d out of range", i);
+            QTMEDIATE_WARNING("index %d out of range", i);
             return false;
         }
 
@@ -134,23 +134,23 @@ namespace Substate {
     }
 
     Property StructNode::at(int i) const {
-        Q_D(const StructNode);
+        QM_D(const StructNode);
         return d->array.at(i);
     }
 
     bool StructNode::remove(Node *node) {
-        Q_D(StructNode);
+        QM_D(StructNode);
         assert(d->testModifiable());
 
         // Validate
         if (!node) {
-            SUBSTATE_WARNING("trying to remove a null node from %p", this);
+            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         auto it = d->arrayIndexes.find(node);
         if (it == d->arrayIndexes.end()) {
-            SUBSTATE_WARNING("node %p is not the child of %p", node, this);
+            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 
@@ -159,7 +159,7 @@ namespace Substate {
     }
 
     int StructNode::indexOf(Node *node) const {
-        Q_D(const StructNode);
+        QM_D(const StructNode);
         auto it = d->arrayIndexes.find(node);
         if (it == d->arrayIndexes.end()) {
             return {};
@@ -168,22 +168,22 @@ namespace Substate {
     }
 
     const std::vector<Property> &StructNode::data() const {
-        Q_D(const StructNode);
+        QM_D(const StructNode);
         return d->array;
     }
 
     int StructNode::size() const {
-        Q_D(const StructNode);
+        QM_D(const StructNode);
         return d->array.size();
     }
 
     void StructNode::write(OStream &stream) const {
-        Q_D(const StructNode);
+        QM_D(const StructNode);
         stream << d->index << d->array;
     }
 
     Node *StructNode::clone(bool user) const {
-        Q_D(const StructNode);
+        QM_D(const StructNode);
 
         auto node = new StructNode(d->array.size());
         auto d2 = node->d_func();
@@ -213,7 +213,7 @@ namespace Substate {
     }
 
     void StructNode::propagateChildren(const std::function<void(Node *)> &func) {
-        Q_D(StructNode);
+        QM_D(StructNode);
         for (const auto &pair : std::as_const(d->arrayIndexes)) {
             func(pair.first);
         }

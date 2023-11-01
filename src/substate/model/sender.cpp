@@ -8,7 +8,7 @@ namespace Substate {
     }
 
     SenderPrivate::~SenderPrivate() {
-        Q_Q(Sender);
+        QM_Q(Sender);
 
         // Notify
         {
@@ -39,7 +39,7 @@ namespace Substate {
         Adds a subscriber.
     */
     void Sender::addSubscriber(Subscriber *sub) {
-        Q_D(Sender);
+        QM_D(Sender);
 
         std::unique_lock<std::shared_mutex> lock(d->shared_lock);
 
@@ -56,7 +56,7 @@ namespace Substate {
         Removes a subscriber.
     */
     void Sender::removeSubscriber(Subscriber *sub) {
-        Q_D(Sender);
+        QM_D(Sender);
 
         std::unique_lock<std::shared_mutex> lock(d->shared_lock);
 
@@ -73,7 +73,7 @@ namespace Substate {
         Returns true if the sender is in destruction.
     */
     bool Sender::isBeingDestroyed() const {
-        Q_D(const Sender);
+        QM_D(const Sender);
         return d->is_clearing;
     }
 
@@ -81,7 +81,7 @@ namespace Substate {
         Notifies all subscribers of the notification.
     */
     void Sender::dispatch(Notification *n) {
-        Q_D(Sender);
+        QM_D(Sender);
 
         decltype(d->subscribers) subs;
 

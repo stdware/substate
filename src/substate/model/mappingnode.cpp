@@ -50,7 +50,7 @@ namespace Substate {
     }
 
     void MappingNodePrivate::setProperty_helper(const std::string &key, const Property &prop) {
-        Q_Q(MappingNode);
+        QM_Q(MappingNode);
         q->beginAction();
 
         Property oldProp;
@@ -140,7 +140,7 @@ namespace Substate {
     }
 
     Property MappingNode::property(const std::string &key) const {
-        Q_D(const MappingNode);
+        QM_D(const MappingNode);
         auto it = d->mapping.find(key);
         if (it == d->mapping.end()) {
             return {};
@@ -149,24 +149,24 @@ namespace Substate {
     }
 
     void MappingNode::setProperty(const std::string &key, const Property &value) {
-        Q_D(MappingNode);
+        QM_D(MappingNode);
         assert(d->testModifiable());
         d->setProperty_helper(key, value);
     }
 
     bool MappingNode::remove(Node *node) {
-        Q_D(MappingNode);
+        QM_D(MappingNode);
         assert(d->testModifiable());
 
         // Validate
         if (!node) {
-            SUBSTATE_WARNING("trying to remove a null node from %p", this);
+            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         auto it = d->mappingIndexes.find(node);
         if (it == d->mappingIndexes.end()) {
-            SUBSTATE_WARNING("node %p is not the child of %p", node, this);
+            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 
@@ -175,7 +175,7 @@ namespace Substate {
     }
 
     std::string MappingNode::indexOf(Node *node) const {
-        Q_D(const MappingNode);
+        QM_D(const MappingNode);
         auto it = d->mappingIndexes.find(node);
         if (it == d->mappingIndexes.end()) {
             return {};
@@ -184,7 +184,7 @@ namespace Substate {
     }
 
     std::vector<std::string> MappingNode::keys() const {
-        Q_D(const MappingNode);
+        QM_D(const MappingNode);
         std::vector<std::string> keys(d->mapping.size());
         std::transform(d->mapping.begin(), d->mapping.end(), keys.begin(),
                        [](const std::pair<const std::string &, const Property &> &pair) {
@@ -194,22 +194,22 @@ namespace Substate {
     }
 
     const std::unordered_map<std::string, Property> &MappingNode::data() const {
-        Q_D(const MappingNode);
+        QM_D(const MappingNode);
         return d->mapping;
     }
 
     int MappingNode::size() const {
-        Q_D(const MappingNode);
+        QM_D(const MappingNode);
         return int(d->mapping.size());
     }
 
     void MappingNode::write(OStream &stream) const {
-        Q_D(const MappingNode);
+        QM_D(const MappingNode);
         stream << d->index << d->mapping;
     }
 
     Node *MappingNode::clone(bool user) const {
-        Q_D(const MappingNode);
+        QM_D(const MappingNode);
 
         auto node = new MappingNode();
         auto d2 = node->d_func();
@@ -241,7 +241,7 @@ namespace Substate {
     }
 
     void MappingNode::propagateChildren(const std::function<void(Node *)> &func) {
-        Q_D(MappingNode);
+        QM_D(MappingNode);
         for (const auto &pair : std::as_const(d->mappingIndexes)) {
             func(pair.first);
         }

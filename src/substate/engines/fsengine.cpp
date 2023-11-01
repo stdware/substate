@@ -48,12 +48,12 @@ namespace Substate {
     }
 
     bool FileSystemEngine::finished() const {
-        Q_D(const FileSystemEngine);
+        QM_D(const FileSystemEngine);
         return d->finished;
     }
 
     void FileSystemEngine::setFinished(bool finished) {
-        Q_D(FileSystemEngine);
+        QM_D(FileSystemEngine);
         d->finished = finished;
     }
 

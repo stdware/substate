@@ -10,7 +10,7 @@ namespace Substate {
     class StructNodePrivate;
 
     class SUBSTATE_EXPORT StructNode : public Node {
-        SUBSTATE_DECL_PRIVATE(StructNode)
+        QTMEDIATE_DECL_PRIVATE(StructNode)
     public:
         StructNode(int size);
         ~StructNode();

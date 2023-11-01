@@ -31,7 +31,7 @@ namespace Substate {
         Returns the model related to the engine.
     */
     Model *Engine::model() const {
-        Q_D(const Engine);
+        QM_D(const Engine);
         return d->model;
     }
 
@@ -39,7 +39,7 @@ namespace Substate {
         Sets up the engine with the specified model.
     */
     void Engine::setup(Model *model) {
-        Q_D(Engine);
+        QM_D(Engine);
         d->model = model;
     }
 
@@ -47,7 +47,7 @@ namespace Substate {
         Commits a list of actions with a message to the engine.
     */
     void Engine::commit(const std::vector<Action *> &actions, const StepMessage &message) {
-        Q_D(Engine);
+        QM_D(Engine);
 
         // Collect inserted nodes and get ownership
         std::vector<Node *> nodes;
@@ -71,7 +71,7 @@ namespace Substate {
         Resets the model.
     */
     void Engine::reset() {
-        Q_D(Engine);
+        QM_D(Engine);
 
         auto model_d = d->model->d_func();
 

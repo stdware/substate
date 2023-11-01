@@ -53,7 +53,7 @@ namespace Substate {
     }
 
     void SheetNodePrivate::addRecord_helper(int id, Node *node) {
-        Q_Q(SheetNode);
+        QM_Q(SheetNode);
         q->beginAction();
 
         // Do change
@@ -74,7 +74,7 @@ namespace Substate {
     }
 
     void SheetNodePrivate::removeRecord_helper(int id) {
-        Q_Q(SheetNode);
+        QM_Q(SheetNode);
         q->beginAction();
 
         auto it = records.find(id);
@@ -131,12 +131,12 @@ namespace Substate {
     }
 
     int SheetNode::insert(Node *node) {
-        Q_D(SheetNode);
+        QM_D(SheetNode);
         assert(d->testModifiable());
 
         // Validate
         if (!d->testInsertable(node)) {
-            SUBSTATE_WARNING("node %p is not able to be inserted", node);
+            QTMEDIATE_WARNING("node %p is not able to be inserted", node);
             return false;
         }
 
@@ -146,12 +146,12 @@ namespace Substate {
     }
 
     bool SheetNode::remove(int id) {
-        Q_D(SheetNode);
+        QM_D(SheetNode);
         assert(d->testModifiable());
 
         // Validate
         if (d->records.find(id) == d->records.end()) {
-            SUBSTATE_WARNING("sequence id %d doesn't exist in %p", id, this);
+            QTMEDIATE_WARNING("sequence id %d doesn't exist in %p", id, this);
             return false;
         }
 
@@ -160,18 +160,18 @@ namespace Substate {
     }
 
     bool SheetNode::remove(Node *node) {
-        Q_D(SheetNode);
+        QM_D(SheetNode);
         assert(d->testModifiable());
 
         // Validate
         if (!node) {
-            SUBSTATE_WARNING("trying to remove a null node from %p", this);
+            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         auto it = d->recordIndexes.find(node);
         if (it == d->recordIndexes.end()) {
-            SUBSTATE_WARNING("node %p is not the child of %p", node, this);
+            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 
@@ -180,7 +180,7 @@ namespace Substate {
     }
 
     Node *SheetNode::record(int id) {
-        Q_D(const SheetNode);
+        QM_D(const SheetNode);
         auto it = d->records.find(id);
         if (it == d->records.end())
             return nullptr;
@@ -188,7 +188,7 @@ namespace Substate {
     }
 
     int SheetNode::indexOf(Node *node) const {
-        Q_D(const SheetNode);
+        QM_D(const SheetNode);
         auto it = d->recordIndexes.find(node);
         if (it == d->recordIndexes.end())
             return -1;
@@ -196,7 +196,7 @@ namespace Substate {
     }
 
     std::vector<int> SheetNode::ids() const {
-        Q_D(const SheetNode);
+        QM_D(const SheetNode);
         std::vector<int> keys(d->records.size());
         std::transform(d->records.begin(), d->records.end(), keys.begin(),
                        [](const std::pair<int, Node *> &pair) {
@@ -206,17 +206,17 @@ namespace Substate {
     }
 
     const std::unordered_map<int, Node *> SheetNode::data() const {
-        Q_D(const SheetNode);
+        QM_D(const SheetNode);
         return d->records;
     }
 
     int SheetNode::size() const {
-        Q_D(const SheetNode);
+        QM_D(const SheetNode);
         return int(d->records.size());
     }
 
     void SheetNode::write(OStream &stream) const {
-        Q_D(const SheetNode);
+        QM_D(const SheetNode);
         // Write index
         stream << d->index;
 
@@ -229,7 +229,7 @@ namespace Substate {
     }
 
     Node *SheetNode::clone(bool user) const {
-        Q_D(const SheetNode);
+        QM_D(const SheetNode);
 
         auto node = new SheetNode();
         auto d2 = node->d_func();
@@ -255,7 +255,7 @@ namespace Substate {
     }
 
     void SheetNode::propagateChildren(const std::function<void(Node *)> &func) {
-        Q_D(SheetNode);
+        QM_D(SheetNode);
         for (const auto &pair : std::as_const(d->records)) {
             func(pair.second);
         }

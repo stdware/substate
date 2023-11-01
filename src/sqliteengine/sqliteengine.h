@@ -9,7 +9,7 @@ namespace Substate {
     class SqliteEnginePrivate;
 
     class SQLITEENGINE_EXPORT SqliteEngine : public MemoryEngine {
-        SUBSTATE_DECL_PRIVATE(SqliteEngine)
+        QTMEDIATE_DECL_PRIVATE(SqliteEngine)
     public:
         SqliteEngine();
         ~SqliteEngine();

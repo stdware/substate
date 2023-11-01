@@ -9,7 +9,7 @@
 namespace Substate {
 
     class BytesNodePrivate : public NodePrivate {
-        SUBSTATE_DECL_PUBLIC(BytesNode)
+        QTMEDIATE_DECL_PUBLIC(BytesNode)
     public:
         BytesNodePrivate();
         ~BytesNodePrivate();

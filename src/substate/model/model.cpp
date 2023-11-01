@@ -18,7 +18,7 @@ namespace Substate {
     }
 
     void ModelPrivate::init() {
-        Q_Q(Model);
+        QM_Q(Model);
         engine->setup(q);
     }
 
@@ -33,7 +33,7 @@ namespace Substate {
     }
 
     void ModelPrivate::setRootItem_helper(Substate::Node *node) {
-        Q_Q(Model);
+        QM_Q(Model);
 
         RootChangeAction a(node, root);
 
@@ -86,7 +86,7 @@ namespace Substate {
         Returns the engine.
     */
     Engine *Model::engine() const {
-        Q_D(const Model);
+        QM_D(const Model);
         return d->engine;
     }
 
@@ -94,7 +94,7 @@ namespace Substate {
         Returns the model state.
     */
     Model::State Model::state() const {
-        Q_D(const Model);
+        QM_D(const Model);
         return d->state;
     }
 
@@ -105,7 +105,7 @@ namespace Substate {
         lock.
     */
     bool Model::isWritable() const {
-        Q_D(const Model);
+        QM_D(const Model);
         return d->state == Transaction && !d->lockedNode;
     }
 
@@ -113,7 +113,7 @@ namespace Substate {
         Returns the node to the index points to if found.
     */
     Node *Model::indexOf(int index) const {
-        Q_D(const Model);
+        QM_D(const Model);
         auto it = d->indexes.find(index);
         if (it == d->indexes.end())
             return nullptr;
@@ -124,7 +124,7 @@ namespace Substate {
         Returns the root node of the model.
     */
     Node *Model::root() const {
-        Q_D(const Model);
+        QM_D(const Model);
         return d->root;
     }
 
@@ -132,16 +132,16 @@ namespace Substate {
         Sets the root node of the model.
     */
     void Model::setRoot(Node *node) {
-        Q_D(Model);
+        QM_D(Model);
         assert(isWritable());
         assert(!node || node->isFree());
         d->setRootItem_helper(node);
     }
 
     void Model::reset() {
-        Q_D(Model);
+        QM_D(Model);
         if (d->state != Idle) {
-            SUBSTATE_FATAL("Attempt to reset at an invalid state");
+            QTMEDIATE_FATAL("Attempt to reset at an invalid state");
         }
 
         Notification n(Notification::AboutToReset);
@@ -156,9 +156,9 @@ namespace Substate {
         A fatal error will be raised if called when the engine is not in idle state.
     */
     void Model::beginTransaction() {
-        Q_D(Model);
+        QM_D(Model);
         if (d->state != Idle) {
-            SUBSTATE_FATAL("Attempt to begin a transaction at an invalid state");
+            QTMEDIATE_FATAL("Attempt to begin a transaction at an invalid state");
         }
         d->state = Transaction;
     }
@@ -169,9 +169,9 @@ namespace Substate {
         A fatal error will be raised if called when the engine is not in transaction state.
     */
     void Model::abortTransaction() {
-        Q_D(Model);
+        QM_D(Model);
         if (d->state != Transaction) {
-            SUBSTATE_FATAL("Cannot abort the transaction without an ongoing transaction");
+            QTMEDIATE_FATAL("Cannot abort the transaction without an ongoing transaction");
         }
 
         auto &stack = d->txActions;
@@ -192,9 +192,9 @@ namespace Substate {
         A fatal error will be raised if called when the engine is not in transaction state.
     */
     void Model::commitTransaction(const Engine::StepMessage &message) {
-        Q_D(Model);
+        QM_D(Model);
         if (d->state != Transaction) {
-            SUBSTATE_FATAL("Cannot commit the transaction without an ongoing transaction");
+            QTMEDIATE_FATAL("Cannot commit the transaction without an ongoing transaction");
         }
         if (d->txActions.empty())
             return;
@@ -212,9 +212,9 @@ namespace Substate {
         Rollback to the previous step.
     */
     void Model::undo() {
-        Q_D(Model);
+        QM_D(Model);
         if (d->state != Idle) {
-            SUBSTATE_FATAL("Attempt to undo at an invalid state");
+            QTMEDIATE_FATAL("Attempt to undo at an invalid state");
         }
         d->state = Undo;
         d->engine->execute(true);
@@ -228,9 +228,9 @@ namespace Substate {
         Redo to the previous step.
     */
     void Model::redo() {
-        Q_D(Model);
+        QM_D(Model);
         if (d->state != Idle) {
-            SUBSTATE_FATAL("Attempt to redo at an invalid state");
+            QTMEDIATE_FATAL("Attempt to redo at an invalid state");
         }
         d->state = Redo;
         d->engine->execute(false);
@@ -241,24 +241,24 @@ namespace Substate {
     }
 
     int Model::minimumStep() const {
-        Q_D(const Model);
+        QM_D(const Model);
         return d->engine->minimum();
     }
 
     int Model::maximumStep() const {
-        Q_D(const Model);
+        QM_D(const Model);
         return d->engine->maximum();
     }
 
     int Model::currentStep() const {
-        Q_D(const Model);
+        QM_D(const Model);
         return d->engine->current();
     }
 
     void Model::dispatch(Notification *n) {
         Sender::dispatch(n);
 
-        Q_D(Model);
+        QM_D(Model);
         switch (n->type()) {
             case Notification::ActionTriggered: {
                 auto n2 = static_cast<ActionNotification *>(n);

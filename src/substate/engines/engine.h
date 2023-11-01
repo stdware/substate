@@ -15,7 +15,7 @@ namespace Substate {
     class EnginePrivate;
 
     class SUBSTATE_EXPORT Engine {
-        SUBSTATE_DECL_PRIVATE(Engine)
+        QTMEDIATE_DECL_PRIVATE(Engine)
     public:
         virtual ~Engine();
 
@@ -38,7 +38,7 @@ namespace Substate {
         std::unique_ptr<EnginePrivate> d_ptr;
         Engine(EnginePrivate &d);
 
-        SUBSTATE_DISABLE_COPY_MOVE(Engine)
+        QTMEDIATE_DISABLE_COPY_MOVE(Engine)
     };
 
 }

@@ -33,13 +33,13 @@ namespace Substate {
     }
 
     NodePrivate::~NodePrivate() {
-        Q_Q(Node);
+        QM_Q(Node);
 
         if (model) {
             // The node is deleted by a wrong behavior in user code, the application must
             // abort otherwise the user data may be corrupted.
             if (!allowDelete) {
-                SUBSTATE_FATAL("Deleting a managed item, crash now!!!");
+                QTMEDIATE_FATAL("Deleting a managed item, crash now!!!");
             }
 
             // The node is deleted forcefully, which is possibly due to the following reasons.
@@ -64,14 +64,14 @@ namespace Substate {
     }
 
     void NodePrivate::setManaged(bool _managed) {
-        Q_Q(Node);
+        QM_Q(Node);
         q->propagate([&_managed](Node *node) {
             node->d_func()->managed = _managed; // Change managed flag recursively
         });
     }
 
     void NodePrivate::propagateModel(Substate::Model *_model) {
-        Q_Q(Node);
+        QM_Q(Node);
         auto model_d = _model->d_func();
         q->propagate([&_model, &model_d](Node *node) {
             auto d = node->d_func();
@@ -115,37 +115,37 @@ namespace Substate {
     }
 
     int Node::type() const {
-        Q_D(const Node);
+        QM_D(const Node);
         return d->type;
     }
 
     Node *Node::parent() const {
-        Q_D(const Node);
+        QM_D(const Node);
         return d->parent;
     }
 
     Model *Node::model() const {
-        Q_D(const Node);
+        QM_D(const Node);
         return d->model;
     }
 
     int Node::index() const {
-        Q_D(const Node);
+        QM_D(const Node);
         return d->index;
     }
 
     bool Node::isFree() const {
-        Q_D(const Node);
+        QM_D(const Node);
         return !d->model && !d->parent; // The item is not free if it has parent or model
     }
 
     bool Node::isManaged() const {
-        Q_D(const Node);
+        QM_D(const Node);
         return d->managed;
     }
 
     bool Node::isWritable() const {
-        Q_D(const Node);
+        QM_D(const Node);
         return !d->model || d->model->isWritable();
     }
 
@@ -187,7 +187,7 @@ namespace Substate {
     }
 
     void Node::dispatch(Notification *n) {
-        Q_D(Node);
+        QM_D(Node);
 
         Sender::dispatch(n);
 
@@ -215,7 +215,7 @@ namespace Substate {
     }
 
     void Node::addChild(Node *node) {
-        Q_D(Node);
+        QM_D(Node);
         auto d2 = node->d_func();
         d2->parent = d->parent;
         if (d2->managed) {
@@ -224,7 +224,7 @@ namespace Substate {
     }
 
     void Node::removeChild(Node *node) {
-        Q_D(Node);
+        QM_D(Node);
         auto d2 = node->d_func();
         d2->parent = nullptr;
         if (d->model) {
@@ -233,12 +233,12 @@ namespace Substate {
     }
 
     void Node::beginAction() {
-        Q_D(Node);
+        QM_D(Node);
         d->model->d_func()->lockedNode = this;
     }
 
     void Node::endAction() {
-        Q_D(Node);
+        QM_D(Node);
         d->model->d_func()->lockedNode = nullptr;
     }
 

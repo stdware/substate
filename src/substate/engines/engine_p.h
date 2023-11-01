@@ -9,7 +9,7 @@
 namespace Substate {
 
     class SUBSTATE_EXPORT EnginePrivate {
-        SUBSTATE_DECL_PUBLIC(Engine)
+        QTMEDIATE_DECL_PUBLIC(Engine)
     public:
         EnginePrivate();
         virtual ~EnginePrivate();

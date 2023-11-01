@@ -35,7 +35,7 @@ namespace Substate {
     }
 
     void BytesNodePrivate::replaceBytes_helper(int index, const char *data, int size) {
-        Q_Q(BytesNode);
+        QM_Q(BytesNode);
         q->beginAction();
 
         ByteArray oldBytes(byteArray.data() + index, size);
@@ -57,7 +57,7 @@ namespace Substate {
     }
 
     void BytesNodePrivate::insertBytes_helper(int index, const char *data, int size) {
-        Q_Q(BytesNode);
+        QM_Q(BytesNode);
         q->beginAction();
 
         // Do change
@@ -74,7 +74,7 @@ namespace Substate {
     }
 
     void BytesNodePrivate::removeBytes_helper(int index, int size) {
-        Q_Q(BytesNode);
+        QM_Q(BytesNode);
         q->beginAction();
 
         ByteArray bytes(byteArray.data() + index, size);
@@ -118,12 +118,12 @@ namespace Substate {
     }
 
     bool BytesNode::insert(int index, const char *data, int size) {
-        Q_D(BytesNode);
+        QM_D(BytesNode);
         assert(d->testModifiable());
 
         // Validate
         if (!validateArrayQueryArguments(index, d->byteArray.size()) || (!data || size == 0)) {
-            SUBSTATE_WARNING("invalid parameters");
+            QTMEDIATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -132,12 +132,12 @@ namespace Substate {
     }
 
     bool BytesNode::remove(int index, int size) {
-        Q_D(BytesNode);
+        QM_D(BytesNode);
         assert(d->testModifiable());
 
         // Validate
         if (!validateArrayRemoveArguments(index, size, d->byteArray.size()) || size == 0) {
-            SUBSTATE_WARNING("invalid parameters");
+            QTMEDIATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -146,12 +146,12 @@ namespace Substate {
     }
 
     bool BytesNode::replace(int index, const char *data, int size) {
-        Q_D(BytesNode);
+        QM_D(BytesNode);
         assert(d->testModifiable());
 
         // Validate
         if (!validateArrayQueryArguments(index, d->byteArray.size()) || (!data || size == 0)) {
-            SUBSTATE_WARNING("invalid parameters");
+            QTMEDIATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -160,17 +160,17 @@ namespace Substate {
     }
 
     const char *BytesNode::data() const {
-        Q_D(const BytesNode);
+        QM_D(const BytesNode);
         return d->byteArray.data();
     }
 
     int BytesNode::size() const {
-        Q_D(const BytesNode);
+        QM_D(const BytesNode);
         return int(d->byteArray.size());
     }
 
     void BytesNode::write(OStream &stream) const {
-        Q_D(const BytesNode);
+        QM_D(const BytesNode);
 
         // Write index
         stream << d->index;
@@ -181,7 +181,7 @@ namespace Substate {
     }
 
     Node *BytesNode::clone(bool user) const {
-        Q_D(const BytesNode);
+        QM_D(const BytesNode);
 
         auto node = new BytesNode();
         auto d2 = node->d_func();
