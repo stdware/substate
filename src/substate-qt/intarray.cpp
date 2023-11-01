@@ -617,4 +617,71 @@ namespace Substate {
     }
     //===========================================================================
 
+    
+    //===========================================================================
+    // Double
+    class DoubleArrayPrivate : public IntArrayBasePrivate {
+        Q_DECLARE_PUBLIC(DoubleArray)
+    public:
+        DoubleArrayPrivate(Node *node) : IntArrayBasePrivate(node, 64) {
+        }
+        ~DoubleArrayPrivate() {
+        }
+
+        void sendReplace(int index, const ByteArray &bytes, const ByteArray &oldBytes) override {
+            Q_Q(DoubleArray);
+            Q_UNUSED(oldBytes)
+            auto data = reinterpret_cast<const double *>(bytes.data());
+            emit q->replaced(index / type_size, {data, data + int(bytes.size() / type_size)});
+        }
+        void sendInsert(int index, const ByteArray &bytes) override {
+            Q_Q(DoubleArray);
+            auto data = reinterpret_cast<const double *>(bytes.data());
+            emit q->inserted(index / type_size, {data, data + int(bytes.size() / type_size)});
+        }
+        void sendRemove(int index, const ByteArray &bytes) override {
+            Q_Q(DoubleArray);
+            auto data = reinterpret_cast<const double *>(bytes.data());
+            emit q->removed(index / type_size, {data, data + int(bytes.size() / type_size)});
+        }
+    };
+
+    DoubleArray::DoubleArray(QObject *parent)
+        : IntArrayBase(*new DoubleArrayPrivate(new BytesNode()), parent) {
+    }
+
+    DoubleArray::DoubleArray(Node *node, QObject *parent)
+        : IntArrayBase(*new DoubleArrayPrivate(node), parent) {
+    }
+
+    DoubleArray::~DoubleArray() {
+    }
+
+    QVector<double> DoubleArray::mid(int index, int size) const {
+        if (index < 0 || index >= this->size()) {
+            return {};
+        }
+        size = qMin(this->size() - index, size);
+        auto data = reinterpret_cast<const double *>(valuesImpl()) + index;
+        return {data, data + size};
+    }
+
+    QVector<double> DoubleArray::values() const {
+        auto data = reinterpret_cast<const double *>(valuesImpl());
+        return {data, data + size()};
+    }
+
+    void DoubleArray::replace(int index, const QVector<double> &values) {
+        replaceImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
+    }
+
+    void DoubleArray::insert(int index, const QVector<double> &values) {
+        insertImpl(index, reinterpret_cast<const char *>(values.constData()), values.size());
+    }
+
+    void DoubleArray::remove(int index, int count) {
+        removeImpl(index, count);
+    }
+    //===========================================================================
+
 }

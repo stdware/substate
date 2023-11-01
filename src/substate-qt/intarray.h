@@ -290,6 +290,39 @@ namespace Substate {
         return reinterpret_cast<const quint64 *>(valuesImpl());
     }
 
+    class DoubleArrayPrivate;
+
+    class QSUBSTATE_EXPORT DoubleArray : public IntArrayBase {
+        Q_OBJECT
+        Q_DECLARE_PRIVATE(DoubleArray)
+    public:
+        DoubleArray(QObject *parent = nullptr);
+        DoubleArray(Node *node, QObject *parent = nullptr);
+        ~DoubleArray();
+
+    public:
+        inline int size() const;
+        inline const double *data() const;
+        QVector<double> mid(int index, int size) const;
+        QVector<double> values() const;
+        void replace(int index, const QVector<double> &values);
+        void insert(int index, const QVector<double> &values);
+        void remove(int index, int count);
+
+    Q_SIGNALS:
+        void replaced(int index, const QVector<double> &values);
+        void inserted(int index, const QVector<double> &values);
+        void removed(int index, const QVector<double> &values);
+    };
+
+    inline int DoubleArray::size() const {
+        return sizeImpl();
+    }
+
+    inline const double *DoubleArray::data() const {
+        return reinterpret_cast<const double *>(valuesImpl());
+    }
+
 }
 
 #endif // INTARRAY_H
