@@ -1,7 +1,7 @@
 #ifndef SUBSTATE_GLOBAL_H
 #define SUBSTATE_GLOBAL_H
 
-#include <qtmediate_global.h>
+#include <qtmediate/qtmediate_global.h>
 
 #ifdef SUBSTATE_STATIC
 #  define SUBSTATE_EXPORT
