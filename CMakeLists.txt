@@ -57,7 +57,7 @@ set(SUBSTATE_INSTALL_NAME ${PROJECT_NAME})
 # ----------------------------------
 # Main Project
 # ----------------------------------
-find_package(qtmediate-cmake-modules REQUIRED)
+find_package(qtmediateCM REQUIRED)
 
 add_subdirectory(src)
 

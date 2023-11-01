@@ -31,7 +31,7 @@ qtmediate_configure_target(${PROJECT_NAME}
     SOURCES ${_src}
     INCLUDE_PRIVATE .
     CCFLAGS ${_cxx_flags}
-    LINKS qtmediate-cmake-modules::library
+    LINKS qtmediateCM::library
 )
 
 # Set global definitions

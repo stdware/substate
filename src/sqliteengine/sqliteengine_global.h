@@ -1,7 +1,7 @@
 #ifndef SQLITEENGINE_GLOBAL_H
 #define SQLITEENGINE_GLOBAL_H
 
-#include <qtmediate/qtmediate_global.h>
+#include <qtmediateCM/qtmediate_global.h>
 
 // Export define
 #ifdef SQLITEENGINE_STATIC
