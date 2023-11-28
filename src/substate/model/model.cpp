@@ -141,7 +141,7 @@ namespace Substate {
     void Model::reset() {
         QM_D(Model);
         if (d->state != Idle) {
-            QTMEDIATE_FATAL("Attempt to reset at an invalid state");
+            QMSETUP_FATAL("Attempt to reset at an invalid state");
         }
 
         Notification n(Notification::AboutToReset);
@@ -158,7 +158,7 @@ namespace Substate {
     void Model::beginTransaction() {
         QM_D(Model);
         if (d->state != Idle) {
-            QTMEDIATE_FATAL("Attempt to begin a transaction at an invalid state");
+            QMSETUP_FATAL("Attempt to begin a transaction at an invalid state");
         }
         d->state = Transaction;
     }
@@ -171,7 +171,7 @@ namespace Substate {
     void Model::abortTransaction() {
         QM_D(Model);
         if (d->state != Transaction) {
-            QTMEDIATE_FATAL("Cannot abort the transaction without an ongoing transaction");
+            QMSETUP_FATAL("Cannot abort the transaction without an ongoing transaction");
         }
 
         auto &stack = d->txActions;
@@ -194,7 +194,7 @@ namespace Substate {
     void Model::commitTransaction(const Engine::StepMessage &message) {
         QM_D(Model);
         if (d->state != Transaction) {
-            QTMEDIATE_FATAL("Cannot commit the transaction without an ongoing transaction");
+            QMSETUP_FATAL("Cannot commit the transaction without an ongoing transaction");
         }
         if (d->txActions.empty())
             return;
@@ -214,7 +214,7 @@ namespace Substate {
     void Model::undo() {
         QM_D(Model);
         if (d->state != Idle) {
-            QTMEDIATE_FATAL("Attempt to undo at an invalid state");
+            QMSETUP_FATAL("Attempt to undo at an invalid state");
         }
         d->state = Undo;
         d->engine->execute(true);
@@ -230,7 +230,7 @@ namespace Substate {
     void Model::redo() {
         QM_D(Model);
         if (d->state != Idle) {
-            QTMEDIATE_FATAL("Attempt to redo at an invalid state");
+            QMSETUP_FATAL("Attempt to redo at an invalid state");
         }
         d->state = Redo;
         d->engine->execute(false);

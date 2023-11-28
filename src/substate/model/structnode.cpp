@@ -125,7 +125,7 @@ namespace Substate {
         assert(d->testModifiable());
 
         if (i < 0 || i >= d->array.size()) {
-            QTMEDIATE_WARNING("index %d out of range", i);
+            QMSETUP_WARNING("index %d out of range", i);
             return false;
         }
 
@@ -144,13 +144,13 @@ namespace Substate {
 
         // Validate
         if (!node) {
-            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
+            QMSETUP_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         auto it = d->arrayIndexes.find(node);
         if (it == d->arrayIndexes.end()) {
-            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
+            QMSETUP_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 

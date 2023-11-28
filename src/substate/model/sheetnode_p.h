@@ -9,7 +9,7 @@
 namespace Substate {
 
     class SUBSTATE_EXPORT SheetNodePrivate : public NodePrivate {
-        QTMEDIATE_DECL_PUBLIC(SheetNode)
+        QMSETUP_DECL_PUBLIC(SheetNode)
     public:
         SheetNodePrivate(int type);
         ~SheetNodePrivate();

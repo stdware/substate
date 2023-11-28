@@ -136,7 +136,7 @@ namespace Substate {
 
         // Validate
         if (!d->testInsertable(node)) {
-            QTMEDIATE_WARNING("node %p is not able to be inserted", node);
+            QMSETUP_WARNING("node %p is not able to be inserted", node);
             return false;
         }
 
@@ -151,7 +151,7 @@ namespace Substate {
 
         // Validate
         if (d->records.find(id) == d->records.end()) {
-            QTMEDIATE_WARNING("sequence id %d doesn't exist in %p", id, this);
+            QMSETUP_WARNING("sequence id %d doesn't exist in %p", id, this);
             return false;
         }
 
@@ -165,13 +165,13 @@ namespace Substate {
 
         // Validate
         if (!node) {
-            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
+            QMSETUP_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         auto it = d->recordIndexes.find(node);
         if (it == d->recordIndexes.end()) {
-            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
+            QMSETUP_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 

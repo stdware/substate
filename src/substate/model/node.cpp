@@ -39,7 +39,7 @@ namespace Substate {
             // The node is deleted by a wrong behavior in user code, the application must
             // abort otherwise the user data may be corrupted.
             if (!allowDelete) {
-                QTMEDIATE_FATAL("Deleting a managed item, crash now!!!");
+                QMSETUP_FATAL("Deleting a managed item, crash now!!!");
             }
 
             // The node is deleted forcefully, which is possibly due to the following reasons.

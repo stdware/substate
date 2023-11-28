@@ -123,7 +123,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayQueryArguments(index, d->byteArray.size()) || (!data || size == 0)) {
-            QTMEDIATE_WARNING("invalid parameters");
+            QMSETUP_WARNING("invalid parameters");
             return false;
         }
 
@@ -137,7 +137,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayRemoveArguments(index, size, d->byteArray.size()) || size == 0) {
-            QTMEDIATE_WARNING("invalid parameters");
+            QMSETUP_WARNING("invalid parameters");
             return false;
         }
 
@@ -151,7 +151,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayQueryArguments(index, d->byteArray.size()) || (!data || size == 0)) {
-            QTMEDIATE_WARNING("invalid parameters");
+            QMSETUP_WARNING("invalid parameters");
             return false;
         }
 

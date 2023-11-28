@@ -13,7 +13,7 @@ namespace Substate {
     class SheetNodePrivate;
 
     class SUBSTATE_EXPORT SheetNode : public Node {
-        QTMEDIATE_DECL_PRIVATE(SheetNode)
+        QMSETUP_DECL_PRIVATE(SheetNode)
     public:
         SheetNode();
         ~SheetNode();

@@ -55,7 +55,7 @@ namespace Substate {
     protected:
         int t;
 
-        QTMEDIATE_DISABLE_COPY_MOVE(Action)
+        QMSETUP_DISABLE_COPY_MOVE(Action)
     };
 
     inline Action::Action(int type) : t(type) {

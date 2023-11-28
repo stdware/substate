@@ -7,7 +7,7 @@
 namespace Substate {
 
     class SUBSTATE_EXPORT MappingNodePrivate : public NodePrivate {
-        QTMEDIATE_DECL_PUBLIC(MappingNode)
+        QMSETUP_DECL_PUBLIC(MappingNode)
     public:
         MappingNodePrivate(int type);
         ~MappingNodePrivate();

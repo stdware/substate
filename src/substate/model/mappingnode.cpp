@@ -160,13 +160,13 @@ namespace Substate {
 
         // Validate
         if (!node) {
-            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
+            QMSETUP_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         auto it = d->mappingIndexes.find(node);
         if (it == d->mappingIndexes.end()) {
-            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
+            QMSETUP_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 

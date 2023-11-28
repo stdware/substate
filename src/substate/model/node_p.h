@@ -7,7 +7,7 @@
 namespace Substate {
 
     class SUBSTATE_EXPORT NodePrivate : public SenderPrivate {
-        QTMEDIATE_DECL_PUBLIC(Node)
+        QMSETUP_DECL_PUBLIC(Node)
     public:
         NodePrivate(int type);
         ~NodePrivate();

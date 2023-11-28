@@ -57,7 +57,7 @@ set(SUBSTATE_INSTALL_NAME ${PROJECT_NAME})
 # ----------------------------------
 # Main Project
 # ----------------------------------
-find_package(qtmediateCM REQUIRED)
+find_package(qmsetup REQUIRED)
 
 add_subdirectory(src)
 

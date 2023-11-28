@@ -11,7 +11,7 @@ namespace Substate {
     class ModelPrivate;
 
     class SUBSTATE_EXPORT Model : public Sender {
-        QTMEDIATE_DECL_PRIVATE(Model)
+        QMSETUP_DECL_PRIVATE(Model)
     public:
         Model();
         Model(Engine *engine);

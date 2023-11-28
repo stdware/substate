@@ -12,7 +12,7 @@ namespace Substate {
     class BytesNodePrivate;
 
     class SUBSTATE_EXPORT BytesNode : public Node {
-        QTMEDIATE_DECL_PRIVATE(BytesNode)
+        QMSETUP_DECL_PRIVATE(BytesNode)
     public:
         BytesNode();
         ~BytesNode();

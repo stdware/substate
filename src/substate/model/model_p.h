@@ -7,7 +7,7 @@
 namespace Substate {
 
     class SUBSTATE_EXPORT ModelPrivate : public SenderPrivate {
-        QTMEDIATE_DECL_PUBLIC(Model)
+        QMSETUP_DECL_PUBLIC(Model)
     public:
         ModelPrivate(Engine *engine);
         virtual ~ModelPrivate();

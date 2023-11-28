@@ -47,7 +47,7 @@ namespace Substate {
         bool own_stream;
         std::streambuf *buf;
 
-        QTMEDIATE_DISABLE_COPY_MOVE(IStream)
+        QMSETUP_DISABLE_COPY_MOVE(IStream)
     };
 
     inline std::istream *IStream::device() const {
@@ -104,7 +104,7 @@ namespace Substate {
         bool own_stream;
         std::streambuf *buf;
 
-        QTMEDIATE_DISABLE_COPY_MOVE(OStream)
+        QMSETUP_DISABLE_COPY_MOVE(OStream)
     };
 
     inline std::ostream *OStream::device() const {

@@ -70,12 +70,12 @@ namespace Substate {
     void MemoryEngine::setPreservedSteps(int steps) {
         QM_D(MemoryEngine);
         if (d->model) {
-            QTMEDIATE_WARNING("changing engine parameters after setup is prohibited");
+            QMSETUP_WARNING("changing engine parameters after setup is prohibited");
             return;
         }
 
         if (!d->acceptChangeMaxSteps(steps)) {
-            QTMEDIATE_WARNING("specified steps %d is too small", steps);
+            QMSETUP_WARNING("specified steps %d is too small", steps);
             return;
         }
         d->maxSteps = steps;

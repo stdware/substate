@@ -1,3 +1,5 @@
+qm_import(Preprocess)
+
 set(SUBSTATE_PROJECT_DESCRIPTION "Crash Consistent Undo Framework")
 set(SUBSTATE_PROJECT_COPYRIGHT "Copyright 2019-2023 SineStriker")
 
@@ -32,7 +34,8 @@ if(SUBSTATE_BUILD_DOCUMENTATIONS)
         CACHE FILEPATH "substate doxygen tag file path" FORCE
     )
 
-    qtmediate_setup_doxygen(substate_RunDoxygen
+    qm_import(Doxygen)
+    qm_setup_doxygen(substate_RunDoxygen
         NAME "Substate"
         DESCRIPTION "${SUBSTATE_PROJECT_DESCRIPTION}"
         MDFILE ../README.md

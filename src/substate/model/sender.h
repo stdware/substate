@@ -14,7 +14,7 @@ namespace Substate {
     class SenderPrivate;
 
     class SUBSTATE_EXPORT Sender {
-        QTMEDIATE_DECL_PRIVATE(Sender)
+        QMSETUP_DECL_PRIVATE(Sender)
     public:
         virtual ~Sender();
 
@@ -31,7 +31,7 @@ namespace Substate {
         std::unique_ptr<SenderPrivate> d_ptr;
         Sender(SenderPrivate &d);
 
-        QTMEDIATE_DISABLE_COPY_MOVE(Sender)
+        QMSETUP_DISABLE_COPY_MOVE(Sender)
     };
 
     class SUBSTATE_EXPORT Subscriber {
@@ -51,7 +51,7 @@ namespace Substate {
         friend class Sender;
         friend class SenderPrivate;
 
-        QTMEDIATE_DISABLE_COPY_MOVE(Subscriber)
+        QMSETUP_DISABLE_COPY_MOVE(Subscriber)
     };
 
     inline Sender *Subscriber::sender() const {

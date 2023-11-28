@@ -14,7 +14,7 @@ namespace Substate {
     class VectorNodePrivate;
 
     class SUBSTATE_EXPORT VectorNode : public Node {
-        QTMEDIATE_DECL_PRIVATE(VectorNode)
+        QMSETUP_DECL_PRIVATE(VectorNode)
     public:
         VectorNode();
         ~VectorNode();

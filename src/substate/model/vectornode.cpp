@@ -202,12 +202,12 @@ namespace Substate {
 
         // Validate
         if (!validateArrayQueryArguments(index, d->vector.size()) || nodes.empty()) {
-            QTMEDIATE_WARNING("invalid parameters");
+            QMSETUP_WARNING("invalid parameters");
             return false;
         }
         for (const auto &node : nodes) {
             if (!d->testInsertable(node)) {
-                QTMEDIATE_WARNING("node %p is not able to be inserted", node);
+                QMSETUP_WARNING("node %p is not able to be inserted", node);
                 return false;
             }
         }
@@ -224,7 +224,7 @@ namespace Substate {
         if (!validateArrayRemoveArguments(index, count, d->vector.size()) ||
             (dest >= index && dest <= index + count) // dest bound
         ) {
-            QTMEDIATE_WARNING("invalid parameters");
+            QMSETUP_WARNING("invalid parameters");
             return false;
         }
 
@@ -238,7 +238,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayRemoveArguments(index, count, d->vector.size())) {
-            QTMEDIATE_WARNING("invalid parameters");
+            QMSETUP_WARNING("invalid parameters");
             return false;
         }
 
@@ -252,14 +252,14 @@ namespace Substate {
 
         // Validate
         if (!node) {
-            QTMEDIATE_WARNING("trying to remove a null node from %p", this);
+            QMSETUP_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         decltype(d->vector)::const_iterator it;
         if (node->parent() != this ||
             (it = std::find(d->vector.begin(), d->vector.end(), node)) == d->vector.end()) {
-            QTMEDIATE_WARNING("node %p is not the child of %p", node, this);
+            QMSETUP_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 

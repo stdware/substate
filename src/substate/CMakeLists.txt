@@ -18,7 +18,7 @@ else()
     add_library(${PROJECT_NAME} SHARED)
 
     if(WIN32)
-        qtmediate_add_win_rc(${PROJECT_NAME}
+        qm_add_win_rc(${PROJECT_NAME}
             DESCRIPTION "${SUBSTATE_PROJECT_DESCRIPTION}"
             COPYRIGHT "${SUBSTATE_PROJECT_COPYRIGHT}"
         )
@@ -27,15 +27,15 @@ endif()
 
 # Configure target
 add_library(substate::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-qtmediate_configure_target(${PROJECT_NAME}
+qm_configure_target(${PROJECT_NAME}
     SOURCES ${_src}
     INCLUDE_PRIVATE .
     CCFLAGS ${_cxx_flags}
-    LINKS qtmediateCM::library
+    LINKS qmsetup::library
 )
 
 # Set global definitions
-qtmediate_export_defines(${PROJECT_NAME})
+qm_export_defines(${PROJECT_NAME})
 
 if(SUBSTATE_INSTALL)
     install(TARGETS ${PROJECT_NAME}
@@ -55,7 +55,7 @@ else()
 endif()
 
 # Generate a standard include directory in build directory
-qtmediate_sync_include(. "${_generate_include_dir}/${PROJECT_NAME}" ${_gen_include_options})
+qm_sync_include(. "${_generate_include_dir}/${PROJECT_NAME}" ${_gen_include_options})
 target_include_directories(${PROJECT_NAME} PUBLIC
     "$<BUILD_INTERFACE:${_generate_include_dir}>"
 )

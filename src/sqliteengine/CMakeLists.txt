@@ -19,7 +19,7 @@ else()
     add_library(${PROJECT_NAME} SHARED)
 
     if(WIN32)
-        qtmediate_add_win_rc(${PROJECT_NAME}
+        qm_add_win_rc(${PROJECT_NAME}
             DESCRIPTION "${SUBSTATE_PROJECT_DESCRIPTION}"
             COPYRIGHT "${SUBSTATE_PROJECT_COPYRIGHT}"
         )
@@ -28,7 +28,7 @@ endif()
 
 # Configure target
 add_library(substate::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
-qtmediate_configure_target(${PROJECT_NAME}
+qm_configure_target(${PROJECT_NAME}
     SOURCES ${_src}
     INCLUDE_PRIVATE .
     CCFLAGS ${_cxx_flags}
@@ -36,7 +36,7 @@ qtmediate_configure_target(${PROJECT_NAME}
 )
 
 # Set global definitions
-qtmediate_export_defines(${PROJECT_NAME})
+qm_export_defines(${PROJECT_NAME})
 
 if(SUBSTATE_INSTALL)
     install(TARGETS ${PROJECT_NAME}

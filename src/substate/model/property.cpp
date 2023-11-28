@@ -29,7 +29,7 @@ namespace Substate {
 
                 auto it = existingNodes.find(index);
                 if (it == existingNodes.end()) {
-                    QTMEDIATE_WARNING("non-existing reference to node id %d", index);
+                    QMSETUP_WARNING("non-existing reference to node id %d", index);
                     stream.setState(std::ios::failbit);
                     break;
                 }
