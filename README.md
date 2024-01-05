@@ -10,7 +10,7 @@ Application developers tend to implement this functionality using the **Command*
 
 Such workflow is not only time-consuming, but also tightly tied to the specific application features, which is too inflexiable to handle the ever-changing developing requirements.
 
-We propose a flexible and efficient undo framework which not only allows developers to implement undo/redo features in less time, but also strictly ensures the **crash consistency** of the application.
+We propose a flexible and efficient undo framework which not only allows developers to implement undo/redo features in less time, but also strictly ensures the **crash consistency** of the application by applying WAL strategy.
 
 ## Highlights
 
@@ -23,11 +23,11 @@ We propose a flexible and efficient undo framework which not only allows develop
 | Component | Requirement |               Detailed               |
 |:---------:|:-----------:|:------------------------------------:|
 | Compiler  |  \>=C++17   |                  /                   |
-|   CMake   |   \>=3.17   |        >=3.20 is recommended         |
+|   CMake   |   \>=3.19   |        >=3.20 is recommended         |
 
 ## Dependencies
 
-+ [qtmediate-cmake-modules](https://github.com/SineStriker/qtmediate-cmake-modules)
++ [qmsetup](https://github.com/stdware/qmsetup)
 
 ## Build & Install
 

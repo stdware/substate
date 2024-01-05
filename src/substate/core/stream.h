@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <string>
 
 #include <substate/substate_global.h>
 
@@ -97,6 +98,7 @@ namespace Substate {
         OStream &operator<<(uint64_t ul);
         OStream &operator<<(float f);
         OStream &operator<<(double d);
+        OStream &operator<<(const std::string_view &s);
         OStream &operator<<(const std::string &s);
 
     private:

@@ -56,7 +56,7 @@ namespace Substate {
     public:
         inline int index() const;
 
-    public:
+    protected:
         int m_index;
     };
 

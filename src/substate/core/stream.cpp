@@ -174,13 +174,16 @@ namespace Substate {
         substate_writeNum(*out, d);
         return *this;
     }
-    OStream &OStream::operator<<(const std::string &s) {
+    OStream &OStream::operator<<(const std::string_view &s) {
         // Write size
         (*this) << int(s.size());
 
         // Write string
         out->write(s.data(), std::streamsize(s.size()));
         return *this;
+    }
+    OStream &OStream::operator<<(const std::string &s) {
+        return (*this) << std::string_view(s);
     }
 
 }

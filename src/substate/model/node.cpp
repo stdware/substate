@@ -89,7 +89,8 @@ namespace Substate {
         int oldRootIndex, newRootIndex;
         stream >> oldRootIndex >> newRootIndex;
 
-        Node *oldRoot = nullptr, *newRoot = nullptr;
+        Node *oldRoot = nullptr;
+        Node *newRoot = nullptr;
 
         if (oldRootIndex != 0) {
             auto it = existingNodes.find(oldRootIndex);

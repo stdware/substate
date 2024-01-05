@@ -1,14 +1,13 @@
-qm_import(Preprocess)
+qm_import(Filesystem Preprocess)
+qm_init_directories()
 
 set(SUBSTATE_PROJECT_DESCRIPTION "Crash Consistent Undo Framework")
-set(SUBSTATE_PROJECT_COPYRIGHT "Copyright 2019-2023 SineStriker")
+set(SUBSTATE_PROJECT_COPYRIGHT "Copyright (C) 2022-2024 Stdware Collections")
 
 # ----------------------------------
 # Main Project
 # ----------------------------------
 add_subdirectory(substate)
-
-add_subdirectory(sqliteengine)
 
 if(SUBSTATE_BUILD_QT_TARGETS)
     add_subdirectory(substate-qt)
@@ -44,7 +43,7 @@ if(SUBSTATE_BUILD_DOCUMENTATIONS)
         TARGETS ${_doc_targets}
         DEPENDS ${_doc_targets}
         NO_EXPAND_MACROS Q_OBJECT Q_GADGET Q_DECLARE_TR_FUNCTIONS
-        COMPILE_DEFINITIONS Q_SIGNALS=Q_SIGNALS Q_SLOTS=Q_SLOTS
+        COMPILE_DEFINITIONS Q_SIGNALS=Q_SIGNALS Q_SLOTS=Q_SLOTS QMSETUP_DECL_EXPORT= QMSETUP_DECL_IMPORT=
         GENERATE_TAGFILE "${SUBSTATE_DOXYGEN_TAGFILE}"
         ${_install_options}
     )
