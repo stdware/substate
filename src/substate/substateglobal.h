@@ -1,5 +1,5 @@
-#ifndef SUBSTATE_GLOBAL_H
-#define SUBSTATE_GLOBAL_H
+#ifndef SUBSTATEGLOBAL_H
+#define SUBSTATEGLOBAL_H
 
 #include <qmsetup/qmsetup_global.h>
 
@@ -13,4 +13,4 @@
 #  endif
 #endif
 
-#endif // SUBSTATE_GLOBAL_H
+#endif // SUBSTATEGLOBAL_H

@@ -26,7 +26,7 @@ namespace Substate {
         inline bool operator!=(const Property &other) const;
 
     public:
-        static Property read(IStream &stream, const std::unordered_map<int, Node *> &existingNodes);
+        static Property read(IStream &stream);
         void write(OStream &stream) const;
 
         SUBSTATE_EXPORT friend IStream &operator>>(IStream &stream, Property &value);

@@ -107,8 +107,7 @@ namespace Substate {
         q->endAction();
     }
 
-    MappingAction *readMappingAction(IStream &stream,
-                                     const std::unordered_map<int, Node *> &existingNodes) {
+    MappingAction *readMappingAction(IStream &stream) {
         int parentIndex;
         std::string key;
 
@@ -116,17 +115,13 @@ namespace Substate {
         if (stream.fail())
             return nullptr;
 
-        auto it = existingNodes.find(parentIndex);
-        if (it == existingNodes.end()) {
-            return nullptr;
-        }
-        Node *parent = it->second;
+        auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
 
-        auto v = Property::read(stream, existingNodes);
+        auto v = Property::read(stream);
         if (stream.fail())
             return nullptr;
 
-        auto oldv = Property::read(stream, existingNodes);
+        auto oldv = Property::read(stream);
         if (stream.fail())
             return nullptr;
 
@@ -243,7 +238,7 @@ namespace Substate {
     void MappingNode::propagateChildren(const std::function<void(Node *)> &func) {
         QM_D(MappingNode);
         for (const auto &pair : std::as_const(d->mappingIndexes)) {
-            func(pair.first);
+            NodeHelper::propagateNode(pair.first, func);
         }
     }
 

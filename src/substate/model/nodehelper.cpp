@@ -77,7 +77,7 @@ namespace Substate {
     void NodeHelper::forceDelete(Node *node) {
         if (!node)
             return;
-        node->propagateChildren([](Node *item) {
+        node->propagate([](Node *item) {
             item->d_func()->allowDelete = true; //
         });
         delete node;

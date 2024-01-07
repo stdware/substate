@@ -26,7 +26,7 @@ namespace Substate {
     Action::~Action() {
     }
 
-    Action *Action::read(IStream &stream, const std::unordered_map<int, Node *> &existingNodes) {
+    Action *Action::read(IStream &stream) {
         int type;
         stream >> type;
         if (stream.fail())
@@ -36,26 +36,26 @@ namespace Substate {
             case BytesInsert:
             case BytesRemove:
             case BytesReplace:
-                return readBytesAction(static_cast<Type>(type), stream, existingNodes);
+                return readBytesAction(static_cast<Type>(type), stream);
             case SheetInsert:
             case SheetRemove:
-                return readSheetAction(static_cast<Type>(type), stream, existingNodes);
+                return readSheetAction(static_cast<Type>(type), stream);
             case VectorInsert:
             case VectorRemove:
-                return readVectorInsDelAction(static_cast<Type>(type), stream, existingNodes);
+                return readVectorInsDelAction(static_cast<Type>(type), stream);
             case VectorMove:
-                return readVectorMoveAction(stream, existingNodes);
+                return readVectorMoveAction(stream);
             case MappingAssign:
-                return readMappingAction(stream, existingNodes);
+                return readMappingAction(stream);
             case StructAssign:
-                return readStructAction(stream, existingNodes);
+                return readStructAction(stream);
             case RootChange:
-                return readRootChangeAction(stream, existingNodes);
+                return readRootChangeAction(stream);
             default:
                 break;
         }
 
-        return getFactory(type)(stream, existingNodes);
+        return getFactory(type)(stream);
     }
 
     bool Action::registerFactory(int type, Factory fac) {

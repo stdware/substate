@@ -68,6 +68,7 @@ namespace Substate {
         void write(OStream &stream) const override;
         Action *clone() const override;
         void execute(bool undo) override;
+        void virtual_hook(int id, void *data) override;
 
     public:
         inline int index() const;

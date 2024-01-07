@@ -22,6 +22,10 @@ namespace Substate {
         // The directory containing the journal files
         std::filesystem::path dir;
 
+        // Internal journal data
+        class JournalData;
+        std::unique_ptr<JournalData> journalData;
+
         // Override functions
         bool acceptChangeMaxSteps(int steps) const override;
         void afterCurrentChange() override;

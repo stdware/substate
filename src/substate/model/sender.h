@@ -3,7 +3,7 @@
 
 #include <memory>
 
-#include <substate/substate_global.h>
+#include <substate/substateglobal.h>
 
 namespace Substate {
 

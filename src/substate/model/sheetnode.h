@@ -25,7 +25,7 @@ namespace Substate {
         Node *record(int id);
         int indexOf(Node *node) const;
         std::vector<int> ids() const;
-        const std::unordered_map<int, Node *> data() const;
+        const std::unordered_map<int, Node *> &data() const;
         inline int count() const;
         int size() const;
 

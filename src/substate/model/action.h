@@ -37,13 +37,14 @@ namespace Substate {
             CleanNodesHook = 1,
             InsertedNodesHook,
             RemovedNodesHook,
+            DeferredReferenceHook,
         };
 
         inline int type() const;
 
-        typedef Action *(*Factory)(IStream &, const std::unordered_map<int, Node *> &);
+        typedef Action *(*Factory)(IStream &);
 
-        static Action *read(IStream &stream, const std::unordered_map<int, Node *> &existingNodes);
+        static Action *read(IStream &stream);
         static bool registerFactory(int type, Factory fac);
 
     public:

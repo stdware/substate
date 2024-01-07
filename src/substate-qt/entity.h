@@ -17,7 +17,7 @@ namespace Substate {
         ~Entity();
 
     public:
-        Node *internalData(Node *node) const;
+        Node *internalData() const;
 
     protected:
         Entity(EntityPrivate &d, QObject *parent = nullptr);

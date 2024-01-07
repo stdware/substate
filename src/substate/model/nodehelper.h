@@ -11,6 +11,7 @@ namespace Substate {
     public:
         static inline NodePrivate *get(Node *node);
         static inline Node *clone(Node *node, bool user);
+        static inline void propagateNode(Node *node, const std::function<void(Node *)> &func);
 
         static void setIndex(Node *node, int index);
         static void setManaged(Node *node, bool managed);
@@ -28,6 +29,10 @@ namespace Substate {
 
     inline Node *NodeHelper::clone(Substate::Node *node, bool user) {
         return node->clone(user);
+    }
+
+    inline void NodeHelper::propagateNode(Node *node, const std::function<void(Node *)> &func) {
+        node->propagate(func);
     }
 
 }

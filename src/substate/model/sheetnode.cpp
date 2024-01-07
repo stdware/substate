@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "substateglobal_p.h"
 #include "nodehelper.h"
 
 namespace Substate {
@@ -103,25 +104,15 @@ namespace Substate {
         q->endAction();
     }
 
-    SheetAction *readSheetAction(Action::Type type, IStream &stream,
-                            const std::unordered_map<int, Node *> &existingNodes) {
+    SheetAction *readSheetAction(Action::Type type, IStream &stream) {
         int parentIndex, id, index;
         stream >> parentIndex >> id >> index;
         if (stream.fail())
             return nullptr;
 
-        auto it = existingNodes.find(parentIndex);
-        if (it == existingNodes.end()) {
-            return nullptr;
-        }
-        Node *parent = it->second;
-
-        auto it2 = existingNodes.find(index);
-        if (it == existingNodes.end()) {
-            return nullptr;
-        }
-
-        return new SheetAction(type, parent, id, it2->second);
+        auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
+        auto child = reinterpret_cast<Node *>(uintptr_t(index));
+        return new SheetAction(type, parent, id, child);
     }
 
     SheetNode::SheetNode() : SheetNode(*new SheetNodePrivate(Sheet)) {
@@ -205,7 +196,7 @@ namespace Substate {
         return keys;
     }
 
-    const std::unordered_map<int, Node *> SheetNode::data() const {
+    const std::unordered_map<int, Node *> &SheetNode::data() const {
         QM_D(const SheetNode);
         return d->records;
     }
@@ -257,7 +248,7 @@ namespace Substate {
     void SheetNode::propagateChildren(const std::function<void(Node *)> &func) {
         QM_D(SheetNode);
         for (const auto &pair : std::as_const(d->records)) {
-            func(pair.second);
+            NodeHelper::propagateNode(pair.second, func);
         }
     }
 
@@ -292,21 +283,26 @@ namespace Substate {
                 if (t == SheetInsert) {
                     NodeHelper::forceDelete(m_child);
                 }
-                break;
+                return;
             }
             case InsertedNodesHook: {
                 if (t == SheetInsert) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.push_back(m_child);
                 }
-                break;
+                return;
             }
             case RemovedNodesHook: {
                 if (t == SheetRemove) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.push_back(m_child);
                 }
-                break;
+                return;
+            }
+            case DeferredReferenceHook: {
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_child, m_child)
+                return;
             }
             default:
                 break;

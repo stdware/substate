@@ -21,8 +21,7 @@ namespace Substate {
         void assign_helper(int i, const Property &prop);
     };
 
-    StructAction *readStructAction(IStream &stream,
-                                   const std::unordered_map<int, Node *> &existingNodes);
+    StructAction *readStructAction(IStream &stream);
 
 }
 

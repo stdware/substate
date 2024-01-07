@@ -21,8 +21,7 @@ namespace Substate {
         void setProperty_helper(const std::string &key, const Property &prop);
     };
 
-    MappingAction *readMappingAction(IStream &stream,
-                                     const std::unordered_map<int, Node *> &existingNodes);
+    MappingAction *readMappingAction(IStream &stream);
 
 }
 

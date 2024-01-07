@@ -17,7 +17,7 @@ namespace Substate {
     Entity::~Entity() {
     }
 
-    Node *Entity::internalData(Node *node) const {
+    Node *Entity::internalData() const {
         Q_D(const Entity);
         return d->internalData();
     }

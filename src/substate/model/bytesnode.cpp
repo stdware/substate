@@ -3,6 +3,8 @@
 
 #include <cassert>
 
+#include "substateglobal_p.h"
+
 namespace Substate {
 
     BytesNodePrivate::BytesNodePrivate() : NodePrivate(Node::Bytes) {
@@ -92,8 +94,7 @@ namespace Substate {
         q->endAction();
     }
 
-    BytesAction *readBytesAction(Action::Type type, IStream &stream,
-                            const std::unordered_map<int, Node *> &existingNodes) {
+    BytesAction *readBytesAction(Action::Type type, IStream &stream) {
         int parent;
         int index;
         ByteArray b, oldb;
@@ -102,12 +103,7 @@ namespace Substate {
         if (stream.fail())
             return nullptr;
 
-        auto it = existingNodes.find(parent);
-        if (it == existingNodes.end()) {
-            return nullptr;
-        }
-        Node *parentNode = it->second;
-
+        auto parentNode = reinterpret_cast<Node *>(uintptr_t(index));
         return new BytesAction(type, parentNode, index, b, oldb);
     }
 
@@ -233,6 +229,17 @@ namespace Substate {
             }
             default:
                 // Unreachable
+                break;
+        }
+    }
+
+    void BytesAction::virtual_hook(int id, void *data) {
+        switch (id) {
+            case DeferredReferenceHook: {
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
+                return;
+            }
+            default:
                 break;
         }
     }

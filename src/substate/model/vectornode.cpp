@@ -3,6 +3,7 @@
 
 #include <cassert>
 
+#include "substateglobal_p.h"
 #include "nodehelper.h"
 
 namespace Substate {
@@ -145,35 +146,20 @@ namespace Substate {
         }
     }
 
-    VectorMoveAction *readVectorMoveAction(IStream &stream,
-                                           const std::unordered_map<int, Node *> &existingNodes) {
+    VectorMoveAction *readVectorMoveAction(IStream &stream) {
         int parentIndex, index, cnt, dest;
         stream >> parentIndex >> index >> cnt >> dest;
         if (stream.fail())
             return nullptr;
-
-        auto it = existingNodes.find(parentIndex);
-        if (it == existingNodes.end()) {
-            return nullptr;
-        }
-        Node *parent = it->second;
-
+        auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
         return new VectorMoveAction(parent, index, cnt, dest);
     }
 
-    VectorInsDelAction *
-        readVectorInsDelAction(Action::Type type, IStream &stream,
-                               const std::unordered_map<int, Node *> &existingNodes) {
+    VectorInsDelAction *readVectorInsDelAction(Action::Type type, IStream &stream) {
         int parentIndex, index, size;
         stream >> parentIndex >> index >> size;
         if (stream.fail())
             return nullptr;
-
-        auto it = existingNodes.find(parentIndex);
-        if (it == existingNodes.end()) {
-            return nullptr;
-        }
-        Node *parent = it->second;
 
         std::vector<Node *> children;
         children.reserve(size);
@@ -181,12 +167,11 @@ namespace Substate {
             int childIndex;
             stream >> childIndex;
 
-            auto it2 = existingNodes.find(childIndex);
-            if (it2 == existingNodes.end()) {
-                return nullptr;
-            }
-            children.push_back(it2->second);
+            auto child = reinterpret_cast<Node *>(uintptr_t(childIndex));
+            children.push_back(child);
         }
+
+        auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
         return new VectorInsDelAction(type, parent, index, children);
     }
 
@@ -328,7 +313,7 @@ namespace Substate {
     void VectorNode::propagateChildren(const std::function<void(Node *)> &func) {
         QM_D(VectorNode);
         for (const auto &node : std::as_const(d->vector)) {
-            func(node);
+            NodeHelper::propagateNode(node, func);
         }
     }
 
@@ -410,7 +395,7 @@ namespace Substate {
                             NodeHelper::forceDelete(child);
                     }
                 }
-                break;
+                return;
             }
             case InsertedNodesHook: {
                 if (t == VectorInsert) {
@@ -420,7 +405,7 @@ namespace Substate {
                         res.push_back(child);
                     }
                 }
-                break;
+                return;
             }
             case RemovedNodesHook: {
                 if (t == VectorRemove) {
@@ -428,6 +413,18 @@ namespace Substate {
                     res.reserve(m_children.size());
                     for (const auto &child : std::as_const(m_children)) {
                         res.push_back(child);
+                    }
+                }
+                return;
+            }
+            case DeferredReferenceHook: {
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
+
+                if (t == VectorInsert || t == VectorRemove) {
+                    auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
+                    res.reserve(m_children.size());
+                    for (auto &child : m_children) {
+                        SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, child, child)
                     }
                 }
                 break;

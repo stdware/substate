@@ -4,6 +4,8 @@
 #include <mutex>
 #include <shared_mutex>
 
+#include "substateglobal_p.h"
+
 #include "bytesnode_p.h"
 #include "mappingnode_p.h"
 #include "sheetnode_p.h"
@@ -84,8 +86,7 @@ namespace Substate {
         return !managed && (!model || model->isWritable());
     }
 
-    RootChangeAction *readRootChangeAction(IStream &stream,
-                                           const std::unordered_map<int, Node *> &existingNodes) {
+    RootChangeAction *readRootChangeAction(IStream &stream) {
         int oldRootIndex, newRootIndex;
         stream >> oldRootIndex >> newRootIndex;
 
@@ -307,21 +308,26 @@ namespace Substate {
         switch (id) {
             case CleanNodesHook: {
                 NodeHelper::forceDelete(r);
-                break;
+                return;
             }
             case InsertedNodesHook: {
                 if (r) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.push_back(r);
                 }
-                break;
+                return;
             }
             case RemovedNodesHook: {
                 if (oldr) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.push_back(oldr);
                 }
-                break;
+                return;
+            }
+            case DeferredReferenceHook: {
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, r, r)
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, oldr, oldr)
+                return;
             }
             default:
                 break;

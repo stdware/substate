@@ -1,5 +1,6 @@
 #include "property.h"
 
+#include "substateglobal_p.h"
 #include "nodehelper.h"
 
 namespace Substate {
@@ -15,7 +16,7 @@ namespace Substate {
         \brief Property stores a node or a variant pointer.
     */
 
-    Property Property::read(IStream &stream, const std::unordered_map<int, Node *> &existingNodes) {
+    Property Property::read(IStream &stream) {
         int32_t type;
         stream >> type;
 
@@ -26,14 +27,7 @@ namespace Substate {
             case PropertyFlag::NodeValue: {
                 int index;
                 stream >> index;
-
-                auto it = existingNodes.find(index);
-                if (it == existingNodes.end()) {
-                    QMSETUP_WARNING("non-existing reference to node id %d", index);
-                    stream.setState(std::ios::failbit);
-                    break;
-                }
-                value = it->second;
+                value = reinterpret_cast<Node *>(uintptr_t(index));
                 break;
             }
             case PropertyFlag::VariantValue: {
@@ -120,21 +114,35 @@ namespace Substate {
                 if (v.isNode()) {
                     NodeHelper::forceDelete(v.node());
                 }
-                break;
+                return;
             }
             case InsertedNodesHook: {
                 if (v.isNode()) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.push_back(v.node());
                 }
-                break;
+                return;
             }
             case RemovedNodesHook: {
                 if (oldv.isNode()) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.push_back(oldv.node());
                 }
-                break;
+                return;
+            }
+            case DeferredReferenceHook: {
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
+
+                // Find new node
+                if (v.isNode()) {
+                    SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, v.node(), v)
+                }
+
+                // Find old node
+                if (oldv.isNode()) {
+                    SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, oldv.node(), oldv)
+                }
+                return;
             }
             default:
                 break;

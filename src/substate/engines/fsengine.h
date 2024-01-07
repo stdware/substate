@@ -24,7 +24,6 @@ namespace Substate {
 
         bool start(const std::filesystem::path &dir);
         bool recover(const std::filesystem::path &dir);
-        bool switchDir(const std::filesystem::path &dir);
 
     public:
         void setup(Model *model) override;
@@ -32,6 +31,9 @@ namespace Substate {
         int minimum() const override;
         int maximum() const override;
         StepMessage stepMessage(int step) const override;
+
+    protected:
+        virtual bool createWarningFile(const std::filesystem::path &dir);
 
     protected:
         FileSystemEngine(FileSystemEnginePrivate &d);

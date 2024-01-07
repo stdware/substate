@@ -88,8 +88,7 @@ namespace Substate {
         q->endAction();
     }
 
-    StructAction *readStructAction(IStream &stream,
-                             const std::unordered_map<int, Node *> &existingNodes) {
+    StructAction *readStructAction(IStream &stream) {
         int parentIndex;
         int index;
 
@@ -97,17 +96,13 @@ namespace Substate {
         if (stream.fail())
             return nullptr;
 
-        auto it = existingNodes.find(parentIndex);
-        if (it == existingNodes.end()) {
-            return nullptr;
-        }
-        Node *parent = it->second;
+        auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
 
-        auto v = Property::read(stream, existingNodes);
+        auto v = Property::read(stream);
         if (stream.fail())
             return nullptr;
 
-        auto oldv = Property::read(stream, existingNodes);
+        auto oldv = Property::read(stream);
         if (stream.fail())
             return nullptr;
 
@@ -215,7 +210,7 @@ namespace Substate {
     void StructNode::propagateChildren(const std::function<void(Node *)> &func) {
         QM_D(StructNode);
         for (const auto &pair : std::as_const(d->arrayIndexes)) {
-            func(pair.first);
+            NodeHelper::propagateNode(pair.first, func);
         }
     }
 

@@ -9,7 +9,7 @@
 #include <iostream>
 #include <string>
 
-#include <substate/substate_global.h>
+#include <substate/substateglobal.h>
 
 namespace Substate {
 
