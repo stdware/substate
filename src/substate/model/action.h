@@ -33,8 +33,15 @@ namespace Substate {
             User = 1024,
         };
 
+        enum State {
+            Normal,
+            Unreferenced,
+            Detached,
+            Deleted,
+        };
+
         enum ActionHook {
-            CleanNodesHook = 1,
+            DetachHook = 1,
             InsertedNodesHook,
             RemovedNodesHook,
             DeferredReferenceHook,
@@ -42,12 +49,17 @@ namespace Substate {
 
         inline int type() const;
 
+        inline int state() const;
+        inline void setState(State state);
+
         typedef Action *(*Factory)(IStream &);
 
         static Action *read(IStream &stream);
         static bool registerFactory(int type, Factory fac);
 
     public:
+        void detach();
+
         virtual void write(OStream &stream) const = 0;
         virtual Action *clone() const = 0;
         virtual void execute(bool undo) = 0;
@@ -55,15 +67,24 @@ namespace Substate {
 
     protected:
         int t;
+        int s;
 
         QMSETUP_DISABLE_COPY_MOVE(Action)
     };
 
-    inline Action::Action(int type) : t(type) {
+    inline Action::Action(int type) : t(type), s(Normal) {
     }
 
     inline int Action::type() const {
         return t;
+    }
+
+    inline int Action::state() const {
+        return s;
+    }
+
+    inline void Action::setState(Substate::Action::State state) {
+        s = state;
     }
 
     class SUBSTATE_EXPORT ActionNotification : public Notification {

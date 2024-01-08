@@ -112,7 +112,10 @@ namespace Substate {
 
         auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
         auto child = reinterpret_cast<Node *>(uintptr_t(index));
-        return new SheetAction(type, parent, id, child);
+
+        auto a = new SheetAction(type, parent, id, child);
+        a->setState(Action::Unreferenced);
+        return a;
     }
 
     SheetNode::SheetNode() : SheetNode(*new SheetNodePrivate(Sheet)) {
@@ -261,6 +264,15 @@ namespace Substate {
     }
 
     SheetAction::~SheetAction() {
+        if (s == Detached) {
+            if (t == SheetInsert) {
+                delete m_child;
+            }
+        } else if (s == Deleted) {
+            if (t == SheetInsert && m_child->isManaged()) {
+                NodeHelper::forceDelete(m_child);
+            }
+        }
     }
 
     void SheetAction::write(OStream &stream) const {
@@ -279,11 +291,11 @@ namespace Substate {
 
     void SheetAction::virtual_hook(int id, void *data) {
         switch (id) {
-            case CleanNodesHook: {
+            case DetachHook: {
                 if (t == SheetInsert) {
-                    NodeHelper::forceDelete(m_child);
+                    m_child = NodeHelper::clone(m_child, false);
                 }
-                return;
+                break;
             }
             case InsertedNodesHook: {
                 if (t == SheetInsert) {

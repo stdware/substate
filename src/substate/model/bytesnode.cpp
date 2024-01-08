@@ -104,7 +104,9 @@ namespace Substate {
             return nullptr;
 
         auto parentNode = reinterpret_cast<Node *>(uintptr_t(index));
-        return new BytesAction(type, parentNode, index, b, oldb);
+        auto a = new BytesAction(type, parentNode, index, b, oldb);
+        a->setState(Action::Unreferenced);
+        return a;
     }
 
     BytesNode::BytesNode() : Node(*new BytesNodePrivate()) {

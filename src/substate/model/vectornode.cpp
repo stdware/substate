@@ -152,7 +152,10 @@ namespace Substate {
         if (stream.fail())
             return nullptr;
         auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
-        return new VectorMoveAction(parent, index, cnt, dest);
+
+        auto a = new VectorMoveAction(parent, index, cnt, dest);
+        a->setState(Action::Unreferenced);
+        return a;
     }
 
     VectorInsDelAction *readVectorInsDelAction(Action::Type type, IStream &stream) {
@@ -172,7 +175,10 @@ namespace Substate {
         }
 
         auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
-        return new VectorInsDelAction(type, parent, index, children);
+
+        auto a = new VectorInsDelAction(type, parent, index, children);
+        a->setState(Action::Unreferenced);
+        return a;
     }
 
     VectorNode::VectorNode() : VectorNode(*new VectorNodePrivate(Vector)) {
@@ -367,6 +373,19 @@ namespace Substate {
     }
 
     VectorInsDelAction::~VectorInsDelAction() {
+        if (s == Detached) {
+            if (t == VectorInsert) {
+                deleteAll(m_children);
+            }
+        } else if (s == Deleted) {
+            if (t == VectorInsert) {
+                for (const auto &child : std::as_const(m_children)) {
+                    if (child->isManaged()) {
+                        NodeHelper::forceDelete(child);
+                    }
+                }
+            }
+        }
     }
 
     void VectorInsDelAction::write(OStream &stream) const {
@@ -388,14 +407,13 @@ namespace Substate {
 
     void VectorInsDelAction::virtual_hook(int id, void *data) {
         switch (id) {
-            case CleanNodesHook: {
+            case DetachHook: {
                 if (t == VectorInsert) {
-                    for (const auto &child : std::as_const(m_children)) {
-                        if (child->isManaged())
-                            NodeHelper::forceDelete(child);
+                    for (auto &child : m_children) {
+                        child = NodeHelper::clone(child, false);
                     }
                 }
-                return;
+                break;
             }
             case InsertedNodesHook: {
                 if (t == VectorInsert) {

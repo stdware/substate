@@ -54,21 +54,21 @@ namespace Substate {
         if (node) {
             if (node->isManaged())
                 node->d_func()->setManaged(false);
-            propagateModel(node, model);
+            propagateEngine(node, model->engine());
         }
         model->d_func()->root = node;
     }
 
     /*!
-        Sets the node and all of its children's model pointer to the specified one, and
+        Sets the node and all of its children's engine pointer to the specified one, and
         processes the node's index.
 
         If the index of a node is 0, the node is regarded as newly created by the user and will be
         assigned the next highest index. Otherwise, the node is regarded as a managed node which is
         deserialized from raw data.
     */
-    void NodeHelper::propagateModel(Node *node, Model *model) {
-        node->d_func()->propagateModel(model);
+    void NodeHelper::propagateEngine(Node *node, Engine *engine) {
+        node->d_func()->propagateEngine(engine);
     }
 
     /*!

@@ -8,12 +8,23 @@ namespace Substate {
 
     EnginePrivate::EnginePrivate() {
         model = nullptr;
+        maxIndex = 0;
     }
 
     EnginePrivate::~EnginePrivate() {
     }
 
     void EnginePrivate::init() {
+    }
+
+    int EnginePrivate::addIndex(Node *node, int idx) {
+        int index = idx > 0 ? (maxIndex = std::max(maxIndex, idx), idx) : (++maxIndex);
+        indexes.insert(std::make_pair(index, node));
+        return index;
+    }
+
+    void EnginePrivate::removeIndex(int index) {
+        indexes.erase(index);
     }
 
     /*!
@@ -33,6 +44,17 @@ namespace Substate {
     Model *Engine::model() const {
         QM_D(const Engine);
         return d->model;
+    }
+
+    /*!
+        Returns the node to the index points to if found.
+    */
+    Node *Engine::indexOf(int index) const {
+        QM_D(const Engine);
+        auto it = d->indexes.find(index);
+        if (it == d->indexes.end())
+            return nullptr;
+        return it->second;
     }
 
     /*!
@@ -57,7 +79,7 @@ namespace Substate {
             nodes.insert(nodes.end(), curNodes.begin(), curNodes.end());
         }
         for (auto n : std::as_const(nodes)) {
-            NodeHelper::propagateModel(n, d->model);
+            NodeHelper::propagateEngine(n, this);
         }
     }
 
@@ -80,7 +102,7 @@ namespace Substate {
 
         // Remove all items
         std::list<Node *> rootItems;
-        for (const auto &pair : std::as_const(model_d->indexes)) {
+        for (const auto &pair : std::as_const(d->indexes)) {
             if (!pair.second->parent()) {
                 rootItems.push_back(pair.second);
             }
@@ -93,8 +115,8 @@ namespace Substate {
         model_d->root = nullptr;
 
         model_d->is_clearing = false;
-        model_d->indexes.clear();
-        model_d->maxIndex = 0;
+        d->indexes.clear();
+        d->maxIndex = 0;
     }
 
     /*!

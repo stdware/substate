@@ -2,6 +2,7 @@
 #define NODEHELPER_H
 
 #include <substate/node.h>
+#include <substate/engine.h>
 
 namespace Substate {
 
@@ -18,7 +19,7 @@ namespace Substate {
         static void setExtra(Node *node, NodeExtra *extra);
 
         static void setModelRoot(Node *node, Model *model);
-        static void propagateModel(Node *node, Model *model);
+        static void propagateEngine(Node *node, Engine *engine);
 
         static void forceDelete(Node *node);
     };

@@ -24,9 +24,8 @@ namespace Substate {
         auto begin = stack.begin() + b;
         auto end = stack.begin() + e;
         for (auto it = begin; it != end; ++it) {
-            auto &tx = *it;
-            for (const auto &a : std::as_const(tx.actions)) {
-                a->virtual_hook(Action::CleanNodesHook, nullptr);
+            for (const auto &a : std::as_const(it->actions)) {
+                a->setState(Action::Deleted);
                 delete a;
             }
         }

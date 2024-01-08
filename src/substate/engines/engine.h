@@ -23,6 +23,7 @@ namespace Substate {
 
     public:
         Model *model() const;
+        Node *indexOf(int index) const;
 
         virtual void setup(Model *model);
         virtual void commit(const std::vector<Action *> &actions, const StepMessage &message);
@@ -37,6 +38,9 @@ namespace Substate {
     protected:
         std::unique_ptr<EnginePrivate> d_ptr;
         Engine(EnginePrivate &d);
+
+        friend class Node;
+        friend class NodePrivate;
 
         QMSETUP_DISABLE_COPY_MOVE(Engine)
     };

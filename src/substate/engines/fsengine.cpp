@@ -7,9 +7,11 @@
 #include <mutex>
 #include <condition_variable>
 #include <thread>
+#include <utility>
 
 #include "substateglobal_p.h"
 #include "model/nodehelper.h"
+#include "model/model_p.h"
 
 #define BINARY_FILE_DAT "dat"
 
@@ -47,12 +49,9 @@ namespace {
         BaseProducer();
         ~BaseProducer();
 
-        inline void pushTask(BaseTask *task, bool trivial = false, bool unshift = false);
-        inline void delTrivialTask(BaseTask *task);
+        inline void pushTask(BaseTask *task, bool unshift = false);
 
     protected:
-        std::unordered_set<BaseTask *> m_trivialTasks;
-
         static inline TaskManager *taskManager = nullptr;
         static inline std::unordered_set<BaseProducer *> instances;
     };
@@ -82,13 +81,17 @@ namespace {
     BaseTask::~BaseTask() = default;
 
     inline void BaseTask::abort() {
-        std::unique_lock<std::mutex> lock(mtx);
-        if (finished) {
-            del();
-        } else {
+        do {
+            std::unique_lock<std::mutex> lock(mtx);
+            if (finished) {
+                break;
+            }
+
             // Will be deleted by the consumer
             obsolete = true;
-        }
+            return;
+        } while (false);
+        del();
     }
 
     inline void BaseTask::del() {
@@ -103,11 +106,6 @@ namespace {
     }
 
     BaseProducer::~BaseProducer() {
-        // Remove trivial tasks
-        for (const auto &task : std::as_const(m_trivialTasks)) {
-            task->abort();
-        }
-
         if (instances.size() == 1 && taskManager) {
             delete taskManager;
             taskManager = nullptr;
@@ -115,17 +113,9 @@ namespace {
         instances.erase(this);
     }
 
-    inline void BaseProducer::pushTask(BaseTask *task, bool trivial, bool unshift) {
+    inline void BaseProducer::pushTask(BaseTask *task, bool unshift) {
         QM_UNUSED(this)
-        if (trivial) {
-            m_trivialTasks.insert(task);
-        }
         taskManager->pushTask(task, unshift);
-    }
-
-    inline void BaseProducer::delTrivialTask(BaseTask *task) {
-        m_trivialTasks.erase(task);
-        task->del();
     }
 
     TaskManager::TaskManager()
@@ -181,7 +171,7 @@ namespace {
 
 }
 
-/* Steps data (model_stepss.dat)
+/* Steps data (model_steps.dat)
  *
  * 0x0          maxSteps in a checkpoint
  * 0x4          maxCheckpoints
@@ -283,7 +273,7 @@ namespace Substate {
     }
 
     static void readAction(std::istream &file, Action **a, bool brief,
-                           std::unordered_map<int, Node *> &existingNodes) {
+                           std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
 
         // read type
@@ -306,7 +296,7 @@ namespace Substate {
                 }
 
                 // Add inserted nodes
-                existingNodes.insert(std::make_pair(node->index(), node));
+                insertedItems.insert(std::make_pair(node->index(), node));
             }
         }
 
@@ -402,7 +392,7 @@ namespace Substate {
     }
 
     static void readJournal(std::ifstream &file, int maxSteps, std::vector<TXData> &res, bool brief,
-                            std::unordered_map<int, Node *> &existingNodes) {
+                            std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
         std::vector<int64_t> positions{
             static_cast<int64_t>((maxSteps + 2) * INT64_SIZE),
@@ -438,7 +428,7 @@ namespace Substate {
             actions.reserve(actions_cnt);
             for (int i = 0; i < actions_cnt; ++i) {
                 Action *a;
-                readAction(file, &a, brief, existingNodes);
+                readAction(file, &a, brief, insertedItems);
                 actions.push_back(a);
             }
             data.push_back({actions, attrs});
@@ -450,13 +440,15 @@ namespace Substate {
 
         class CommitTask : public BaseTask {
         public:
-            CommitTask()
-                : BaseTask(true), fsStep(-1), fsMin(-1), oldFsMin(-1), oldFsMax(-1), maxSteps(0),
-                  maxId(0) {
+            CommitTask(fs::path dir, int fsStep, int fsMin, int oldFsMin, int oldFsMax,
+                       int maxSteps, int maxId, TXData data)
+                : BaseTask(true), fsStep(fsStep), fsMin(fsMin), oldFsMin(oldFsMin),
+                  oldFsMax(oldFsMax), maxSteps(maxSteps), maxId(maxId), data(std::move(data)),
+                  dir(std::move(dir)) {
             }
 
             ~CommitTask() {
-                deleteAll(data.actions);
+                deleteAll(data.actions); // Delete all cloned actions
             }
 
             void execute() override {
@@ -562,13 +554,14 @@ namespace Substate {
             int fsStep, fsMin;
             int oldFsMin, oldFsMax;
             int maxSteps;
-            fs::path dir;
             size_t maxId;
+            fs::path dir;
         };
 
         class ChangeStepTask : public BaseTask {
         public:
-            ChangeStepTask() : BaseTask(true), fsStep(0) {
+            ChangeStepTask(fs::path dir, int fsStep)
+                : BaseTask(true), fsStep(fsStep), dir(std::move(dir)) {
             }
 
             ~ChangeStepTask() = default;
@@ -593,7 +586,9 @@ namespace Substate {
         // Writing checkpoint with root item and all items removed during last period
         class WriteCkptTask : public BaseTask {
         public:
-            WriteCkptTask() : BaseTask(true), num(0), root(nullptr) {
+            WriteCkptTask(fs::path dir, int num, Node *root, std::vector<Node *> removedItems)
+                : BaseTask(true), num(num), dir(std::move(dir)), root(nullptr),
+                  removedItems(std::move(removedItems)) {
             }
 
             ~WriteCkptTask() {
@@ -616,13 +611,18 @@ namespace Substate {
 
         class ReadCkptTask : public BaseTask {
         public:
-            ReadCkptTask() : BaseTask(false), num(0), brief(false), maxSteps(0) {
+            ReadCkptTask(fs::path dir, int num, bool brief, int maxSteps)
+                : BaseTask(false), num(num), brief(brief), maxSteps(maxSteps), dir(std::move(dir)) {
             }
 
             ~ReadCkptTask() {
+                // Delete items if not moved by post actions
                 deleteAll(removedItems);
                 for (const auto &item : std::as_const(data)) {
                     deleteAll(item.actions);
+                }
+                for (const auto &it : std::as_const(insertedItems)) {
+                    delete it.second;
                 }
             }
 
@@ -646,7 +646,7 @@ namespace Substate {
                 {
                     auto path = journal_path(dir, num);
                     std::ifstream file(path, std::ios::binary);
-                    readJournal(file, maxSteps, data, brief, existingNodes);
+                    readJournal(file, maxSteps, data, brief, insertedItems);
                 }
 
                 std::unique_lock<std::mutex> lock(mtx);
@@ -661,16 +661,18 @@ namespace Substate {
 
             int num;
             bool brief; // Read only id of insert operation
-            std::vector<Node *> removedItems;
-            std::vector<TXData> data;
-            std::unordered_map<int, Node *> existingNodes;
             int maxSteps;
             fs::path dir;
+
+            std::vector<Node *> removedItems;
+            std::vector<TXData> data;
+            std::unordered_map<int, Node *> insertedItems;
         };
 
         class ReadStepMessageTask : public BaseTask {
         public:
-            ReadStepMessageTask() : BaseTask(false), step(0), maxSteps(0) {
+            ReadStepMessageTask(fs::path dir, int step, int maxSteps)
+                : BaseTask(false), step(step), maxSteps(maxSteps), dir(std::move(dir)) {
             }
 
             void execute() override {
@@ -705,8 +707,8 @@ namespace Substate {
 
             int step;
             int maxSteps;
-            Engine::StepMessage res;
             fs::path dir;
+            Engine::StepMessage res;
         };
 
         class ResetTask : public BaseTask {
@@ -771,17 +773,43 @@ namespace Substate {
         }
     };
 
+    static WriteCkptTask *generateWriteCkptTask(FileSystemEnginePrivate *d) {
+        // Collect all removed items
+        std::vector<Node *> removedItems;
+        for (auto i = d->stack.size() - d->maxSteps; i != d->stack.size(); ++i) {
+            const auto &tx = d->stack.at(i);
+            for (const auto &a : std::as_const(tx.actions)) {
+                a->virtual_hook(Action::RemovedNodesHook, &removedItems);
+            }
+        }
+        int num = int(d->min + d->stack.size()) / d->maxSteps;
+        auto root = NodeHelper::clone(d->model->root(), false);
+        return new WriteCkptTask(d->dir, num, root, std::move(removedItems));
+    }
+
     class FileSystemEnginePrivate::JournalData : public BaseProducer {
     public:
-        int fsMin;
-        int fsMax;
+        std::unique_ptr<RecoverData> recoverData;
 
-        Engine::StepMessage getFsStepMessage(int step) {
-            auto task = new ReadStepMessageTask();
-            task->step = step;
+        ReadCkptTask *backward_task = nullptr;
+        ReadCkptTask *forward_task = nullptr;
+        WriteCkptTask *write_task = nullptr;
+
+        JournalData() {
+        }
+
+        ~JournalData() {
+            abortBackwardReadTask();
+            abortForwardReadTask();
+        }
+
+        Engine::StepMessage getFsStepMessage(const fs::path &_dir, int step, int maxSteps) {
+            auto task = new ReadStepMessageTask(_dir, step, maxSteps);
 
             std::unique_lock<std::mutex> lock(task->mtx);
-            pushTask(task, false, true);
+            pushTask(task, true);
+
+            // Wait for finished
             while (!task->finished) {
                 task->cv.wait(lock);
             }
@@ -791,10 +819,26 @@ namespace Substate {
             task->del();
             return res;
         }
+
+        inline void abortBackwardReadTask() {
+            if (backward_task) {
+                backward_task->abort();
+                backward_task = nullptr;
+            }
+        }
+
+        inline void abortForwardReadTask() {
+            if (forward_task) {
+                forward_task->abort();
+                forward_task = nullptr;
+            }
+        }
     };
 
     FileSystemEnginePrivate::FileSystemEnginePrivate()
         : journalData(std::make_unique<JournalData>()) {
+        fsMin = 0;
+        fsMax = 0;
         finished = false;
         maxCheckPoints = 1;
     }
@@ -808,17 +852,230 @@ namespace Substate {
     void FileSystemEnginePrivate::init() {
     }
 
+    void FileSystemEnginePrivate::updateStackSize() {
+        // if (stack.size() > 3 * maxSteps) {
+        if (current <= maxSteps / 2) {
+            int size = int(stack.size()) - 2 * maxSteps;
+            if (size > 0) {
+                // Abort forward transactions reading task
+                journalData->abortForwardReadTask();
+
+                // Remove tail
+                removeActions(2 * maxSteps, int(stack.size()));
+            }
+
+        } else if (current > maxSteps * 2.5) {
+            // Abort backward transactions reading task
+            journalData->abortBackwardReadTask();
+
+            // Remove head
+            removeActions(0, maxSteps);
+            min += maxSteps;
+            current -= maxSteps;
+        }
+    }
+
+    void FileSystemEnginePrivate::extractBackwardJournal(std::vector<TransactionData> &data,
+                                                         std::vector<Node *> &removedItems) {
+        QM_Q(FileSystemEngine);
+
+        // Add the removed nodes
+        // These nodes are now not on the root item
+        for (const auto &node : std::as_const(removedItems)) {
+            NodeHelper::propagateEngine(node, q);
+            NodeHelper::setManaged(node, true);
+        }
+
+        // Now the pointers in the actions are the index value
+        // We need to accomplish the deferred reference work here
+        for (const auto &item : std::as_const(data)) {
+            for (const auto &action : item.actions) {
+                action->virtual_hook(Action::DeferredReferenceHook, &indexes);
+                action->setState(Action::Normal);
+            }
+        }
+
+        auto size = int(data.size());
+
+        stack.insert(stack.begin(), data.begin(), data.end());
+        min -= size;
+        current += size;
+
+        // Get ownership
+        data.clear();
+        removedItems.clear();
+    }
+
+    void FileSystemEnginePrivate::extractForwardJournal(
+        std::vector<TransactionData> &data, std::unordered_map<int, Node *> &insertedItems) {
+        QM_Q(FileSystemEngine);
+
+        // Add the inserted nodes
+        // These nodes are now not on the root item
+        for (const auto &it : std::as_const(insertedItems)) {
+            auto node = it.second;
+            NodeHelper::propagateEngine(node, q);
+            NodeHelper::setManaged(node, true);
+        }
+
+        // Now the pointers in the actions are the index value
+        // We need to accomplish the deferred reference work here
+        for (const auto &item : std::as_const(data)) {
+            for (const auto &action : item.actions) {
+                action->virtual_hook(Action::DeferredReferenceHook, &indexes);
+                action->setState(Action::Normal);
+            }
+        }
+        stack.insert(stack.end(), data.begin(), data.end());
+
+        // Get ownership
+        data.clear();
+        insertedItems.clear();
+    }
+
     bool FileSystemEnginePrivate::acceptChangeMaxSteps(int steps) const {
-        return MemoryEnginePrivate::acceptChangeMaxSteps(steps);
+        return !journalData->recoverData && MemoryEnginePrivate::acceptChangeMaxSteps(steps);
     }
 
     void FileSystemEnginePrivate::afterCurrentChange() {
-        MemoryEnginePrivate::afterCurrentChange();
+        QM_Q(FileSystemEngine);
+
+        auto d2 = journalData.get();
+
+        // Push step updating task
+        {
+            auto task = new ChangeStepTask(dir, q->current());
+            task->fsStep = q->current();
+            d2->pushTask(task);
+        }
+
+        auto &backward = d2->backward_task;
+        auto &forward = d2->forward_task;
+
+        // Check if backward transactions is enough to undo
+        if (current <= maxSteps / 2) {
+
+            if (fsMin < min) {
+                // Abort forward transactions reading task
+                d2->abortForwardReadTask();
+
+                // Need to read backward transactions from file system
+                if (!backward) {
+                    int num = min / maxSteps - 1;
+
+                    backward = new ReadCkptTask(dir, num, true, maxSteps);
+                    d2->pushTask(backward);
+                }
+
+                // Need to wait until the reading task finished
+                if (current == 0) {
+                    std::unique_lock<std::mutex> lock(backward->mtx);
+                    while (!backward->finished) {
+                        backward->cv.wait(lock);
+                    }
+                }
+
+                // Insert backward transactions
+                if (backward && backward->finished) {
+                    extractBackwardJournal(backward->data, backward->removedItems);
+                    backward->del();
+                    backward = nullptr;
+                }
+            }
+
+        }
+
+        // Check if forward transactions is enough to redo
+        else if (current > stack.size() - maxSteps / 2) {
+
+            if (fsMax > min + stack.size()) {
+                // Abort backward transactions reading task
+                d2->abortBackwardReadTask();
+
+                // Need to read forward transactions from file system
+                if (!forward) {
+                    int num = int(min + stack.size()) / maxSteps;
+                    forward = new ReadCkptTask(dir, num, false, maxSteps);
+                    d2->pushTask(forward);
+                }
+
+                // Need to wait until the reading task finished
+                if (current == stack.size() - 1) {
+                    std::unique_lock<std::mutex> lock(forward->mtx);
+                    while (!forward->finished) {
+                        forward->cv.wait(lock);
+                    }
+                }
+
+                // Insert forward transactions
+                if (forward && forward->finished) {
+                    // Extract transactions
+                    extractForwardJournal(forward->data, forward->insertedItems);
+                    forward->del();
+                    forward = nullptr;
+                }
+            }
+        }
+
+        // Over
+        updateStackSize();
     }
 
     void FileSystemEnginePrivate::afterCommit(const std::vector<Action *> &actions,
                                               const Engine::StepMessage &message) {
-        MemoryEnginePrivate::afterCommit(actions, message);
+        auto d2 = journalData.get();
+        auto &writeCkptTask = d2->write_task;
+
+        auto oldFsMin = fsMin;
+        auto oldFsMax = fsMax;
+
+        // Update fsMax
+        fsMax = min + current;
+
+        // Update fsMin
+        int expectMin;
+        if (maxCheckPoints >= 0 &&
+            (expectMin = ((fsMax - 1) / maxSteps - (maxCheckPoints + 3)) * maxSteps) > fsMin) {
+            fsMin = expectMin;
+        }
+
+        // Abort forward transactions reading task
+        d2->abortForwardReadTask();
+
+        // Abort backward transactions reading task
+        if (current > maxSteps * 1.5)
+            d2->abortBackwardReadTask();
+
+        // Delete formal checkpoint task
+        auto rem = stack.size() % maxSteps;
+        if (rem == 0) {
+            delete writeCkptTask;
+
+            // Save checkpoint task
+            writeCkptTask = generateWriteCkptTask(this);
+        } else if (rem == 1 && stack.size() > 1) {
+            // Deferred push checkpoint task
+            if (writeCkptTask) {
+                d2->pushTask(writeCkptTask);
+                writeCkptTask = nullptr;
+            }
+        } else if (writeCkptTask) {
+            delete writeCkptTask;
+            writeCkptTask = nullptr;
+        }
+
+        // Add commit task (Must do it after writing checkpoint)
+        {
+            auto newActions = actions;
+            for (auto &action : newActions) {
+                action = action->clone();
+                action->detach();
+            }
+            auto task = new CommitTask(dir, fsMax, fsMin, oldFsMin, oldFsMax, maxSteps, maxIndex,
+                                       {newActions, message});
+            d2->pushTask(task);
+        }
+        updateStackSize();
     }
 
     void FileSystemEnginePrivate::afterReset() {
@@ -864,24 +1121,25 @@ namespace Substate {
     }
 
     int FileSystemEngine::minimum() const {
-        return MemoryEngine::minimum();
+        QM_D(const FileSystemEngine);
+        return d->fsMin;
     }
 
     int FileSystemEngine::maximum() const {
-        return MemoryEngine::maximum();
+        QM_D(const FileSystemEngine);
+        return d->fsMax;
     }
 
     Engine::StepMessage FileSystemEngine::stepMessage(int step) const {
         QM_D(const FileSystemEngine);
 
-        auto d2 = d->journalData.get();
-        if (step <= d2->fsMin || step > d2->fsMax) {
+        if (step <= d->fsMin || step > d->fsMax) {
             return {};
         }
 
         int step2 = step - (d->min + 1);
         if (step2 < 0 || step2 >= d->stack.size()) {
-            return d2->getFsStepMessage(step);
+            return d->journalData->getFsStepMessage(d->dir, step, d->maxSteps);
         }
         return d->stack.at(step2).message;
     }

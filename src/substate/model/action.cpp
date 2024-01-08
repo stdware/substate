@@ -69,6 +69,11 @@ namespace Substate {
         return true;
     }
 
+    void Action::detach() {
+        virtual_hook(DetachHook, nullptr);
+        s = Detached;
+    }
+
     void Action::virtual_hook(int id, void *data) {
     }
 

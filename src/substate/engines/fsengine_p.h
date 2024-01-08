@@ -22,9 +22,19 @@ namespace Substate {
         // The directory containing the journal files
         std::filesystem::path dir;
 
+        // Real bound in filesystem
+        int fsMin;
+        int fsMax;
+
         // Internal journal data
         class JournalData;
         std::unique_ptr<JournalData> journalData;
+
+        void updateStackSize();
+        void extractBackwardJournal(std::vector<TransactionData> &data,
+                                    std::vector<Node *> &removedItems);
+        void extractForwardJournal(std::vector<TransactionData> &data,
+                                   std::unordered_map<int, Node *> &insertedItems);
 
         // Override functions
         bool acceptChangeMaxSteps(int steps) const override;

@@ -125,7 +125,9 @@ namespace Substate {
         if (stream.fail())
             return nullptr;
 
-        return new MappingAction(parent, key, v, oldv);
+        auto a = new MappingAction(parent, key, v, oldv);
+        a->setState(Action::Unreferenced);
+        return a;
     }
 
     MappingNode::MappingNode() : Node(*new MappingNodePrivate(Mapping)) {

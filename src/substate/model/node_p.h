@@ -2,6 +2,7 @@
 #define NODE_P_H
 
 #include <substate/node.h>
+#include <substate/engine.h>
 #include <substate/private/sender_p.h>
 
 namespace Substate {
@@ -15,7 +16,7 @@ namespace Substate {
 
         int type;
         Node *parent;
-        Model *model;
+        Engine *engine;
         int index;
         bool managed;
         bool allowDelete;
@@ -23,7 +24,7 @@ namespace Substate {
         NodeExtra *extra;
 
         void setManaged(bool _managed);
-        void propagateModel(Model *_model);
+        void propagateEngine(Engine *_engine);
 
         bool testModifiable() const;
         inline bool testInsertable(const Node *item) const {

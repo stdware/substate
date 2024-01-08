@@ -18,13 +18,8 @@ namespace Substate {
 
         Model::State state;
         std::vector<Action *> txActions;
-        std::unordered_map<int, Node *> indexes;
-        int maxIndex;
 
         Node *root;
-
-        int addIndex(Node *node, int idx = 0);
-        void removeIndex(int index);
 
         void setRootItem_helper(Node *node);
     };

@@ -5,31 +5,22 @@
 
 #include "node_p.h"
 #include "engines/memengine.h"
+#include "nodehelper.h"
 
 namespace Substate {
 
     ModelPrivate::ModelPrivate(Engine *engine) : engine(engine) {
         lockedNode = nullptr;
-        maxIndex = 0;
     }
 
     ModelPrivate::~ModelPrivate() {
+        NodeHelper::forceDelete(root);
         delete engine;
     }
 
     void ModelPrivate::init() {
         QM_Q(Model);
         engine->setup(q);
-    }
-
-    int ModelPrivate::addIndex(Node *node, int idx) {
-        int index = idx > 0 ? (maxIndex = std::max(maxIndex, idx), idx) : (++maxIndex);
-        indexes.insert(std::make_pair(index, node));
-        return index;
-    }
-
-    void ModelPrivate::removeIndex(int index) {
-        indexes.erase(index);
     }
 
     void ModelPrivate::setRootItem_helper(Substate::Node *node) {
@@ -114,10 +105,7 @@ namespace Substate {
     */
     Node *Model::indexOf(int index) const {
         QM_D(const Model);
-        auto it = d->indexes.find(index);
-        if (it == d->indexes.end())
-            return nullptr;
-        return it->second;
+        return d->engine->indexOf(index);
     }
 
     /*!
@@ -178,7 +166,7 @@ namespace Substate {
         for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
             const auto &a = *it;
             a->execute(true);
-            a->virtual_hook(Action::CleanNodesHook, nullptr); // Need to remove newly created items
+            a->setState(Action::Detached); // Need to remove newly created items
             delete a;
         }
         stack.clear();

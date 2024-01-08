@@ -106,7 +106,9 @@ namespace Substate {
         if (stream.fail())
             return nullptr;
 
-        return new StructAction(parent, index, v, oldv);
+        auto a = new StructAction(parent, index, v, oldv);
+        a->setState(Action::Unreferenced);
+        return a;
     }
 
     StructNode::StructNode(int size) : StructNode(*new StructNodePrivate(Struct, size)) {

@@ -106,13 +106,22 @@ namespace Substate {
     }
 
     PropertyAction::~PropertyAction() {
+        if (s == Detached) {
+            if (v.isNode()) {
+                delete v.node();
+            }
+        } else if (s == Deleted) {
+            if (v.isNode() && v.node()->isManaged()) {
+                NodeHelper::forceDelete(v.node());
+            }
+        }
     }
 
     void PropertyAction::virtual_hook(int id, void *data) {
         switch (id) {
-            case CleanNodesHook: {
+            case DetachHook: {
                 if (v.isNode()) {
-                    NodeHelper::forceDelete(v.node());
+                    v = NodeHelper::clone(v.node(), false);
                 }
                 return;
             }
