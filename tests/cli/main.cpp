@@ -19,7 +19,6 @@ namespace {
         return defaultValue;
     }
 
-
     std::string join(const std::vector<std::string> &v, const std::string_view &delimiter) {
         if (v.empty())
             return {};
@@ -95,7 +94,7 @@ namespace {
     public:
         inline Command(std::string name = {}, std::string help = {},
                        CommandHandler handler = nullptr);
-        inline Command(std::vector<std::string> names = {}, std::string help = {},
+        inline Command(std::initializer_list<std::string> names = {}, std::string help = {},
                        CommandHandler handler = nullptr);
 
         inline Command &arg(Argument arg);
@@ -131,9 +130,9 @@ namespace {
         : m_names({std::move(name)}), m_help(std::move(help)), m_handler(handler) {
     }
 
-    inline Command::Command(std::vector<std::string> names, std::string help,
+    inline Command::Command(std::initializer_list<std::string> names, std::string help,
                             CommandHandler handler)
-        : m_names(std::move(names)), m_help(std::move(help)), m_handler(handler) {
+        : m_names(names), m_help(std::move(help)), m_handler(handler) {
     }
 
     inline Command &Command::arg(Argument arg) {
@@ -192,12 +191,12 @@ namespace {
         for (const auto &arg : m_args) {
             args += ' ';
             if (arg.m_required) {
-                args += '[' + arg.m_name + ']';
-            } else {
                 args += '<' + arg.m_name + '>';
+            } else {
+                args += '[' + arg.m_name + ']';
             }
         }
-        printf("%s%10s%-40s%s\n", "    ", commands.data(), args.data(), m_help.data());
+        printf("%s%-10s%-40s%s\n", "    ", commands.data(), args.data(), m_help.data());
     }
 
 }
@@ -230,8 +229,7 @@ namespace {
 
     const std::vector<Command> &Environment::commands() {
         static std::vector<Command> commands = {
-            Command(std::vector<std::string>{"help"}, "Show this help", cmd_help)
-                .arg(Argument("cmd").optional()),
+            Command("help", "Show this help", cmd_help).arg(Argument("cmd").optional()),
         };
         return commands;
     }
@@ -246,7 +244,7 @@ namespace {
                     continue;
 
                 for (const auto &name : cmd.names()) {
-                    res.insert(std::make_pair(name, i));
+                    res.insert(std::make_pair(name.data(), i));
                 }
             }
             return res;
@@ -304,7 +302,7 @@ int main(int argc, char *argv[]) {
         }
 
         auto name = tokens.front();
-        auto cmd = Environment::findCommand(tokens.front());
+        auto cmd = Environment::findCommand(name);
         if (!cmd) {
             printf("Unknown command \"%s\".\n", name.data());
             continue;

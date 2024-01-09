@@ -1,6 +1,3 @@
-qm_import(Filesystem Preprocess)
-qm_init_directories()
-
 set(SUBSTATE_PROJECT_DESCRIPTION "Crash Consistent Undo Framework")
 set(SUBSTATE_PROJECT_COPYRIGHT "Copyright (C) 2022-2024 Stdware Collections")
 

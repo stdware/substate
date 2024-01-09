@@ -41,6 +41,8 @@ set(SUBSTATE_INSTALL_NAME ${PROJECT_NAME})
 # Main Project
 # ----------------------------------
 find_package(qmsetup REQUIRED)
+qm_import(Filesystem Preprocess)
+qm_init_directories()
 
 add_subdirectory(src)
 
