@@ -2,10 +2,17 @@
 #include <utility>
 #include <vector>
 #include <charconv>
+#include <cstdlib>
 #include <string_view>
 
 #include <substate/model.h>
 #include <substate/fsengine.h>
+
+#ifdef _WIN32
+#  define CLEAR_SCREEN_COMMAND "cls"
+#else
+#  define CLEAR_SCREEN_COMMAND "clear"
+#endif
 
 using namespace Substate;
 
@@ -102,7 +109,7 @@ namespace {
         inline bool empty() const;
         inline const std::vector<std::string> &names() const;
 
-        bool check(const std::vector<std::string_view> &tokens) const;
+        bool run(const std::vector<std::string_view> &tokens) const;
         void help() const;
 
     protected:
@@ -153,22 +160,24 @@ namespace {
         return m_names;
     }
 
-    bool Command::check(const std::vector<std::string_view> &tokens) const {
+    bool Command::run(const std::vector<std::string_view> &tokens) const {
         std::vector<std::string_view> args;
         for (int i = 0; i < m_args.size(); ++i) {
             const auto &arg = m_args[i];
-            if (!arg.m_required) {
-                args.emplace_back();
-                continue;
-            }
 
-            // Skip the command place
+            // Check if argument is enough
             if (i + 1 == tokens.size()) {
+                if (!arg.m_required) {
+                    args.emplace_back();
+                    continue;
+                }
+
                 printf("Missing argument \"%s\".", arg.m_name.data());
                 help();
                 return false;
             }
 
+            // Check if the token is a number
             const auto &token = tokens[i + 1];
             if (arg.m_digit) {
                 bool ok;
@@ -215,6 +224,8 @@ namespace {
         static const Command *findCommand(const std::string_view &name);
 
         static void cmd_help(const std::vector<std::string_view> &args);
+        static void cmd_quit(const std::vector<std::string_view> &args);
+        static void cmd_clear(const std::vector<std::string_view> &args);
 
     public:
         bool quit = false;
@@ -229,7 +240,9 @@ namespace {
 
     const std::vector<Command> &Environment::commands() {
         static std::vector<Command> commands = {
-            Command("help", "Show this help", cmd_help).arg(Argument("cmd").optional()),
+            Command("help", "Show help information", cmd_help).arg(Argument("cmd").optional()),
+            Command({"quit", "exit"}, "Exit", cmd_quit),
+            Command({"cls", "clear"}, "Clear screen", cmd_clear),
         };
         return commands;
     }
@@ -277,6 +290,14 @@ namespace {
         cmd->help();
     }
 
+    void Environment::cmd_quit(const std::vector<std::string_view> &args) {
+        instance().quit = true;
+    }
+
+    void Environment::cmd_clear(const std::vector<std::string_view> &args) {
+        std::system(CLEAR_SCREEN_COMMAND);
+    }
+
 }
 
 int main(int argc, char *argv[]) {
@@ -284,7 +305,7 @@ int main(int argc, char *argv[]) {
     QM_UNUSED(argv)
 
     auto &env = Environment::instance();
-    while (true) {
+    while (!env.quit) {
         printf("> ");
 
         std::string line;
@@ -308,12 +329,8 @@ int main(int argc, char *argv[]) {
             continue;
         }
 
-        if (!cmd->check(tokens)) {
+        if (!cmd->run(tokens)) {
             continue;
-        }
-
-        if (env.quit) {
-            break;
         }
     }
     return 0;
