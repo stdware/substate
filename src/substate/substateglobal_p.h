@@ -3,16 +3,18 @@
 
 #include <unordered_map>
 
-#define SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(DATA, NODE, OUT)                                     \
+#define SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(ARGS, NODE, OUT)                                     \
     {                                                                                              \
-        auto &map = *reinterpret_cast<const std::unordered_map<int, Node *> *>(DATA);              \
+        auto &map = *reinterpret_cast<const std::unordered_map<int, Node *> *>(ARGS[0]);           \
         int idx = int(reinterpret_cast<uintptr_t>(NODE));                                          \
         if (idx == 0) {                                                                            \
             OUT = nullptr;                                                                         \
         } else {                                                                                   \
             auto it = map.find(idx);                                                               \
             if (it == map.end()) {                                                                 \
-                QMSETUP_FATAL("Deferred reference node of id %d not found", idx);                  \
+                QMSETUP_WARNING("Deferred reference node of id %d not found", idx);                \
+                *reinterpret_cast<bool *>(ARGS[1]) = false;                                        \
+                return;                                                                            \
             }                                                                                      \
             OUT = it->second;                                                                      \
         }                                                                                          \

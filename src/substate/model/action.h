@@ -59,6 +59,7 @@ namespace Substate {
 
     public:
         void detach();
+        bool deferredReference(const std::unordered_map<int, Node *> &existingItems);
 
         virtual void write(OStream &stream) const = 0;
         virtual Action *clone() const = 0;

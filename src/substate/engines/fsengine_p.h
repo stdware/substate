@@ -13,6 +13,8 @@ namespace Substate {
         ~FileSystemEnginePrivate();
         void init();
 
+        void setup_helper();
+
         // If true, the journal files will be removed when destructs
         bool finished;
 

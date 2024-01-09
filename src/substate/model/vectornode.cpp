@@ -436,13 +436,14 @@ namespace Substate {
                 return;
             }
             case DeferredReferenceHook: {
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
+                auto a = reinterpret_cast<void **>(data);
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(a, m_parent, m_parent)
 
                 if (t == VectorInsert || t == VectorRemove) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.reserve(m_children.size());
                     for (auto &child : m_children) {
-                        SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, child, child)
+                        SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(a, child, child)
                     }
                 }
                 break;

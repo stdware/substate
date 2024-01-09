@@ -321,8 +321,9 @@ namespace Substate {
                 return;
             }
             case DeferredReferenceHook: {
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, r, r)
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, oldr, oldr)
+                auto a = reinterpret_cast<void **>(data);
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(a, r, r)
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(a, oldr, oldr)
                 return;
             }
             default:

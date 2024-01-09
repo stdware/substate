@@ -2,6 +2,7 @@
 #include "fsengine_p.h"
 
 #include <fstream>
+#include <algorithm>
 #include <unordered_set>
 
 #include <mutex>
@@ -237,9 +238,16 @@ namespace Substate {
         return dir / ("ckpt_" + std::to_string(i) + "." BINARY_FILE_DAT);
     }
 
+    static inline bool fs_exists(const fs::path &path) {
+        return fs::exists(path);
+    }
+
+    static inline bool fs_remove(const fs::path &path) {
+        return fs::remove(path);
+    }
+
     static inline bool truncateJournals(const fs::path &dir, int i, bool dryRun = false) {
-        auto func = dryRun ? [](const fs::path &path) { return fs::exists(path); }
-                           : [](const fs::path &path) { return fs::remove(path); };
+        auto func = dryRun ? fs_exists : fs_remove;
         bool b1 = func(journal_path(dir, i)) || (i == 0);
         bool b2 = func(ckpt_path(dir, i));
         return b1 || b2;
@@ -272,7 +280,7 @@ namespace Substate {
         a->write(out);
     }
 
-    static void readAction(std::istream &file, Action **a, bool brief,
+    static bool readAction(std::istream &file, Action **a, bool brief,
                            std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
 
@@ -292,7 +300,9 @@ namespace Substate {
             for (int i = 0; i < size; ++i) {
                 auto node = Node::read(in);
                 if (!node) {
-                    QMSETUP_FATAL("Failed to read inserted when reading action of type %d.", type);
+                    QMSETUP_WARNING("Failed to read inserted when reading action of type %d.",
+                                    type);
+                    return false;
                 }
 
                 // Add inserted nodes
@@ -301,11 +311,14 @@ namespace Substate {
         }
 
         // Read action data
+
         auto action = Action::read(in);
         if (!action) {
-            QMSETUP_FATAL("Failed to read action of type %d.", type);
+            QMSETUP_WARNING("Failed to read action of type %d.", type);
+            return false;
         }
         *a = action;
+        return true;
     }
 
     static void writeCheckPoint(std::ostream &file, Node *root,
@@ -322,7 +335,7 @@ namespace Substate {
             root->write(out);
         } else {
             // Write 0
-            out << size_t(0);
+            out << int(0);
         }
 
         // Write removed items pos
@@ -340,7 +353,7 @@ namespace Substate {
         }
     }
 
-    static void readCheckPoint(std::istream &file, Node **rootRef,
+    static bool readCheckPoint(std::istream &file, Node **rootRef,
                                std::vector<Node *> *removedItemsRef) {
         IStream in(&file);
         in.skipRawData(4);
@@ -357,13 +370,14 @@ namespace Substate {
             in.skipRawData(INT64_SIZE);
 
             // Read root id
-            size_t id;
+            int id;
             in >> id;
             if (id != 0) {
                 // Read root
                 root = Node::read(in);
                 if (!root) {
-                    QMSETUP_FATAL("Failed to read root item.");
+                    QMSETUP_WARNING("Failed to read root item.");
+                    return false;
                 }
             }
         }
@@ -382,16 +396,19 @@ namespace Substate {
             for (int i = 0; i < sz; ++i) {
                 auto item = Node::read(in);
                 if (!item) {
-                    QMSETUP_FATAL("Failed to read one of the removed items.");
+                    deleteAll(removedItems);
+                    QMSETUP_WARNING("Failed to read one of the removed items.");
+                    return false;
                 }
                 removedItems.push_back(item);
             }
 
             *removedItemsRef = std::move(removedItems);
         }
+        return true;
     }
 
-    static void readJournal(std::ifstream &file, int maxSteps, std::vector<TXData> &res, bool brief,
+    static bool readJournal(std::ifstream &file, int maxSteps, std::vector<TXData> &res, bool brief,
                             std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
         std::vector<int64_t> positions{
@@ -409,7 +426,8 @@ namespace Substate {
         }
 
         if (!in.good()) {
-            QMSETUP_FATAL("Read journal failed when reading positions.");
+            QMSETUP_WARNING("Read journal failed when reading positions.");
+            return false;
         }
 
         std::vector<TXData> data;
@@ -428,12 +446,21 @@ namespace Substate {
             actions.reserve(actions_cnt);
             for (int i = 0; i < actions_cnt; ++i) {
                 Action *a;
-                readAction(file, &a, brief, insertedItems);
+                if (!readAction(file, &a, brief, insertedItems)) {
+                    goto abort;
+                }
                 actions.push_back(a);
             }
             data.push_back({actions, attrs});
         }
         res = std::move(data);
+        return true;
+
+    abort:
+        for (const auto &item : std::as_const(data)) {
+            deleteAll(item.actions);
+        }
+        return false;
     }
 
     namespace {
@@ -554,7 +581,7 @@ namespace Substate {
             int fsStep, fsMin;
             int oldFsMin, oldFsMax;
             int maxSteps;
-            size_t maxId;
+            int maxId;
             fs::path dir;
         };
 
@@ -635,7 +662,10 @@ namespace Substate {
                 if (brief) {
                     auto path = ckpt_path(dir, num + 1);
                     std::ifstream file(path, std::ios::binary);
-                    readCheckPoint(file, nullptr, &removedItems);
+                    if (!readCheckPoint(file, nullptr, &removedItems)) {
+                        QMSETUP_FATAL("Read checkpoint task failed when reading checkpoint %d.",
+                                      num + 1);
+                    }
                 }
 
                 if (obsolete) {
@@ -646,7 +676,9 @@ namespace Substate {
                 {
                     auto path = journal_path(dir, num);
                     std::ifstream file(path, std::ios::binary);
-                    readJournal(file, maxSteps, data, brief, insertedItems);
+                    if (!readJournal(file, maxSteps, data, brief, insertedItems)) {
+                        QMSETUP_FATAL("Read checkpoint task failed when reading journal %d.", num);
+                    }
                 }
 
                 std::unique_lock<std::mutex> lock(mtx);
@@ -733,7 +765,7 @@ namespace Substate {
                     } else {
                         file.seekp(8);
                     }
-                    out << fsMin << fsMax << fsStep << size_t(0);
+                    out << fsMin << fsMax << fsStep << int(0);
                     file.flush();
                 }
 
@@ -763,15 +795,35 @@ namespace Substate {
         int fsMax;
         int fsStep;
         int currentNum;
-        size_t maxId;
+        int maxId;
         Node *root;
+        std::unordered_map<int, Node *> insertedItems;
         std::vector<Node *> removedItems;
         std::vector<TXData> backwardData;
         std::vector<TXData> forwardData;
 
         ~RecoverData() {
+            delete root;
+            deleteAll(removedItems);
+            for (const auto &it : std::as_const(insertedItems)) {
+                delete it.second;
+            }
+            for (const auto &item : std::as_const(backwardData)) {
+                deleteAll(item.actions);
+            }
+            for (const auto &item : std::as_const(forwardData)) {
+                deleteAll(item.actions);
+            }
         }
     };
+
+    static bool checkDir_helper(const fs::path &dir) {
+        if (dir.empty() || !fs::is_directory(dir)) {
+            QMSETUP_WARNING("%s: not a directory.", dir.string().data());
+            return false;
+        }
+        return true;
+    }
 
     static WriteCkptTask *generateWriteCkptTask(FileSystemEnginePrivate *d) {
         // Collect all removed items
@@ -852,8 +904,74 @@ namespace Substate {
     void FileSystemEnginePrivate::init() {
     }
 
+    void FileSystemEnginePrivate::setup_helper() {
+        QM_Q(FileSystemEngine);
+
+        auto recoverData = journalData->recoverData.get();
+        if (!recoverData) {
+            // Write steps
+            {
+                auto path = steps_path(dir);
+                std::ofstream file(path, std::ios::binary);
+                OStream out(&file);
+                out << maxSteps << maxCheckPoints << fsMin << fsMax << int(0) << maxIndex;
+            }
+
+            q->createWarningFile(dir);
+            return;
+        }
+
+        fsMin = recoverData->fsMin;
+        fsMax = recoverData->fsMax;
+        maxIndex = recoverData->maxId;
+
+        if (recoverData->root) {
+            NodeHelper::setModelRoot(recoverData->root, model);
+            recoverData->root = nullptr; // Get ownership
+        }
+
+        current = 0;
+        min = recoverData->currentNum * maxSteps;
+
+        // Get backward transactions
+        if (!recoverData->backwardData.empty()) {
+            extractBackwardJournal(recoverData->backwardData, recoverData->removedItems);
+        }
+
+        // Get forward transactions
+        if (!recoverData->forwardData.empty()) {
+            extractForwardJournal(recoverData->forwardData, recoverData->insertedItems);
+        }
+
+        int expected = recoverData->fsStep - min;
+
+        // Undo or redo
+        while (current > expected) {
+            const auto &tx = stack.at(current - 1);
+            for (auto it = tx.actions.rbegin(); it != tx.actions.rend(); ++it) {
+                (*it)->execute(true);
+            }
+            current--;
+        }
+
+        while (current < expected) {
+            const auto &tx = stack.at(current);
+            for (auto it = tx.actions.begin(); it != tx.actions.end(); ++it) {
+                (*it)->execute(false);
+            }
+            current++;
+        }
+
+        delete recoverData;
+        recoverData = nullptr;
+
+        // Need to prepare a checkpoint to write as if a transaction has been committed
+        if (stack.size() % maxSteps == 0) {
+            journalData->write_task = generateWriteCkptTask(this);
+        }
+    }
+
     void FileSystemEnginePrivate::updateStackSize() {
-        // if (stack.size() > 3 * maxSteps) {
         if (current <= maxSteps / 2) {
             int size = int(stack.size()) - 2 * maxSteps;
             if (size > 0) {
@@ -1109,15 +1227,205 @@ namespace Substate {
     }
 
     bool FileSystemEngine::start(const fs::path &dir) {
-        return false;
+        QM_D(FileSystemEngine);
+        if (!checkDir_helper(dir)) {
+            return false;
+        }
+
+        auto d2 = d->journalData.get();
+        if (d2->recoverData) {
+            d2->recoverData.reset();
+        }
+        d->dir = dir;
+        return true;
     }
 
     bool FileSystemEngine::recover(const fs::path &dir) {
+        QM_D(FileSystemEngine);
+
+        if (!checkDir_helper(dir)) {
+            return false;
+        }
+
+        // Read steps
+        int maxSteps, maxCheckPoints, fsMin, fsMax, fsStep, maxId;
+        auto readSteps = [&](std::istream &file) {
+            IStream in(&file);
+            in >> maxSteps >> maxCheckPoints >> fsMin >> fsMax >> fsStep >> maxId;
+            return in.good();
+        };
+
+        {
+            auto path = steps_path(dir);
+            std::ifstream file(path, std::ios::binary);
+            if (!file.is_open() || !readSteps(file)) {
+                QMSETUP_WARNING("Read steps file failed.");
+                return false;
+            }
+        }
+
+        // Unhandled inconsistency (Merely impossible)
+        // 1. Crash during updating steps
+
+        // Fix possible inconsistency:
+        // 1. Crash during writing committed transaction or writing checkpoint,
+        //    before updating steps
+        {
+            int64_t expected = fsMax % maxSteps;
+            if (expected > 0) {
+                int num = (fsMax - 1) / maxSteps;
+                auto path = journal_path(dir, num);
+                std::fstream file(path, std::ios::binary);
+                if (!file.is_open()) {
+                    QMSETUP_WARNING("Read journal %d failed.", num);
+                    return false;
+                }
+
+                IStream in(&file);
+                OStream out(&file);
+                int64_t cur;
+                in >> cur;
+
+                if (cur != expected) {
+                    QMSETUP_WARNING("Journal step inconsistent, expected %lld, actual %lld.",
+                                    expected, cur);
+
+                    file.seekp(0);
+                    out << expected;
+
+                    // Truncate
+                    file.seekg(cur * INT64_SIZE); // Transaction end
+                    int64_t pos;
+                    in >> pos;
+
+                    file.seekp(file.tellg());
+                    out << int64_t(-1);
+
+                    file.close();
+                    fs::resize_file(path, pos);
+                }
+            } else {
+                // The first transaction may fail to be flushed
+                truncateJournals(dir, fsMax / maxSteps);
+            }
+        }
+
+        // 2. Crash during truncating logs
+        {
+            // Remove backward logs
+            int minNum = fsMin / maxSteps;
+            for (int i = minNum - 1; i >= 0; --i) {
+                if (!truncateJournals(dir, i))
+                    break;
+            }
+
+            // Remove forward logs
+            int maxNum = (fsMax - 1) / maxSteps;
+            for (int i = maxNum + 1;; ++i) {
+                if (!truncateJournals(dir, i))
+                    break;
+            }
+
+            // Check existence
+            for (int i = minNum; i <= maxNum; ++i) {
+                if (!truncateJournals(dir, i, true)) {
+                    QMSETUP_WARNING("Check checkpoint or journal failed at %d.", i);
+                    return false;
+                }
+            }
+        }
+
+        if (fsMax == 0) {
+            d->dir = dir;
+            return true;
+        }
+
+        // Get nearest checkpoint
+        // Suppose maxSteps = 100
+        // 1. 51 <= fsStep <= 150                         -> num = 1
+        // 2. 151 <= fsStep <= 250                        -> num = 2
+        // 3. fsStep >= 151, fsMin = 100, fsMax <= 200    -> num = 1
+
+        int minNum = fsMin / maxSteps;
+        int maxNum = std::max((fsMax - 1) / maxSteps, 0);
+        int num = std::min((fsStep + maxSteps / 2 - 1) / maxSteps, maxNum);
+
+        Node *root = nullptr;
+        std::vector<Node *> removedItems;
+        std::unordered_map<int, Node *> insertedItems;
+        std::vector<TXData> backwardData;
+        std::vector<TXData> forwardData;
+
+        if (num > 0) {
+            bool needBackward = num > minNum;
+
+            // Read checkpoint
+            {
+                auto path = ckpt_path(dir, num);
+                std::ifstream file(path, std::ios::binary);
+                if (!file.is_open() ||
+                    !readCheckPoint(file, &root, needBackward ? &removedItems : nullptr)) {
+                    QMSETUP_WARNING("Read checkpoint %d failed.", num);
+                    return false;
+                }
+            }
+
+            // Read backward transactions
+            if (needBackward) {
+                auto path = journal_path(dir, num - 1);
+                std::ifstream file(path, std::ios::binary);
+                if (!file.is_open() ||
+                    !readJournal(file, maxSteps, backwardData, true, insertedItems)) {
+                    QMSETUP_WARNING("Read journal %d failed.", num - 1);
+                    goto failed;
+                }
+            }
+        }
+
+        {
+            // Read forward transactions
+            auto path = journal_path(dir, num);
+            std::ifstream file(path, std::ios::binary);
+            if (!file.is_open() ||
+                !readJournal(file, maxSteps, forwardData, false, insertedItems)) {
+                QMSETUP_WARNING("Read journal %d failed.", num);
+                goto failed;
+            }
+        }
+
+        goto success;
+
+    failed:
+        delete root;
+        deleteAll(removedItems);
+        for (const auto &it : std::as_const(insertedItems)) {
+            delete it.second;
+        }
         return false;
+
+    success:
+        auto rdata = new RecoverData();
+        rdata->fsMin = fsMin;
+        rdata->fsMax = fsMax;
+        rdata->fsStep = fsStep;
+        rdata->currentNum = num;
+        rdata->maxId = maxId;
+        rdata->root = root;
+        rdata->insertedItems = std::move(insertedItems);
+        rdata->removedItems = std::move(removedItems);
+        rdata->backwardData = std::move(backwardData);
+        rdata->forwardData = std::move(forwardData);
+        d->maxSteps = maxSteps;
+        d->maxCheckPoints = maxCheckPoints;
+        d->journalData->recoverData.reset(rdata);
+        d->dir = dir;
+        return true;
     }
 
     void FileSystemEngine::setup(Model *model) {
-        Engine::setup(model);
+        QM_D(FileSystemEngine);
+        d->model = model;
+        d->setup_helper();
     }
 
     int FileSystemEngine::minimum() const {
