@@ -92,6 +92,8 @@ namespace {
             obsolete = true;
             return;
         } while (false);
+
+        // Delete itself
         del();
     }
 
@@ -116,6 +118,9 @@ namespace {
 
     inline void BaseProducer::pushTask(BaseTask *task, bool unshift) {
         QM_UNUSED(this)
+
+        QMSETUP_DEBUG("Push task %s", typeid(*task).name());
+
         taskManager->pushTask(task, unshift);
     }
 
@@ -179,7 +184,7 @@ namespace {
  * 0x8          min step in log
  * 0xC          max step in log
  * 0x10         current step
- * 0x14         max index in model
+ * 0x14         max index in model (int32_t)
  *
  */
 
@@ -280,7 +285,7 @@ namespace Substate {
         a->write(out);
     }
 
-    static bool readAction(std::istream &file, Action **a, bool brief,
+    static bool readAction(std::istream &file, Action *&a, bool brief,
                            std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
 
@@ -311,13 +316,12 @@ namespace Substate {
         }
 
         // Read action data
-
         auto action = Action::read(in);
         if (!action) {
             QMSETUP_WARNING("Failed to read action of type %d.", type);
             return false;
         }
-        *a = action;
+        a = action;
         return true;
     }
 
@@ -359,6 +363,7 @@ namespace Substate {
         in.skipRawData(4);
 
         Node *root = nullptr;
+        std::vector<Node *> removedItems;
 
         if (!rootRef) {
             // Read removed items pos
@@ -377,13 +382,10 @@ namespace Substate {
                 root = Node::read(in);
                 if (!root) {
                     QMSETUP_WARNING("Failed to read root item.");
-                    return false;
+                    goto abort;
                 }
             }
         }
-
-        if (root)
-            *rootRef = root;
 
         if (removedItemsRef) {
             // Read removed items size
@@ -391,23 +393,31 @@ namespace Substate {
             in >> sz;
 
             // Read removed items data
-            std::vector<Node *> removedItems;
             removedItems.reserve(sz);
             for (int i = 0; i < sz; ++i) {
                 auto item = Node::read(in);
                 if (!item) {
-                    deleteAll(removedItems);
                     QMSETUP_WARNING("Failed to read one of the removed items.");
-                    return false;
+                    goto abort;
                 }
                 removedItems.push_back(item);
             }
 
             *removedItemsRef = std::move(removedItems);
         }
+
+        if (root)
+            *rootRef = root;
+
         return true;
+
+    abort:
+        delete root;
+        deleteAll(removedItems);
+        return false;
     }
 
+    // The caller should remove the inserted items if failed.
     static bool readJournal(std::ifstream &file, int maxSteps, std::vector<TXData> &res, bool brief,
                             std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
@@ -446,7 +456,7 @@ namespace Substate {
             actions.reserve(actions_cnt);
             for (int i = 0; i < actions_cnt; ++i) {
                 Action *a;
-                if (!readAction(file, &a, brief, insertedItems)) {
+                if (!readAction(file, a, brief, insertedItems)) {
                     goto abort;
                 }
                 actions.push_back(a);
@@ -716,6 +726,8 @@ namespace Substate {
                     std::ifstream file(path, std::ios::binary);
                     IStream in(&file);
 
+                    QMSETUP_DEBUG("Read attributes at %d in journal %d.", step, num);
+
                     int64_t pos0 = file.tellg();
 
                     int cur = (step - 1) % maxSteps + 1;
@@ -745,8 +757,9 @@ namespace Substate {
 
         class ResetTask : public BaseTask {
         public:
-            ResetTask()
-                : BaseTask(true), fsMin(0), fsMax(0), fsStep(0), maxSteps(0), maxCheckPoints(0) {
+            ResetTask(fs::path dir, int fsMin, int fsMax, int maxSteps, int maxCheckPoints)
+                : BaseTask(true), fsMin(fsMin), fsMax(fsMax), maxSteps(maxSteps),
+                  maxCheckPoints(maxCheckPoints), dir(std::move(dir)) {
             }
 
             void execute() override {
@@ -765,7 +778,7 @@ namespace Substate {
                     } else {
                         file.seekp(8);
                     }
-                    out << fsMin << fsMax << fsStep << int(0);
+                    out << int(0) << int(0) << int(0) << int(0);
                     file.flush();
                 }
 
@@ -779,7 +792,7 @@ namespace Substate {
                 }
             }
 
-            int fsMin, fsMax, fsStep;
+            int fsMin, fsMax;
             int maxSteps, maxCheckPoints;
             fs::path dir;
         };
@@ -847,12 +860,12 @@ namespace Substate {
         ReadCkptTask *forward_task = nullptr;
         WriteCkptTask *write_task = nullptr;
 
-        JournalData() {
-        }
+        JournalData() = default;
 
         ~JournalData() {
             abortBackwardReadTask();
             abortForwardReadTask();
+            write_task->del();
         }
 
         Engine::StepMessage getFsStepMessage(const fs::path &_dir, int step, int maxSteps) {
@@ -896,6 +909,9 @@ namespace Substate {
     }
 
     FileSystemEnginePrivate::~FileSystemEnginePrivate() {
+        // Terminate or wait all tasks
+        journalData.reset();
+
         if (finished) {
             // Remove journal
         }
@@ -914,7 +930,7 @@ namespace Substate {
                 auto path = steps_path(dir);
                 std::ofstream file(path, std::ios::binary);
                 OStream out(&file);
-                out << maxSteps << maxCheckPoints << fsMin << fsMax << int(0) << maxIndex;
+                out << maxSteps << maxCheckPoints << int(0) << int(0) << int(0) << int(0);
             }
 
             q->createWarningFile(dir);
@@ -980,6 +996,10 @@ namespace Substate {
 
                 // Remove tail
                 removeActions(2 * maxSteps, int(stack.size()));
+
+                QMSETUP_DEBUG(
+                    "Remove forward transactions, size=%d, min=%d, current=%d, stack_size=%d", size,
+                    min, current, int(stack.size()));
             }
 
         } else if (current > maxSteps * 2.5) {
@@ -990,6 +1010,10 @@ namespace Substate {
             removeActions(0, maxSteps);
             min += maxSteps;
             current -= maxSteps;
+
+            QMSETUP_DEBUG(
+                "Remove backward transactions, size=%d, min=%d, current=%d, stack_size=%d",
+                maxSteps, min, current, int(stack.size()));
         }
     }
 
@@ -1095,6 +1119,8 @@ namespace Substate {
 
                 // Insert backward transactions
                 if (backward && backward->finished) {
+                    QMSETUP_DEBUG("Prepend backward transactions, size=%d",
+                                  int(backward->data.size()));
                     extractBackwardJournal(backward->data, backward->removedItems);
                     backward->del();
                     backward = nullptr;
@@ -1127,7 +1153,8 @@ namespace Substate {
 
                 // Insert forward transactions
                 if (forward && forward->finished) {
-                    // Extract transactions
+                    QMSETUP_DEBUG("Append backward transactions, size=%d",
+                                  int(forward->data.size()));
                     extractForwardJournal(forward->data, forward->insertedItems);
                     forward->del();
                     forward = nullptr;
@@ -1197,7 +1224,24 @@ namespace Substate {
     }
 
     void FileSystemEnginePrivate::afterReset() {
-        MemoryEnginePrivate::afterReset();
+        auto oldFsMin = fsMin;
+        auto oldFsMax = fsMax;
+
+        fsMin = 0;
+        fsMax = 0;
+
+        auto d2 = journalData.get();
+        auto &write_task = d2->write_task;
+        if (write_task) {
+            write_task->del();
+            write_task = nullptr;
+        }
+
+        d2->abortForwardReadTask();
+        d2->abortBackwardReadTask();
+
+        auto task = new ResetTask(dir, oldFsMin, oldFsMax, maxSteps, maxCheckPoints);
+        d2->pushTask(task);
     }
 
     FileSystemEngine::FileSystemEngine() {
@@ -1350,6 +1394,9 @@ namespace Substate {
         int maxNum = std::max((fsMax - 1) / maxSteps, 0);
         int num = std::min((fsStep + maxSteps / 2 - 1) / maxSteps, maxNum);
 
+        QMSETUP_DEBUG("Restore, min=%d, max=%d, cur=%d", fsMin, fsMax, fsStep);
+        QMSETUP_DEBUG("Read checkpoint %d", num);
+
         Node *root = nullptr;
         std::vector<Node *> removedItems;
         std::unordered_map<int, Node *> insertedItems;
@@ -1372,6 +1419,8 @@ namespace Substate {
 
             // Read backward transactions
             if (needBackward) {
+                QMSETUP_WARNING("Restore backward transactions %d", num - 1);
+
                 auto path = journal_path(dir, num - 1);
                 std::ifstream file(path, std::ios::binary);
                 if (!file.is_open() ||
@@ -1384,6 +1433,8 @@ namespace Substate {
 
         {
             // Read forward transactions
+            QMSETUP_WARNING("Restore forward transactions %d", num);
+
             auto path = journal_path(dir, num);
             std::ifstream file(path, std::ios::binary);
             if (!file.is_open() ||
