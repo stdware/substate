@@ -261,6 +261,9 @@ namespace Substate {
     static void writeAction(std::ostream &file, Action *a) {
         OStream out(&file);
 
+        // Write sign
+        out << "ACT ";
+
         // Write type
         out << a->type();
 
@@ -288,6 +291,9 @@ namespace Substate {
     static bool readAction(std::istream &file, Action *&a, bool brief,
                            std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
+
+        // skip sign
+        in.skipRawData(4);
 
         // read type
         int type;
@@ -1032,8 +1038,7 @@ namespace Substate {
         // We need to accomplish the deferred reference work here
         for (const auto &item : std::as_const(data)) {
             for (const auto &action : item.actions) {
-                action->virtual_hook(Action::DeferredReferenceHook, &indexes);
-                action->setState(Action::Normal);
+                action->deferredReference(indexes);
             }
         }
 
@@ -1064,8 +1069,7 @@ namespace Substate {
         // We need to accomplish the deferred reference work here
         for (const auto &item : std::as_const(data)) {
             for (const auto &action : item.actions) {
-                action->virtual_hook(Action::DeferredReferenceHook, &indexes);
-                action->setState(Action::Normal);
+                action->deferredReference(indexes);
             }
         }
         stack.insert(stack.end(), data.begin(), data.end());
@@ -1419,7 +1423,7 @@ namespace Substate {
 
             // Read backward transactions
             if (needBackward) {
-                QMSETUP_WARNING("Restore backward transactions %d", num - 1);
+                QMSETUP_DEBUG("Restore backward transactions %d", num - 1);
 
                 auto path = journal_path(dir, num - 1);
                 std::ifstream file(path, std::ios::binary);
@@ -1433,7 +1437,7 @@ namespace Substate {
 
         {
             // Read forward transactions
-            QMSETUP_WARNING("Restore forward transactions %d", num);
+            QMSETUP_DEBUG("Restore forward transactions %d", num);
 
             auto path = journal_path(dir, num);
             std::ifstream file(path, std::ios::binary);

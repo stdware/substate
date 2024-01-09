@@ -1,4 +1,4 @@
-project(tst_variant)
+project(cli)
 
 file(GLOB _src *.h *.cpp)
 

@@ -238,8 +238,7 @@ namespace Substate {
     void BytesAction::virtual_hook(int id, void *data) {
         switch (id) {
             case DeferredReferenceHook: {
-                auto a = reinterpret_cast<void **>(data);
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(a, m_parent, m_parent)
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
                 return;
             }
             default:

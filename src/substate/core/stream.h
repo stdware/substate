@@ -100,6 +100,7 @@ namespace Substate {
         OStream &operator<<(double d);
         OStream &operator<<(const std::string_view &s);
         OStream &operator<<(const std::string &s);
+        OStream &operator<<(const char *s);
 
     private:
         std::ostream *out;

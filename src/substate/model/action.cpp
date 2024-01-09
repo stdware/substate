@@ -74,18 +74,10 @@ namespace Substate {
         s = Detached;
     }
 
-    bool Action::deferredReference(const std::unordered_map<int, Node *> &existingItems) {
-        bool ok = true;
-        void *a[] = {
-            &const_cast<std::unordered_map<int, Node *> &>(existingItems),
-            &ok,
-        };
-        virtual_hook(DeferredReferenceHook, a);
-        if (!ok) {
-            return false;
-        }
+    void Action::deferredReference(const std::unordered_map<int, Node *> &existingItems) {
+        virtual_hook(DeferredReferenceHook,
+                     &const_cast<std::unordered_map<int, Node *> &>(existingItems));
         s = Normal;
-        return true;
     }
 
     void Action::virtual_hook(int id, void *data) {

@@ -186,4 +186,8 @@ namespace Substate {
         return (*this) << std::string_view(s);
     }
 
+    OStream &OStream::operator<<(const char *s) {
+        return (*this) << std::string_view(s);
+    }
+
 }
