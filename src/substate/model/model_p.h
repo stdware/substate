@@ -14,12 +14,13 @@ namespace Substate {
         void init();
 
         Engine *engine;
-        Node *lockedNode;
+        Node *lockedNode = nullptr;
+        bool isChangingRoot = false;
 
-        Model::State state;
+        Model::State state = Model::Idle;
         std::vector<Action *> txActions;
 
-        Node *root;
+        Node *root = nullptr;
 
         void setRootItem_helper(Node *node);
     };

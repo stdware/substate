@@ -116,6 +116,9 @@ namespace Substate {
         NodeAction(int type, Node *parent);
         ~NodeAction();
 
+        void write(Substate::OStream &stream) const override;
+        void virtual_hook(int id, void *data) override;
+
         inline Node *parent() const;
 
     protected:

@@ -88,7 +88,6 @@ namespace Substate {
         inline Property oldValue() const;
 
     public:
-        std::string m_key;
         Property v, oldv;
     };
 

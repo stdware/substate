@@ -77,6 +77,7 @@ namespace Substate {
         Variant(float f);
         Variant(double d);
         Variant(const std::string &s);
+        Variant(const char *s, int size = -1);
         Variant(int type, const void *data); // copy
         ~Variant();
 

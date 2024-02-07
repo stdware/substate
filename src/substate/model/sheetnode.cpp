@@ -276,7 +276,8 @@ namespace Substate {
     }
 
     void SheetAction::write(OStream &stream) const {
-        stream << m_parent->index() << m_id << m_child->index();
+        NodeAction::write(stream);
+        stream << m_id << m_child->index();
     }
 
     Action *SheetAction::clone() const {
@@ -295,7 +296,8 @@ namespace Substate {
                 if (t == SheetInsert) {
                     m_child = NodeHelper::clone(m_child, false);
                 }
-                break;
+                NodeAction::virtual_hook(id, data);
+                return;
             }
             case InsertedNodesHook: {
                 if (t == SheetInsert) {

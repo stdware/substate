@@ -10,12 +10,21 @@
 namespace Substate {
 
     ModelPrivate::ModelPrivate(Engine *engine) : engine(engine) {
-        lockedNode = nullptr;
     }
 
     ModelPrivate::~ModelPrivate() {
-        NodeHelper::forceDelete(root);
+        // Remove all actions first (may hold the root reference)
+        for (const auto &action : std::as_const(txActions)) {
+            delete action;
+        }
+
+        // Remove engine (may hold the root reference)
         delete engine;
+
+        if (root) {
+            root->d_func()->propagateEngine(nullptr);
+            NodeHelper::forceDelete(root);
+        }
     }
 
     void ModelPrivate::init() {
@@ -25,6 +34,8 @@ namespace Substate {
 
     void ModelPrivate::setRootItem_helper(Substate::Node *node) {
         QM_Q(Model);
+
+        isChangingRoot = true;
 
         RootChangeAction a(node, root);
 
@@ -48,6 +59,8 @@ namespace Substate {
             ActionNotification n(Notification::ActionTriggered, &a);
             q->dispatch(&n);
         }
+
+        isChangingRoot = false;
     }
 
     /*!
@@ -97,7 +110,7 @@ namespace Substate {
     */
     bool Model::isWritable() const {
         QM_D(const Model);
-        return d->state == Transaction && !d->lockedNode;
+        return d->state == Transaction && !d->lockedNode && !d->isChangingRoot;
     }
 
     /*!
@@ -184,8 +197,10 @@ namespace Substate {
         if (d->state != Transaction) {
             QMSETUP_FATAL("Cannot commit the transaction without an ongoing transaction");
         }
-        if (d->txActions.empty())
+        if (d->txActions.empty()) {
+            d->state = Idle;
             return;
+        }
 
         d->engine->commit(d->txActions, message);
         d->txActions.clear();

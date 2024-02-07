@@ -81,6 +81,8 @@ namespace Substate {
     }
 
     void MemoryEngine::commit(const std::vector<Action *> &actions, const StepMessage &message) {
+        Engine::commit(actions, message);
+
         QM_D(MemoryEngine);
 
         // Truncate stack tail

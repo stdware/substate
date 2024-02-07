@@ -123,6 +123,7 @@ namespace Substate {
                 if (v.isNode()) {
                     v = NodeHelper::clone(v.node(), false);
                 }
+                NodeAction::virtual_hook(id, data);
                 return;
             }
             case InsertedNodesHook: {

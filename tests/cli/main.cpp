@@ -4,9 +4,11 @@
 #include <charconv>
 #include <cstdlib>
 #include <string_view>
+#include <map>
 
 #include <substate/model.h>
 #include <substate/fsengine.h>
+#include <substate/vectornode.h>
 
 #ifdef _WIN32
 #  define CLEAR_SCREEN_COMMAND "cls"
@@ -227,8 +229,13 @@ namespace {
         static void cmd_quit(const std::vector<std::string_view> &args);
         static void cmd_clear(const std::vector<std::string_view> &args);
 
+        static void cmd_newVector(const std::vector<std::string_view> &args);
+
     public:
         bool quit = false;
+
+        std::map<int, Node *> tempItems;
+        int maxTempId = -1;
     };
 
     Environment::Environment() = default;
@@ -291,11 +298,22 @@ namespace {
     }
 
     void Environment::cmd_quit(const std::vector<std::string_view> &args) {
+        QM_UNUSED(args)
         instance().quit = true;
     }
 
     void Environment::cmd_clear(const std::vector<std::string_view> &args) {
+        QM_UNUSED(args)
         std::system(CLEAR_SCREEN_COMMAND);
+    }
+
+    void Environment::cmd_newVector(const std::vector<std::string_view> &args) {
+        auto &env = Environment::instance();
+
+        auto item = new VectorNode();
+        auto id = env.maxTempId--;
+        env.tempItems.insert(std::make_pair(id, item));
+        printf("Create new vector item %d\n", id);
     }
 
 }

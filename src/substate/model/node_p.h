@@ -15,13 +15,15 @@ namespace Substate {
         void init();
 
         int type;
-        Node *parent;
-        Engine *engine;
-        int index;
-        bool managed;
-        bool allowDelete;
+        Node *parent = nullptr;
 
-        NodeExtra *extra;
+        Engine *engine = nullptr;
+        int index = 0;
+
+        bool managed = false;
+        bool allowDelete = false;
+
+        NodeExtra *extra = nullptr;
 
         void setManaged(bool _managed);
         void propagateEngine(Engine *_engine);

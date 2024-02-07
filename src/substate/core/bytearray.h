@@ -9,8 +9,8 @@ namespace Substate {
 
     class SUBSTATE_EXPORT ByteArray {
     public:
-        ByteArray();
-        ByteArray(const char *data, int size);
+        inline ByteArray();
+        ByteArray(const char *data, int size = -1);
         ~ByteArray();
 
         inline const char *data() const;
@@ -26,6 +26,9 @@ namespace Substate {
         SUBSTATE_EXPORT friend IStream &operator>>(IStream &stream, ByteArray &a);
         SUBSTATE_EXPORT friend OStream &operator<<(OStream &stream, const ByteArray &a);
     };
+
+    inline ByteArray::ByteArray() : m_data(nullptr), m_size(0) {
+    }
 
     inline const char *ByteArray::data() const {
         return m_data.get();

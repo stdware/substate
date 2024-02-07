@@ -189,6 +189,10 @@ namespace Substate {
         substate_v_construct(String, &d, &s);
     }
 
+    Variant::Variant(const char *s, int size)
+        : Variant(size >= 0 ? std::string(s, size) : std::string(s)) {
+    }
+
     /*!
         Constructs variant of type \a type, and initializes with \a data if \a data is not null.
     */
@@ -539,7 +543,7 @@ namespace Substate {
     /*!
         \internal
     */
-     const Variant &Variant::sharedNull() {
+    const Variant &Variant::sharedNull() {
         static Variant var;
         return var;
     }

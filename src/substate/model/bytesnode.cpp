@@ -198,7 +198,8 @@ namespace Substate {
     }
 
     void BytesAction::write(OStream &stream) const {
-        stream << m_parent->index() << m_index << b << oldb;
+        NodeAction::write(stream);
+        stream << m_index << b << oldb;
     }
 
     Action *BytesAction::clone() const {
@@ -237,6 +238,10 @@ namespace Substate {
 
     void BytesAction::virtual_hook(int id, void *data) {
         switch (id) {
+            case DetachHook: {
+
+                break;
+            }
             case DeferredReferenceHook: {
                 SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
                 return;

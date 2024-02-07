@@ -257,7 +257,8 @@ namespace Substate {
     }
 
     void MappingAction::write(OStream &stream) const {
-        stream << m_parent->index() << m_key;
+        PropertyAction::write(stream);
+        stream << m_key;
         v.write(stream);
         oldv.write(stream);
     }

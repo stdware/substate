@@ -4,9 +4,6 @@
 
 namespace Substate {
 
-    ByteArray::ByteArray() : m_data(nullptr), m_size(0) {
-    }
-
     ByteArray::ByteArray(const char *data, int size) {
         if (data == nullptr || size == 0) {
             m_data = nullptr;
@@ -14,13 +11,16 @@ namespace Substate {
             return;
         }
 
+        if (size < 0) {
+            size = int(strlen(data));
+        }
+
         auto buf = new char[size];
         memcpy(buf, data, size);
         m_data.reset(buf);
     }
 
-    ByteArray::~ByteArray() {
-    }
+    ByteArray::~ByteArray() = default;
 
     bool ByteArray::operator==(const ByteArray &other) const {
         if (this == &other) {

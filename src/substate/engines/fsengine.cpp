@@ -14,7 +14,7 @@
 #include "model/nodehelper.h"
 #include "model/model_p.h"
 
-#define BINARY_FILE_DAT "dat"
+#define BINARY_FILE_SUFFIX ".dat"
 
 namespace fs = std::filesystem;
 
@@ -232,15 +232,15 @@ namespace Substate {
     static constexpr const auto INT64_SIZE = int64_t(sizeof(int64_t));
 
     static inline fs::path journal_path(const fs::path &dir, int i) {
-        return dir / ("journal_" + std::to_string(i) + "." BINARY_FILE_DAT);
+        return dir / ("journal_" + std::to_string(i) + BINARY_FILE_SUFFIX);
     }
 
     static inline fs::path steps_path(const fs::path &dir) {
-        return dir / "model_steps." BINARY_FILE_DAT;
+        return dir / "model_steps" BINARY_FILE_SUFFIX;
     }
 
     static inline fs::path ckpt_path(const fs::path &dir, int i) {
-        return dir / ("ckpt_" + std::to_string(i) + "." BINARY_FILE_DAT);
+        return dir / ("ckpt_" + std::to_string(i) + BINARY_FILE_SUFFIX);
     }
 
     static inline bool fs_exists(const fs::path &path) {
@@ -292,10 +292,10 @@ namespace Substate {
                            std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
 
-        // skip sign
+        // Skip sign
         in.skipRawData(4);
 
-        // read type
+        // Read type
         int type;
         in >> type;
 
@@ -502,7 +502,8 @@ namespace Substate {
                     int num = (fsStep - 1) / maxSteps;
                     auto path = journal_path(dir, num);
                     auto exists = fs::exists(path);
-                    std::fstream file(path, std::ios::binary);
+                    std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out |
+                                                std::ios::app);
 
                     // Write initial zeros
                     if (!exists) {
@@ -560,7 +561,8 @@ namespace Substate {
                 // Write steps (Must do it after writing transaction)
                 {
                     auto path = steps_path(dir);
-                    std::fstream file(path, std::ios::binary);
+                    std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out |
+                                                std::ios::app);
 
                     std::string buf;
                     OStream out(&buf);
@@ -612,7 +614,8 @@ namespace Substate {
             void execute() override {
                 // Write step
                 auto path = steps_path(dir);
-                std::fstream file(path, std::ios::binary);
+                std::fstream file(path,
+                                  std::ios::binary | std::ios::in | std::ios::out | std::ios::app);
                 file.seekg(16);
 
                 // Call write once
@@ -642,7 +645,7 @@ namespace Substate {
 
             void execute() override {
                 auto path = ckpt_path(dir, num);
-                std::ofstream file(path, std::ios::binary);
+                std::ofstream file(path, std::ios::binary | std::ios::app);
                 writeCheckPoint(file, root, removedItems);
             }
 
@@ -659,7 +662,7 @@ namespace Substate {
             }
 
             ~ReadCkptTask() {
-                // Delete items if not moved by post actions
+                // Delete items if not moved out by post actions
                 deleteAll(removedItems);
                 for (const auto &item : std::as_const(data)) {
                     deleteAll(item.actions);
@@ -776,7 +779,7 @@ namespace Substate {
                 {
                     auto path = steps_path(dir);
                     bool exists = fs::exists(path);
-                    std::ofstream file(path, std::ios::binary);
+                    std::ofstream file(path, std::ios::binary | std::ios::app);
                     OStream out(&file);
                     if (!exists) {
                         // Write initial values
@@ -934,7 +937,7 @@ namespace Substate {
             // Write steps
             {
                 auto path = steps_path(dir);
-                std::ofstream file(path, std::ios::binary);
+                std::ofstream file(path, std::ios::binary | std::ios::app);
                 OStream out(&file);
                 out << maxSteps << maxCheckPoints << int(0) << int(0) << int(0) << int(0);
             }
@@ -1196,21 +1199,23 @@ namespace Substate {
             d2->abortBackwardReadTask();
 
         // Delete formal checkpoint task
-        auto rem = stack.size() % maxSteps;
-        if (rem == 0) {
-            delete writeCkptTask;
+        {
+            auto rem = stack.size() % maxSteps;
+            if (rem == 0) {
+                delete writeCkptTask;
 
-            // Save checkpoint task
-            writeCkptTask = generateWriteCkptTask(this);
-        } else if (rem == 1 && stack.size() > 1) {
-            // Deferred push checkpoint task
-            if (writeCkptTask) {
-                d2->pushTask(writeCkptTask);
+                // Save checkpoint task
+                writeCkptTask = generateWriteCkptTask(this);
+            } else if (rem == 1 && stack.size() > 1) {
+                // Deferred push checkpoint task
+                if (writeCkptTask) {
+                    d2->pushTask(writeCkptTask);
+                    writeCkptTask = nullptr;
+                }
+            } else if (writeCkptTask) {
+                delete writeCkptTask;
                 writeCkptTask = nullptr;
             }
-        } else if (writeCkptTask) {
-            delete writeCkptTask;
-            writeCkptTask = nullptr;
         }
 
         // Add commit task (Must do it after writing checkpoint)
@@ -1248,7 +1253,7 @@ namespace Substate {
         d2->pushTask(task);
     }
 
-    FileSystemEngine::FileSystemEngine() {
+    FileSystemEngine::FileSystemEngine() : FileSystemEngine(*new FileSystemEnginePrivate()) {
     }
 
     FileSystemEngine::~FileSystemEngine() {
@@ -1323,7 +1328,8 @@ namespace Substate {
             if (expected > 0) {
                 int num = (fsMax - 1) / maxSteps;
                 auto path = journal_path(dir, num);
-                std::fstream file(path, std::ios::binary);
+                std::fstream file(path,
+                                  std::ios::binary | std::ios::in | std::ios::out | std::ios::app);
                 if (!file.is_open()) {
                     QMSETUP_WARNING("Read journal %d failed.", num);
                     return false;
@@ -1508,7 +1514,7 @@ namespace Substate {
     }
 
     bool FileSystemEngine::createWarningFile(const fs::path &dir) {
-        std::ofstream file(dir / "WARNING.txt");
+        std::ofstream file(dir / "WARNING.txt", std::ios::trunc);
         if (!file.is_open()) {
             return false;
         }

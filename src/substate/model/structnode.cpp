@@ -229,7 +229,8 @@ namespace Substate {
     }
 
     void StructAction::write(OStream &stream) const {
-        stream << m_parent->index() << m_index;
+        PropertyAction::write(stream);
+        stream << m_index;
         v.write(stream);
         oldv.write(stream);
     }

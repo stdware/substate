@@ -342,7 +342,8 @@ namespace Substate {
     }
 
     void VectorMoveAction::write(OStream &stream) const {
-        stream << m_parent->index() << m_index << cnt << dest;
+        VectorAction::write(stream);
+        stream << m_index << cnt << dest;
     }
 
     Action *VectorMoveAction::clone() const {
@@ -389,7 +390,8 @@ namespace Substate {
     }
 
     void VectorInsDelAction::write(OStream &stream) const {
-        stream << m_parent->index() << m_index << int(m_children.size());
+        VectorAction::write(stream);
+        stream << m_index << int(m_children.size());
         for (const auto &node : m_children) {
             stream << node->index();
         }
@@ -413,7 +415,8 @@ namespace Substate {
                         child = NodeHelper::clone(child, false);
                     }
                 }
-                break;
+                VectorAction::virtual_hook(id, data);
+                return;
             }
             case InsertedNodesHook: {
                 if (t == VectorInsert) {
@@ -445,7 +448,7 @@ namespace Substate {
                         SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, child, child)
                     }
                 }
-                break;
+                return;
             }
             default:
                 break;

@@ -30,9 +30,7 @@ namespace Substate {
         return it->second;
     }
 
-    NodePrivate::NodePrivate(int type)
-        : type(type), parent(nullptr), engine(nullptr), index(0), managed(false),
-          allowDelete(false), extra(nullptr) {
+    NodePrivate::NodePrivate(int type) : type(type) {
     }
 
     NodePrivate::~NodePrivate() {
@@ -75,11 +73,21 @@ namespace Substate {
 
     void NodePrivate::propagateEngine(Substate::Engine *_engine) {
         QM_Q(Node);
+
+        if (!_engine) {
+            q->propagate([](Node *node) {
+                auto d = node->d_func();
+                d->engine = nullptr;
+                d->index = 0;
+            });
+            return;
+        }
+
         auto engine_pri = _engine->d_func();
         q->propagate([&_engine, &engine_pri](Node *node) {
             auto d = node->d_func();
-            d->index = engine_pri->addIndex(node, d->index);
             d->engine = _engine;
+            d->index = engine_pri->addIndex(node, d->index);
         });
     }
 
@@ -225,12 +233,14 @@ namespace Substate {
 
     void Node::beginAction() {
         QM_D(Node);
-        d->engine->model()->d_func()->lockedNode = this;
+        if (d->engine)
+            d->engine->model()->d_func()->lockedNode = this;
     }
 
     void Node::endAction() {
         QM_D(Node);
-        d->engine->model()->d_func()->lockedNode = nullptr;
+        if (d->engine)
+            d->engine->model()->d_func()->lockedNode = nullptr;
     }
 
     void Node::propagate(const std::function<void(Node *)> &func) {
@@ -271,6 +281,16 @@ namespace Substate {
     }
 
     NodeAction::~NodeAction() {
+    }
+
+    void NodeAction::write(OStream &stream) const {
+        stream << (s == Detached ? int(reinterpret_cast<uintptr_t>(m_parent)) : m_parent->index());
+    }
+
+    void NodeAction::virtual_hook(int id, void *data) {
+        if (id == DetachHook) {
+            m_parent = reinterpret_cast<Node *>(uintptr_t(m_parent->index()));
+        }
     }
 
     RootChangeAction::RootChangeAction(Node *root, Node *oldRoot)

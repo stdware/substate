@@ -69,6 +69,9 @@ namespace Substate {
         return true;
     }
 
+    /*!
+        Makes all inserted nodes the copy of the original ones.
+    */
     void Action::detach() {
         virtual_hook(DetachHook, nullptr);
         s = Detached;
