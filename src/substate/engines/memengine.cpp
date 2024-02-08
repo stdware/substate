@@ -4,13 +4,10 @@
 namespace Substate {
 
     MemoryEnginePrivate::MemoryEnginePrivate() {
-        maxSteps = 4; // For test only
-        min = 0;
-        current = 0;
     }
 
     MemoryEnginePrivate::~MemoryEnginePrivate() {
-        removeActions(0, stack.size());
+        removeActions(0, int(stack.size()));
     }
 
     void MemoryEnginePrivate::init() {
@@ -87,7 +84,7 @@ namespace Substate {
 
         // Truncate stack tail
         if (d->current < d->stack.size()) {
-            d->removeActions(d->current, d->stack.size());
+            d->removeActions(d->current, int(d->stack.size()));
         }
 
         // Commit
@@ -106,8 +103,8 @@ namespace Substate {
 
             // Step backward
             const auto &tx = d->stack.at(d->current - 1);
-            for (const auto &a : tx.actions) {
-                a->execute(true);
+            for (auto it = tx.actions.rbegin(); it != tx.actions.rend(); ++it) {
+                (*it)->execute(true);
             }
             d->current--;
         } else {
@@ -116,8 +113,8 @@ namespace Substate {
 
             // Step forward
             const auto &tx = d->stack.at(d->current);
-            for (const auto &a : tx.actions) {
-                a->execute(false);
+            for (auto it = tx.actions.begin(); it != tx.actions.end(); ++it) {
+                (*it)->execute(false);
             }
             d->current++;
         }

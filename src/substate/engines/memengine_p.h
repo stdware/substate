@@ -14,13 +14,13 @@ namespace Substate {
         void init();
 
         // The maximum number of actions kept in memory
-        int maxSteps;
+        int maxSteps = 4; // For test only
 
         // The minimum step the engine can reach
-        int min;
+        int min = 0;
 
         // The current index of undo stack
-        int current;
+        int current = 0;
 
         // Undo stack
         struct TransactionData {

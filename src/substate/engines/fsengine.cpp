@@ -207,7 +207,7 @@ namespace {
  * ...
  * 8*maxStep        entry maxStep
  * 8*maxStep+8      0xFFFFFFFFFFFFFFFF
- * 8*maxStep+16     transaction 0 (attributes + operations)
+ * 8*maxStep+16     transaction 0 (attributes + actions)
  * ...
  *
  */
@@ -258,6 +258,11 @@ namespace Substate {
         return b1 || b2;
     }
 
+    // 1. sign
+    // 2. type
+    // 3. inserted notes data size
+    // 4. inserted notes
+    // 5. action data
     static void writeAction(std::ostream &file, Action *a) {
         OStream out(&file);
 
@@ -274,11 +279,14 @@ namespace Substate {
         // Write inserted data size (make it convenient to skip if read in brief mode)
         out << int64_t(0);
         int64_t pos = file.tellp();
+
+        // Write inserted notes
         out << int(insertedNotes.size());
         for (const auto &item : std::as_const(insertedNotes)) {
             item->write(out);
         }
 
+        // Fix inserted data size
         int64_t pos1 = file.tellp();
         file.seekp(pos - INT64_SIZE);
         out << (pos1 - pos);
@@ -299,11 +307,10 @@ namespace Substate {
         int type;
         in >> type;
 
+        int64_t insertedDataSize;
+        in >> insertedDataSize;
         if (brief) {
-            // Skip
-            int64_t insertedDataSize;
-            in >> insertedDataSize;
-            in.skipRawData(int(insertedDataSize));
+            in.skipRawData(int(insertedDataSize)); // Skip
         } else {
             // Read inserted actions
             int size;
@@ -348,16 +355,14 @@ namespace Substate {
             out << int(0);
         }
 
-        // Write removed items pos
+        // Go back to write removed items pos
         int64_t pos = file.tellp();
         file.seekp(4);
         out << pos;
         file.seekp(pos);
 
-        // Write removed items size
+        // Write removed items
         out << int(removedItems.size());
-
-        // Write removed items data
         for (const auto &item : std::as_const(removedItems)) {
             item->write(out);
         }
@@ -455,7 +460,7 @@ namespace Substate {
             Engine::StepMessage attrs;
             in >> attrs;
 
-            // Read operations
+            // Read actions
             int actions_cnt;
             in >> actions_cnt;
             std::vector<Action *> actions;
@@ -531,10 +536,10 @@ namespace Substate {
                     // Write attributes
                     out << data.message;
 
-                    // Write operation count
+                    // Write action count
                     out << int(data.actions.size());
 
-                    // Write operations
+                    // Write actions
                     for (const auto &a : std::as_const(data.actions)) {
                         writeAction(file, a);
                     }
@@ -711,7 +716,7 @@ namespace Substate {
             }
 
             int num;
-            bool brief; // Read only id of insert operation
+            bool brief; // Read only id of insert action
             int maxSteps;
             fs::path dir;
 
@@ -1010,7 +1015,6 @@ namespace Substate {
                     "Remove forward transactions, size=%d, min=%d, current=%d, stack_size=%d", size,
                     min, current, int(stack.size()));
             }
-
         } else if (current > maxSteps * 2.5) {
             // Abort backward transactions reading task
             journalData->abortBackwardReadTask();
@@ -1198,7 +1202,7 @@ namespace Substate {
         if (current > maxSteps * 1.5)
             d2->abortBackwardReadTask();
 
-        // Delete formal checkpoint task
+        // Delete earlier checkpoint task
         {
             auto rem = stack.size() % maxSteps;
             if (rem == 0) {

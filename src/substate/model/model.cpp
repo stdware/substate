@@ -21,10 +21,7 @@ namespace Substate {
         // Remove engine (may hold the root reference)
         delete engine;
 
-        if (root) {
-            root->d_func()->propagateEngine(nullptr);
-            NodeHelper::forceDelete(root);
-        }
+        NodeHelper::forceDelete(root);
     }
 
     void ModelPrivate::init() {

@@ -9,16 +9,8 @@ namespace Substate {
 
     SenderPrivate::~SenderPrivate() {
         QM_Q(Sender);
-
-        // Notify
-        {
-            Notification n(Notification::SenderDestroyed);
-            q->dispatch(&n);
-        }
-
-        is_clearing = true;
-        for (const auto &sub : std::as_const(subscribers))
-            sub->m_sender = nullptr;
+        Notification n(Notification::SenderDestroyed);
+        q->dispatch(&n);
     }
 
     void SenderPrivate::init() {
@@ -33,6 +25,13 @@ namespace Substate {
         Destructor.
     */
     Sender::~Sender() {
+        QM_D(Sender);
+
+        d->is_clearing = true;
+
+        // Notify
+        for (const auto &sub : std::as_const(d->subscribers))
+            sub->m_sender = nullptr;
     }
 
     /*!

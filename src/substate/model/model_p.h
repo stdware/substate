@@ -10,7 +10,7 @@ namespace Substate {
         QMSETUP_DECL_PUBLIC(Model)
     public:
         ModelPrivate(Engine *engine);
-        virtual ~ModelPrivate();
+        ~ModelPrivate();
         void init();
 
         Engine *engine;

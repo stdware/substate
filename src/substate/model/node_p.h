@@ -18,6 +18,7 @@ namespace Substate {
         Node *parent = nullptr;
 
         Engine *engine = nullptr;
+        Model *model = nullptr;
         int index = 0;
 
         bool managed = false;

@@ -49,6 +49,6 @@ int main(int argc, char *argv[]) {
     model.undo();
 
     printf("%s\n", rootNode->property("2").variant().toString().data());
-    printf("OK");
+    printf("OK\n");
     return 0;
 }

@@ -30,13 +30,17 @@ namespace Substate {
         return it->second;
     }
 
+    static int g_cnt = 0;
+
     NodePrivate::NodePrivate(int type) : type(type) {
+        printf("+ %d\n", ++g_cnt);
     }
 
     NodePrivate::~NodePrivate() {
         QM_Q(Node);
+        printf("- %d\n", --g_cnt);
 
-        if (engine) {
+        if (model) {
             // The node is deleted by a wrong behavior in user code, the application must
             // abort otherwise the user data may be corrupted.
             if (!allowDelete) {
@@ -49,7 +53,8 @@ namespace Substate {
 
             // We need to remove its reference in the index map except when the model is in
             // destruction so that there's no need.
-            if (!engine->model()->isBeingDestroyed()) {
+            if (!model->isBeingDestroyed()) {
+                // If the model is in its destructor, the engine may have been deleted.
                 engine->d_func()->removeIndex(index);
             }
         } else if (parent && !parent->isBeingDestroyed()) {
@@ -73,26 +78,17 @@ namespace Substate {
 
     void NodePrivate::propagateEngine(Substate::Engine *_engine) {
         QM_Q(Node);
-
-        if (!_engine) {
-            q->propagate([](Node *node) {
-                auto d = node->d_func();
-                d->engine = nullptr;
-                d->index = 0;
-            });
-            return;
-        }
-
         auto engine_pri = _engine->d_func();
-        q->propagate([&_engine, &engine_pri](Node *node) {
+        q->propagate([_engine, engine_pri](Node *node) {
             auto d = node->d_func();
             d->engine = _engine;
+            d->model = _engine->model();
             d->index = engine_pri->addIndex(node, d->index);
         });
     }
 
     bool NodePrivate::testModifiable() const {
-        return !managed && (!engine || engine->model()->isWritable());
+        return !managed && (!model || model->isWritable());
     }
 
     RootChangeAction *readRootChangeAction(IStream &stream) {
@@ -125,7 +121,7 @@ namespace Substate {
 
     Model *Node::model() const {
         QM_D(const Node);
-        return d->engine ? d->engine->model() : nullptr;
+        return d->model;
     }
 
     int Node::index() const {
@@ -135,7 +131,7 @@ namespace Substate {
 
     bool Node::isFree() const {
         QM_D(const Node);
-        return !d->engine && !d->parent; // The item is not free if it has parent or model
+        return !d->model && !d->parent; // The item is not free if it has parent or model
     }
 
     bool Node::isManaged() const {
@@ -145,7 +141,7 @@ namespace Substate {
 
     bool Node::isWritable() const {
         QM_D(const Node);
-        return !d->engine || d->engine->model()->isWritable();
+        return !d->model || d->model->isWritable();
     }
 
     Node *Node::clone() const {
@@ -197,8 +193,8 @@ namespace Substate {
         switch (n->type()) {
             case Notification::ActionAboutToTrigger:
             case Notification::ActionTriggered: {
-                if (d->engine) {
-                    d->engine->model()->dispatch(n);
+                if (d->model) {
+                    d->model->dispatch(n);
                 }
                 break;
             }
@@ -226,21 +222,21 @@ namespace Substate {
         QM_D(Node);
         auto d2 = node->d_func();
         d2->parent = nullptr;
-        if (d->engine) {
+        if (d->model) {
             d2->setManaged(true);
         }
     }
 
     void Node::beginAction() {
         QM_D(Node);
-        if (d->engine)
-            d->engine->model()->d_func()->lockedNode = this;
+        if (d->model)
+            d->model->d_func()->lockedNode = this;
     }
 
     void Node::endAction() {
         QM_D(Node);
-        if (d->engine)
-            d->engine->model()->d_func()->lockedNode = nullptr;
+        if (d->model)
+            d->model->d_func()->lockedNode = nullptr;
     }
 
     void Node::propagate(const std::function<void(Node *)> &func) {
