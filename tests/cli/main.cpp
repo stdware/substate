@@ -9,6 +9,10 @@
 #include <substate/model.h>
 #include <substate/fsengine.h>
 #include <substate/vectornode.h>
+#include <substate/structnode.h>
+#include <substate/mappingnode.h>
+#include <substate/sheetnode.h>
+#include <substate/bytesnode.h>
 
 #ifdef _WIN32
 #  define CLEAR_SCREEN_COMMAND "cls"
@@ -20,7 +24,7 @@ using namespace Substate;
 
 namespace {
 
-    inline int stoi2(const std::string_view &s, int defaultValue, bool *ok = nullptr) {
+    inline int stoi2(const std::string_view &s, int defaultValue = 0, bool *ok = nullptr) {
         auto res = std::from_chars(s.data(), s.data() + s.size(), defaultValue);
         if (ok) {
             *ok = res.ec == std::errc();
@@ -103,7 +107,7 @@ namespace {
     public:
         inline Command(std::string name = {}, std::string help = {},
                        CommandHandler handler = nullptr);
-        inline Command(std::initializer_list<std::string> names = {}, std::string help = {},
+        inline Command(std::initializer_list<std::string> names, std::string help = {},
                        CommandHandler handler = nullptr);
 
         inline Command &arg(Argument arg);
@@ -174,7 +178,7 @@ namespace {
                     continue;
                 }
 
-                printf("Missing argument \"%s\".", arg.m_name.data());
+                printf("Missing argument \"%s\".\n", arg.m_name.data());
                 help();
                 return false;
             }
@@ -229,13 +233,40 @@ namespace {
         static void cmd_quit(const std::vector<std::string_view> &args);
         static void cmd_clear(const std::vector<std::string_view> &args);
 
-        static void cmd_newVector(const std::vector<std::string_view> &args);
+        static void cmd_byte(const std::vector<std::string_view> &args);
+        static void cmd_vec(const std::vector<std::string_view> &args);
+        static void cmd_map(const std::vector<std::string_view> &args);
+        static void cmd_sht(const std::vector<std::string_view> &args);
+
+        static void cmd_bins(const std::vector<std::string_view> &args);
+        static void cmd_brm(const std::vector<std::string_view> &args);
+        static void cmd_bch(const std::vector<std::string_view> &args);
+
+        static void cmd_vins(const std::vector<std::string_view> &args);
+        static void cmd_vrm(const std::vector<std::string_view> &args);
+
+        static void cmd_sins(const std::vector<std::string_view> &args);
+        static void cmd_srm(const std::vector<std::string_view> &args);
+
+        static void cmd_mins(const std::vector<std::string_view> &args);
+        static void cmd_mrm(const std::vector<std::string_view> &args);
+
+        static void cmd_info(const std::vector<std::string_view> &args);
+        static void cmd_temp(const std::vector<std::string_view> &args);
+        static void cmd_show(const std::vector<std::string_view> &args);
+        static void cmd_root(const std::vector<std::string_view> &args);
+
+        static void cmd_undo(const std::vector<std::string_view> &args);
+        static void cmd_redo(const std::vector<std::string_view> &args);
+        static void cmd_reset(const std::vector<std::string_view> &args);
 
     public:
         bool quit = false;
 
         std::map<int, Node *> tempItems;
         int maxTempId = -1;
+
+        Model *model = nullptr;
     };
 
     Environment::Environment() = default;
@@ -247,9 +278,74 @@ namespace {
 
     const std::vector<Command> &Environment::commands() {
         static std::vector<Command> commands = {
-            Command("help", "Show help information", cmd_help).arg(Argument("cmd").optional()),
+            Command({"help"}, "Show help information", cmd_help).arg(Argument("cmd").optional()),
             Command({"quit", "exit"}, "Exit", cmd_quit),
             Command({"cls", "clear"}, "Clear screen", cmd_clear),
+
+            Command(),
+
+            Command({"bytes", "bnew"}, "New bytes node", cmd_byte),
+            Command({"vec", "vnew"}, "New vector node", cmd_vec),
+            Command({"map", "mnew"}, "New mapping node", cmd_map),
+            Command({"sheet", "snew"}, "New sheet node", cmd_sht),
+
+            Command(),
+
+            Command({"bins"}, "Insert bytes", cmd_bins)
+                .arg(Argument("id").digit())
+                .arg(Argument("idx").digit())
+                .arg({"bytes"}),
+            Command({"brm"}, "Remove bytes", cmd_brm)
+                .arg(Argument("id").digit())
+                .arg(Argument("idx").digit())
+                .arg(Argument("cnt").digit()),
+            Command({"bch"}, "Change bytes", cmd_bch)
+                .arg(Argument("id").digit())
+                .arg(Argument("idx").digit())
+                .arg({"bytes"}),
+
+            Command(),
+
+            Command({"vins"}, "Insert vector item", cmd_vins)
+                .arg(Argument("parent").digit())
+                .arg(Argument("idx").digit())
+                .arg(Argument("id").digit()),
+            Command({"vrm"}, "Remove vector item", cmd_vrm)
+                .arg(Argument("parent").digit())
+                .arg(Argument("idx").digit())
+                .arg(Argument("cnt").digit().optional()),
+
+            Command(),
+
+            Command({"sins"}, "Insert sheet item", cmd_sins)
+                .arg(Argument("parent").digit())
+                .arg(Argument("id").digit()),
+            Command({"srm"}, "Remove sheet item", cmd_srm)
+                .arg(Argument("parent").digit())
+                .arg(Argument("idx").digit()),
+
+            Command(),
+
+            Command({"mins"}, "Insert map item", cmd_mins)
+                .arg(Argument("parent").digit())
+                .arg({"key"})
+                .arg(Argument("id").digit()),
+            Command({"mrm"}, "Remove map item", cmd_mrm)
+                .arg(Argument("parent").digit())
+                .arg({"key"}),
+
+            Command(),
+
+            Command({"info"}, "Show model information", cmd_info),
+            Command({"temp"}, "Show temporary ids", cmd_temp),
+            Command({"show", "ls"}, "Show node information", cmd_show).arg(Argument("id").digit()),
+            Command({"root"}, "Set root node", cmd_root).arg(Argument("id").digit()),
+
+            Command(),
+
+            Command({"undo"}, "Undo", cmd_undo),
+            Command({"redo"}, "Redo", cmd_redo),
+            Command({"reset"}, "Reset model", cmd_reset),
         };
         return commands;
     }
@@ -307,13 +403,491 @@ namespace {
         std::system(CLEAR_SCREEN_COMMAND);
     }
 
-    void Environment::cmd_newVector(const std::vector<std::string_view> &args) {
+    void Environment::cmd_byte(const std::vector<std::string_view> &args) {
         auto &env = Environment::instance();
 
-        auto item = new VectorNode();
+        auto node = new BytesNode();
         auto id = env.maxTempId--;
-        env.tempItems.insert(std::make_pair(id, item));
-        printf("Create new vector item %d\n", id);
+        env.tempItems.insert(std::make_pair(id, node));
+        printf("Create new bytes node %d\n", id);
+    }
+
+    void Environment::cmd_vec(const std::vector<std::string_view> &args) {
+        auto &env = Environment::instance();
+
+        auto node = new VectorNode();
+        auto id = env.maxTempId--;
+        env.tempItems.insert(std::make_pair(id, node));
+        printf("Create new vector node %d\n", id);
+    }
+
+    void Environment::cmd_map(const std::vector<std::string_view> &args) {
+        auto &env = Environment::instance();
+
+        auto node = new MappingNode();
+        auto id = env.maxTempId--;
+        env.tempItems.insert(std::make_pair(id, node));
+        printf("Create new mapping node %d\n", id);
+    }
+
+    void Environment::cmd_sht(const std::vector<std::string_view> &args) {
+        auto &env = Environment::instance();
+
+        auto node = new SheetNode();
+        auto id = env.maxTempId--;
+        env.tempItems.insert(std::make_pair(id, node));
+        printf("Create new sheet node %d\n", id);
+    }
+
+    bool findNodeCommon(int id, Node **nodeRef, bool free = false) {
+        auto &env = Environment::instance();
+        Node *node = nullptr;
+
+        if (id < 0) {
+            auto it = env.tempItems.find(id);
+            if (it != env.tempItems.end()) {
+                node = it->second;
+            }
+        } else {
+            if (free) {
+                printf("Node %d is not free.\n", id);
+                return false;
+            }
+            node = env.model->indexOf(id);
+        }
+
+        if (!node) {
+            printf("Cannot find node %d.\n", id);
+            return false;
+        }
+
+        *nodeRef = node;
+        return true;
+    }
+
+    void filterTempNodes() {
+        auto &tempItems = Environment::instance().tempItems;
+        for (auto it = tempItems.begin(); it != tempItems.end();) {
+            if (it->second->index() > 0) {
+                it = tempItems.erase(it);
+            } else
+                ++it;
+        }
+    }
+
+    template <class ParentNode>
+    bool findParentAndChild(int parentId, ParentNode **parentRef, int childId = 0,
+                            Node **childRef = nullptr) {
+        auto &env = Environment::instance();
+        Node *parent = nullptr;
+
+        if (parentId < 0) {
+            auto it = env.tempItems.find(parentId);
+            if (it != env.tempItems.end()) {
+                parent = it->second;
+            }
+        } else {
+            parent = env.model->indexOf(parentId);
+        }
+
+        if (!parent) {
+            printf("Cannot find parent node %d.\n", parentId);
+            return false;
+        }
+
+        Node *child = nullptr;
+        if (childRef) {
+            {
+                auto it = env.tempItems.find(parentId);
+                if (it != env.tempItems.end()) {
+                    child = it->second;
+                }
+            }
+
+            if (!child) {
+                printf("Cannot find child node %d.\n", childId);
+                return false;
+            }
+        }
+
+        auto realParent = dynamic_cast<ParentNode *>(parent);
+        if (!realParent) {
+            printf("Parent node %d type mismatch.\n", parentId);
+            return false;
+        }
+
+        *parentRef = realParent;
+        if (childRef)
+            *childRef = child;
+        return true;
+    }
+
+    inline void printOK() {
+        printf("OK\n");
+    }
+
+    class TransactionGuard {
+    public:
+        explicit TransactionGuard(bool enable) {
+            if (enable) {
+                Environment::instance().model->beginTransaction();
+            }
+        }
+
+        ~TransactionGuard() {
+            auto model = Environment::instance().model;
+            if (model->state() != Model::Idle) {
+                model->commitTransaction({
+                    {"action_index", std::to_string(model->maximumStep())}
+                });
+            }
+        }
+    };
+
+    void Environment::cmd_bins(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto idx = stoi2(args.at(1));
+        auto bytes = args.at(2);
+
+        BytesNode *parent;
+        if (!findParentAndChild(parentId, &parent)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            if (!parent->insert(idx, bytes.data(), bytes.size())) {
+                return;
+            }
+        }
+
+        printOK();
+    }
+
+    void Environment::cmd_brm(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto idx = stoi2(args.at(1));
+        auto cnt = stoi2(args.at(2));
+
+        BytesNode *parent;
+        if (!findParentAndChild(parentId, &parent)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            if (!parent->remove(idx, cnt)) {
+                return;
+            }
+        }
+
+        printOK();
+    }
+
+    void Environment::cmd_bch(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto idx = stoi2(args.at(1));
+        auto bytes = args.at(2);
+
+        BytesNode *parent;
+        if (!findParentAndChild(parentId, &parent)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            if (!parent->replace(idx, bytes.data(), bytes.size())) {
+                return;
+            }
+        }
+
+        printOK();
+    }
+
+    void Environment::cmd_vins(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto idx = stoi2(args.at(1));
+        auto childId = stoi2(args.at(2));
+
+        VectorNode *parent;
+        Node *child;
+        if (!findParentAndChild(parentId, &parent, childId, &child)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            if (idx >= parent->size() || idx < 0) {
+                parent->append(child);
+            } else {
+                parent->insert(idx, child);
+            }
+        }
+
+        filterTempNodes();
+        printOK();
+    }
+
+    void Environment::cmd_vrm(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto idx = stoi2(args.at(1));
+        auto cnt = stoi2(args.at(2));
+
+        VectorNode *parent;
+        if (!findParentAndChild(parentId, &parent)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            if (!parent->remove(idx, cnt)) {
+                return;
+            }
+        }
+
+        printOK();
+    }
+
+    void Environment::cmd_sins(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto childId = stoi2(args.at(2));
+
+        SheetNode *parent;
+        Node *child;
+        if (!findParentAndChild(parentId, &parent, childId, &child)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            parent->insert(child);
+        }
+
+        filterTempNodes();
+        printOK();
+    }
+
+    void Environment::cmd_srm(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto idx = stoi2(args.at(1));
+
+        SheetNode *parent;
+        if (!findParentAndChild(parentId, &parent)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            if (!parent->remove(idx)) {
+                return;
+            }
+        }
+
+        printOK();
+    }
+
+    void Environment::cmd_mins(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto key = args.at(1);
+        auto childId = stoi2(args.at(2));
+
+        MappingNode *parent;
+        Node *child;
+        if (!findParentAndChild(parentId, &parent, childId, &child)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            parent->setProperty(std::string(key), child);
+        }
+
+        filterTempNodes();
+        printOK();
+    }
+
+    void Environment::cmd_mrm(const std::vector<std::string_view> &args) {
+        auto parentId = stoi2(args.front());
+        auto key = args.at(1);
+
+        MappingNode *parent;
+        if (!findParentAndChild(parentId, &parent)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(parentId >= 0);
+            parent->clearProperty(std::string(key));
+        }
+
+        printOK();
+    }
+
+    static const char *nodeType2str(Node::Type type) {
+        switch (type) {
+            case Node::Bytes: {
+                return "Bytes";
+            }
+            case Node::Vector: {
+                return "Vector";
+            }
+            case Node::Mapping: {
+                return "Mapping";
+            }
+            case Node::Sheet: {
+                return "Sheet";
+            }
+            case Node::Struct: {
+                return "Struct";
+            }
+            default:
+                break;
+        }
+        return nullptr;
+    }
+
+    static void printNode(const std::string &msg, Node *node) {
+        static int indent = 0;
+        static const auto &printIndent = []() { printf("%s", std::string(indent, ' ').data()); };
+
+        // Print name
+        printIndent();
+        if (!msg.empty())
+            printf("%s: ", msg.data());
+        printf("%s\n", nodeType2str(static_cast<Node::Type>(node->type())));
+
+        indent += 2;
+
+        // Print contents
+        switch (node->type()) {
+            case Node::Bytes: {
+                auto n = static_cast<BytesNode *>(node);
+                printIndent();
+                printf("bytes: %s\n", std::string(n->data(), n->size()).data());
+                break;
+            }
+            case Node::Vector: {
+                auto n = static_cast<VectorNode *>(node);
+                for (int i = 0; i < n->size(); ++i) {
+                    auto child = n->at(i);
+                    printNode(std::to_string(i), child);
+                }
+                break;
+            }
+            case Node::Mapping: {
+                auto n = static_cast<MappingNode *>(node);
+                const auto &data = n->data();
+                for (const auto &item : data) {
+                    auto &key = item.first;
+                    auto &child = item.second;
+                    if (child.isVariant()) {
+                        printIndent();
+                        printf("%s variant: %s\n", key.data(), child.variant().toString().data());
+                    } else {
+                        printNode(key, child.node());
+                    }
+                }
+                break;
+            }
+            case Node::Sheet: {
+                auto n = static_cast<SheetNode *>(node);
+                std::map<int, Node *> data{n->data().begin(), n->data().end()};
+                for (const auto &item : std::as_const(data)) {
+                    printNode(std::to_string(item.first), item.second);
+                }
+                break;
+            }
+            case Node::Struct: {
+                auto n = static_cast<StructNode *>(node);
+                for (int i = 0; i < n->size(); ++i) {
+                    auto val = n->at(i);
+                    if (val.isVariant()) {
+                        printIndent();
+                        printf("%d variant: %s\n", i, val.variant().toString().data());
+                    } else {
+                        printNode(std::to_string(i), val.node());
+                    }
+                }
+                break;
+            }
+            default:
+                break;
+        }
+
+        indent -= 2;
+    }
+
+    void Environment::cmd_info(const std::vector<std::string_view> &args) {
+        QM_UNUSED(args)
+
+        auto model = Environment::instance().model;
+        auto root = model->root();
+
+        printf("Min step: %d\n", model->minimumStep());
+        printf("Max step: %d\n", model->maximumStep());
+        printf("Current step: %d\n", model->currentStep());
+        printf("Root id: %d\n", root ? root->index() : 0);
+    }
+
+    void Environment::cmd_temp(const std::vector<std::string_view> &args) {
+        auto &tempItems = Environment::instance().tempItems;
+
+        for (const auto &item : std::as_const(tempItems)) {
+            printf("%d ", item.first);
+        }
+        printf("\n");
+    }
+
+    void Environment::cmd_show(const std::vector<std::string_view> &args) {
+        auto id = stoi2(args.front());
+
+        Node *node;
+        if (!findNodeCommon(id, &node)) {
+            return;
+        }
+
+        printNode("Node", node);
+    }
+
+    void Environment::cmd_root(const std::vector<std::string_view> &args) {
+        auto id = stoi2(args.front());
+
+        Node *node;
+        if (!findNodeCommon(id, &node, true)) {
+            return;
+        }
+
+        {
+            TransactionGuard txGuard(true);
+            Environment::instance().model->setRoot(node);
+        }
+
+        filterTempNodes();
+        printOK();
+    }
+
+    void Environment::cmd_undo(const std::vector<std::string_view> &args) {
+        QM_UNUSED(args)
+
+        Environment::instance().model->undo();
+
+        printOK();
+    }
+
+    void Environment::cmd_redo(const std::vector<std::string_view> &args) {
+        QM_UNUSED(args)
+
+        Environment::instance().model->redo();
+
+        printOK();
+    }
+
+    void Environment::cmd_reset(const std::vector<std::string_view> &args) {
+        QM_UNUSED(args)
+
+        Environment::instance().model->reset();
+
+        printOK();
     }
 
 }
@@ -322,7 +896,28 @@ int main(int argc, char *argv[]) {
     QM_UNUSED(argc)
     QM_UNUSED(argv)
 
+#if 0
+    static const std::filesystem::path model_path("model");
+    std::filesystem::create_directories(model_path);
+
+    auto engine = new FileSystemEngine();
+    if (!engine->recover(model_path)) {
+        if (!engine->start(model_path)) {
+            printf("Start Failed\n");
+            return 0;
+        }
+    } else {
+        printf("Recover Success\n");
+    }
+
+    Model model(engine);
+#else
+    Model model;
+#endif
+
     auto &env = Environment::instance();
+    env.model = &model;
+
     while (!env.quit) {
         printf("> ");
 

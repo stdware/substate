@@ -18,6 +18,7 @@ namespace Substate {
         auto buf = new char[size];
         memcpy(buf, data, size);
         m_data.reset(buf);
+        m_size = size;
     }
 
     ByteArray::~ByteArray() = default;

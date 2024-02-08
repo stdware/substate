@@ -30,15 +30,15 @@ namespace Substate {
         return it->second;
     }
 
-    static int g_cnt = 0;
+    // static int g_cnt = 0;
 
     NodePrivate::NodePrivate(int type) : type(type) {
-        printf("+ %d\n", ++g_cnt);
+        // printf("+ %d\n", ++g_cnt);
     }
 
     NodePrivate::~NodePrivate() {
         QM_Q(Node);
-        printf("- %d\n", --g_cnt);
+        // printf("- %d\n", --g_cnt);
 
         if (model) {
             // The node is deleted by a wrong behavior in user code, the application must

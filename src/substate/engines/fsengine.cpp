@@ -15,6 +15,11 @@
 #include "model/model_p.h"
 
 #define BINARY_FILE_SUFFIX ".dat"
+#define WARNING_FILE_NAME  "WARNING.txt"
+#define WARNING_FILE_CONTENT                                                                       \
+    "This directory contains the binary log files of the current editing project, you can remove " \
+    "the whole directory, but do not delete or change any file in the directory, otherwise it "    \
+    "may cause crash!"
 
 namespace fs = std::filesystem;
 
@@ -946,8 +951,6 @@ namespace Substate {
                 OStream out(&file);
                 out << maxSteps << maxCheckPoints << int(0) << int(0) << int(0) << int(0);
             }
-
-            q->createWarningFile(dir);
             return;
         }
 
@@ -1289,6 +1292,12 @@ namespace Substate {
             return false;
         }
 
+        if (!createWarningFile(dir)) {
+            QMSETUP_WARNING("%s: create text failed, may need write permission.",
+                            dir.string().data());
+            return false;
+        }
+
         auto d2 = d->journalData.get();
         if (d2->recoverData) {
             d2->recoverData.reset();
@@ -1518,14 +1527,11 @@ namespace Substate {
     }
 
     bool FileSystemEngine::createWarningFile(const fs::path &dir) {
-        std::ofstream file(dir / "WARNING.txt", std::ios::trunc);
+        std::ofstream file(dir / WARNING_FILE_NAME, std::ios::trunc);
         if (!file.is_open()) {
             return false;
         }
-        file << "This directory contains the binary log files of the current editing project, "
-                "you can remove the whole directory, but do not delete or change any file in "
-                "the directory, otherwise it may cause crash!"
-             << std::endl;
+        file << WARNING_FILE_CONTENT << std::endl;
         return true;
     }
 

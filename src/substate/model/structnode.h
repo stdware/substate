@@ -15,7 +15,7 @@ namespace Substate {
         StructNode(int size);
         ~StructNode();
 
-    protected:
+    public:
         bool assign(int i, const Property &value);
         Property at(int i) const;
         bool remove(Node *node);

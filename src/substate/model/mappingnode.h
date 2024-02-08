@@ -29,6 +29,10 @@ namespace Substate {
         inline int count() const;
         int size() const;
 
+        inline void insert(const std::string &key, const Property &value);
+        inline void remove(const std::string &key);
+        inline Property at(const std::string &key);
+
     public:
         void write(OStream &stream) const override;
 
@@ -50,6 +54,18 @@ namespace Substate {
 
     inline int MappingNode::count() const {
         return size();
+    }
+
+    inline void MappingNode::insert(const std::string &key, const Property &value) {
+        setProperty(key, value);
+    }
+
+    inline void MappingNode::remove(const std::string &key) {
+        clearProperty(key);
+    }
+
+    inline Property MappingNode::at(const std::string &key) {
+        return property(key);
     }
 
     class SUBSTATE_EXPORT MappingAction : public PropertyAction {
