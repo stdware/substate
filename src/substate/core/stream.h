@@ -16,7 +16,6 @@ namespace Substate {
     class SUBSTATE_EXPORT IStream {
     public:
         explicit IStream(std::istream *in);
-        explicit IStream(std::string *s);
         ~IStream();
 
     public:
@@ -29,6 +28,7 @@ namespace Substate {
 
         int readRawData(char *data, int len);
         int skipRawData(int len);
+        int align(int size);
 
         IStream &operator>>(bool &b);
         IStream &operator>>(int8_t &c);
@@ -45,8 +45,6 @@ namespace Substate {
 
     private:
         std::istream *in;
-        bool own_stream;
-        std::streambuf *buf;
 
         QMSETUP_DISABLE_COPY_MOVE(IStream)
     };
@@ -74,7 +72,6 @@ namespace Substate {
     class SUBSTATE_EXPORT OStream {
     public:
         explicit OStream(std::ostream *out);
-        explicit OStream(const std::string *s);
         ~OStream();
 
     public:
@@ -87,6 +84,7 @@ namespace Substate {
 
         int writeRawData(const char *data, int len);
         int skipRawData(int len);
+        int align(int size);
 
         OStream &operator<<(int8_t c);
         OStream &operator<<(uint8_t uc);
@@ -104,8 +102,6 @@ namespace Substate {
 
     private:
         std::ostream *out;
-        bool own_stream;
-        std::streambuf *buf;
 
         QMSETUP_DISABLE_COPY_MOVE(OStream)
     };

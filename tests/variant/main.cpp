@@ -33,7 +33,7 @@ static void testString() {
 
     {
         OStream stream(&ss);
-        Variant var(std::string("what"));
+        Variant var("what");
         stream << var;
     }
 

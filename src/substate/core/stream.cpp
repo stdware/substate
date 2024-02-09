@@ -22,27 +22,25 @@ namespace Substate {
         return true;
     }
 
-    IStream::IStream(std::istream *in) : in(in), own_stream(false), buf(nullptr) {
-    }
-    IStream::IStream(std::string *s) {
-        buf = new std::stringbuf(*s);
-        in = new std::istream(buf);
-        own_stream = true;
+    IStream::IStream(std::istream *in) : in(in) {
     }
     IStream::~IStream() {
-        if (own_stream) {
-            delete in;
-        }
-        delete buf;
     }
     int IStream::readRawData(char *data, int len) {
+        auto org = in->tellg();
         in->read(data, len);
-        return 0;
+        return int(in->tellg() - org);
     }
     int IStream::skipRawData(int len) {
         auto org = in->tellg();
         in->ignore(len);
         return int(in->tellg() - org);
+    }
+    int IStream::align(int size) {
+        auto rem = int(in->tellg() % size);
+        if (rem == 0)
+            return 0;
+        return skipRawData(size - rem);
     }
     IStream &IStream::operator>>(bool &b) {
         int8_t c;
@@ -109,30 +107,49 @@ namespace Substate {
         return *this;
     }
 
-    OStream::OStream(std::ostream *out) : out(out), own_stream(false), buf(nullptr) {
-    }
-    OStream::OStream(const std::string *s) {
-        buf = new std::stringbuf(*s);
-        out = new std::ostream(buf);
-        own_stream = true;
+    OStream::OStream(std::ostream *out) : out(out) {
     }
     OStream::~OStream() {
-        if (own_stream) {
-            delete out;
-        }
-        delete buf;
     }
     int OStream::writeRawData(const char *data, int len) {
+        auto org = out->tellp();
         out->write(data, len);
-        return 0;
+        return int(out->tellp() - org);
     }
     int OStream::skipRawData(int len) {
-        for (int i = 0; i < len; ++i) {
-            out->put('\0');
-            if (out->fail())
-                return i;
+        // for (int i = 0; i < len; ++i) {
+        //     out->put('\0');
+        //     if (out->fail())
+        //         return i;
+        // }
+        // return len;
+
+        if (len <= 0) {
+            return 0;
         }
-        return len;
+
+        static const constexpr std::size_t blockSize = 8;
+        static const constexpr char buffer[blockSize] = {};
+
+        std::size_t fullBlocks = len / blockSize;
+        std::size_t lastBlockSize = len % blockSize;
+
+        auto org = out->tellp();
+
+        for (std::size_t i = 0; i < fullBlocks; ++i) {
+            out->write(buffer, blockSize);
+        }
+
+        if (lastBlockSize > 0) {
+            out->write(buffer, std::streamsize(lastBlockSize));
+        }
+        return int(out->tellp() - org);
+    }
+    int OStream::align(int size) {
+        auto rem = int(out->tellp() % size);
+        if (rem == 0)
+            return 0;
+        return skipRawData(size - rem);
     }
     OStream &OStream::operator<<(int8_t c) {
         substate_writeNum(*out, c);

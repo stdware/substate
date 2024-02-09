@@ -498,7 +498,7 @@ namespace {
         Node *child = nullptr;
         if (childRef) {
             {
-                auto it = env.tempItems.find(parentId);
+                auto it = env.tempItems.find(childId);
                 if (it != env.tempItems.end()) {
                     child = it->second;
                 }
@@ -896,18 +896,22 @@ int main(int argc, char *argv[]) {
     QM_UNUSED(argc)
     QM_UNUSED(argv)
 
-#if 0
+#if 1
     static const std::filesystem::path model_path("model");
-    std::filesystem::create_directories(model_path);
 
     auto engine = new FileSystemEngine();
-    if (!engine->recover(model_path)) {
+    if (std::filesystem::is_directory(model_path)) {
+        if (!engine->recover(model_path)) {
+            printf("Recover Failed\n");
+            return -1;
+        }
+        printf("Recover Success\n");
+    } else {
+        std::filesystem::create_directories(model_path);
         if (!engine->start(model_path)) {
             printf("Start Failed\n");
-            return 0;
+            return -1;
         }
-    } else {
-        printf("Recover Success\n");
     }
 
     Model model(engine);

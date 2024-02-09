@@ -1,6 +1,7 @@
 #include "fsengine.h"
 #include "fsengine_p.h"
 
+#include <sstream>
 #include <fstream>
 #include <algorithm>
 #include <unordered_set>
@@ -20,6 +21,13 @@
     "This directory contains the binary log files of the current editing project, you can remove " \
     "the whole directory, but do not delete or change any file in the directory, otherwise it "    \
     "may cause crash!"
+
+#define CKPT_SIGN   "CKPT"
+#define ACTION_SIGN "ACT "
+#define NODE_SIGN   "NODE"
+#define TRANSACTION_SIGN "TXX "
+
+static constexpr const int DATA_ALIGN = 4;
 
 namespace fs = std::filesystem;
 
@@ -263,6 +271,22 @@ namespace Substate {
         return b1 || b2;
     }
 
+    static inline void writeNode(OStream &out, const Node *node) {
+        out.writeRawData(NODE_SIGN, 4);
+        node->write(out);
+        out.align(DATA_ALIGN);
+    }
+
+    static inline Node *readNode(IStream &in) {
+        in.skipRawData(4); // Skip sign
+        auto node = Node::read(in);
+        if (!node) {
+            return nullptr;
+        }
+        in.align(DATA_ALIGN);
+        return node;
+    }
+
     // 1. sign
     // 2. type
     // 3. inserted notes data size
@@ -272,23 +296,23 @@ namespace Substate {
         OStream out(&file);
 
         // Write sign
-        out << "ACT ";
+        out.writeRawData(ACTION_SIGN, 4);
 
         // Write type
         out << a->type();
 
         // Write inserted actions
-        std::vector<Node *> insertedNotes;
-        a->virtual_hook(Action::InsertedNodesHook, &insertedNotes);
+        std::vector<Node *> insertedNodes;
+        a->virtual_hook(Action::InsertedNodesHook, &insertedNodes);
 
         // Write inserted data size (make it convenient to skip if read in brief mode)
         out << int64_t(0);
         int64_t pos = file.tellp();
 
         // Write inserted notes
-        out << int(insertedNotes.size());
-        for (const auto &item : std::as_const(insertedNotes)) {
-            item->write(out);
+        out << int(insertedNodes.size());
+        for (const auto &item : std::as_const(insertedNodes)) {
+            writeNode(out, item);
         }
 
         // Fix inserted data size
@@ -299,6 +323,7 @@ namespace Substate {
 
         // Write action data
         a->write(out);
+        out.align(DATA_ALIGN);
     }
 
     static bool readAction(std::istream &file, Action *&a, bool brief,
@@ -312,8 +337,11 @@ namespace Substate {
         int type;
         in >> type;
 
+        auto pos = file.tellg();
+
         int64_t insertedDataSize;
         in >> insertedDataSize;
+
         if (brief) {
             in.skipRawData(int(insertedDataSize)); // Skip
         } else {
@@ -321,7 +349,7 @@ namespace Substate {
             int size;
             in >> size;
             for (int i = 0; i < size; ++i) {
-                auto node = Node::read(in);
+                auto node = readNode(in);
                 if (!node) {
                     QMSETUP_WARNING("Failed to read inserted when reading action of type %d.",
                                     type);
@@ -339,13 +367,14 @@ namespace Substate {
             QMSETUP_WARNING("Failed to read action of type %d.", type);
             return false;
         }
+        in.align(DATA_ALIGN);
         a = action;
         return true;
     }
 
     static void writeCheckPoint(std::ostream &file, Node *root,
                                 const std::vector<Node *> &removedItems) {
-        file.write("CKPT", 4);
+        file.write(CKPT_SIGN, 4);
 
         OStream out(&file);
         out << int64_t(0);
@@ -354,7 +383,7 @@ namespace Substate {
             out << root->index();
 
             // Write root data
-            root->write(out);
+            writeNode(out, root);
         } else {
             // Write 0
             out << int(0);
@@ -369,7 +398,7 @@ namespace Substate {
         // Write removed items
         out << int(removedItems.size());
         for (const auto &item : std::as_const(removedItems)) {
-            item->write(out);
+            writeNode(out, item);
         }
     }
 
@@ -395,7 +424,7 @@ namespace Substate {
             in >> id;
             if (id != 0) {
                 // Read root
-                root = Node::read(in);
+                root = readNode(in);
                 if (!root) {
                     QMSETUP_WARNING("Failed to read root item.");
                     goto abort;
@@ -411,7 +440,7 @@ namespace Substate {
             // Read removed items data
             removedItems.reserve(sz);
             for (int i = 0; i < sz; ++i) {
-                auto item = Node::read(in);
+                auto item = readNode(in);
                 if (!item) {
                     QMSETUP_WARNING("Failed to read one of the removed items.");
                     goto abort;
@@ -461,9 +490,13 @@ namespace Substate {
         for (const auto &pos : std::as_const(positions)) {
             file.seekg(pos);
 
+            // Skip sign
+            in.skipRawData(4);
+
             // Read attributes
             Engine::StepMessage attrs;
             in >> attrs;
+            in.align(DATA_ALIGN);
 
             // Read actions
             int actions_cnt;
@@ -511,15 +544,22 @@ namespace Substate {
                 {
                     int num = (fsStep - 1) / maxSteps;
                     auto path = journal_path(dir, num);
-                    auto exists = fs::exists(path);
-                    std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out |
-                                                std::ios::app);
+                    bool exists = true;
+                    std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
+                    if (!file.is_open()) {
+                        exists = false;
+                        // Create
+                        file.open(path, std::ios::binary | std::ios::in | std::ios::out |
+                                            std::ios::trunc);
+                    }
+
+                    if (!file.is_open())
+                        QMSETUP_FATAL("Failed to open file!");
 
                     // Write initial zeros
                     if (!exists) {
                         std::string zero((maxSteps + 2) * INT64_SIZE, '\0');
                         file.write(zero.data(), std::streamsize(zero.size()));
-                        file.seekp(0);
                     }
 
                     // Get current transaction start pos
@@ -538,8 +578,12 @@ namespace Substate {
 
                     OStream out(&file);
 
+                    // Write sign
+                    out.writeRawData(TRANSACTION_SIGN, 4);
+
                     // Write attributes
                     out << data.message;
+                    out.align(DATA_ALIGN);
 
                     // Write action count
                     out << int(data.actions.size());
@@ -571,18 +615,24 @@ namespace Substate {
                 // Write steps (Must do it after writing transaction)
                 {
                     auto path = steps_path(dir);
-                    std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out |
-                                                std::ios::app);
+                    std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
+                    if (!file.is_open()) {
+                        QMSETUP_FATAL("Failed to open file!");
+                    }
 
                     std::string buf;
-                    OStream out(&buf);
-                    out << fsMin << fsMax << fsStep;
-                    if (maxId > 0) {
-                        out << maxId;
+                    {
+                        std::ostringstream oss(std::ios::binary);
+                        OStream out(&oss);
+                        out << fsMin << fsMax << fsStep;
+                        if (maxId > 0) {
+                            out << maxId;
+                        }
+                        buf = oss.str();
                     }
 
                     // Call write once to ensure atomicity
-                    file.seekp(8);
+                    file.seekp(8, std::ios::beg);
                     file.write(buf.data(), std::streamsize(buf.size()));
                     file.flush();
                 }
@@ -624,9 +674,11 @@ namespace Substate {
             void execute() override {
                 // Write step
                 auto path = steps_path(dir);
-                std::fstream file(path,
-                                  std::ios::binary | std::ios::in | std::ios::out | std::ios::app);
-                file.seekg(16);
+                std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
+                if (!file.is_open()) {
+                    QMSETUP_FATAL("Failed to open file!");
+                }
+                file.seekp(16);
 
                 // Call write once
                 OStream out(&file);
@@ -655,7 +707,10 @@ namespace Substate {
 
             void execute() override {
                 auto path = ckpt_path(dir, num);
-                std::ofstream file(path, std::ios::binary | std::ios::app);
+                std::ofstream file(path, std::ios::binary);
+                if (!file.is_open()) {
+                    QMSETUP_FATAL("Failed to open file!");
+                }
                 writeCheckPoint(file, root, removedItems);
             }
 
@@ -691,6 +746,9 @@ namespace Substate {
                 if (brief) {
                     auto path = ckpt_path(dir, num + 1);
                     std::ifstream file(path, std::ios::binary);
+                    if (!file.is_open()) {
+                        QMSETUP_FATAL("Failed to open file!");
+                    }
                     if (!readCheckPoint(file, nullptr, &removedItems)) {
                         QMSETUP_FATAL("Read checkpoint task failed when reading checkpoint %d.",
                                       num + 1);
@@ -705,6 +763,9 @@ namespace Substate {
                 {
                     auto path = journal_path(dir, num);
                     std::ifstream file(path, std::ios::binary);
+                    if (!file.is_open()) {
+                        QMSETUP_FATAL("Failed to open file!");
+                    }
                     if (!readJournal(file, maxSteps, data, brief, insertedItems)) {
                         QMSETUP_FATAL("Read checkpoint task failed when reading journal %d.", num);
                     }
@@ -743,6 +804,9 @@ namespace Substate {
 
                     auto path = journal_path(dir, num);
                     std::ifstream file(path, std::ios::binary);
+                    if (!file.is_open()) {
+                        QMSETUP_FATAL("Failed to open file!");
+                    }
                     IStream in(&file);
 
                     QMSETUP_DEBUG("Read attributes at %d in journal %d.", step, num);
@@ -789,7 +853,11 @@ namespace Substate {
                 {
                     auto path = steps_path(dir);
                     bool exists = fs::exists(path);
-                    std::ofstream file(path, std::ios::binary | std::ios::app);
+                    std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
+                    if (!file.is_open()) {
+                        QMSETUP_FATAL("Failed to open file!");
+                    }
+
                     OStream out(&file);
                     if (!exists) {
                         // Write initial values
@@ -947,7 +1015,11 @@ namespace Substate {
             // Write steps
             {
                 auto path = steps_path(dir);
-                std::ofstream file(path, std::ios::binary | std::ios::app);
+                std::ofstream file(path, std::ios::binary);
+                if (!file.is_open()) {
+                    QMSETUP_FATAL("Failed to open file!");
+                }
+
                 OStream out(&file);
                 out << maxSteps << maxCheckPoints << int(0) << int(0) << int(0) << int(0);
             }
@@ -1341,8 +1413,7 @@ namespace Substate {
             if (expected > 0) {
                 int num = (fsMax - 1) / maxSteps;
                 auto path = journal_path(dir, num);
-                std::fstream file(path,
-                                  std::ios::binary | std::ios::in | std::ios::out | std::ios::app);
+                std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
                 if (!file.is_open()) {
                     QMSETUP_WARNING("Read journal %d failed.", num);
                     return false;
@@ -1527,7 +1598,7 @@ namespace Substate {
     }
 
     bool FileSystemEngine::createWarningFile(const fs::path &dir) {
-        std::ofstream file(dir / WARNING_FILE_NAME, std::ios::trunc);
+        std::ofstream file(dir / WARNING_FILE_NAME);
         if (!file.is_open()) {
             return false;
         }
