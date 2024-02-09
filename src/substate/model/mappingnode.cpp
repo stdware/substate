@@ -29,8 +29,6 @@ namespace Substate {
             goto abort;
         }
 
-        auto pos = stream.device()->tellg();
-
         stream >> d->mapping;
         if (stream.fail()) {
             goto abort;

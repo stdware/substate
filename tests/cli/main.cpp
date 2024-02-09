@@ -650,7 +650,7 @@ namespace {
 
     void Environment::cmd_sins(const std::vector<std::string_view> &args) {
         auto parentId = stoi2(args.front());
-        auto childId = stoi2(args.at(2));
+        auto childId = stoi2(args.at(1));
 
         SheetNode *parent;
         Node *child;
