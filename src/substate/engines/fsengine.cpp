@@ -273,6 +273,7 @@ namespace Substate {
 
     static inline void writeNode(OStream &out, const Node *node) {
         out.writeRawData(NODE_SIGN, 4);
+        out << node->type();
         node->write(out);
         out.align(DATA_ALIGN);
     }
@@ -298,9 +299,6 @@ namespace Substate {
         // Write sign
         out.writeRawData(ACTION_SIGN, 4);
 
-        // Write type
-        out << a->type();
-
         // Write inserted actions
         std::vector<Node *> insertedNodes;
         a->virtual_hook(Action::InsertedNodesHook, &insertedNodes);
@@ -321,6 +319,9 @@ namespace Substate {
         out << (pos1 - pos);
         file.seekp(pos1);
 
+        // Write type
+        out << a->type();
+
         // Write action data
         a->write(out);
         out.align(DATA_ALIGN);
@@ -333,12 +334,7 @@ namespace Substate {
         // Skip sign
         in.skipRawData(4);
 
-        // Read type
-        int type;
-        in >> type;
-
-        auto pos = file.tellg();
-
+        // Read inserted data size
         int64_t insertedDataSize;
         in >> insertedDataSize;
 
@@ -351,8 +347,7 @@ namespace Substate {
             for (int i = 0; i < size; ++i) {
                 auto node = readNode(in);
                 if (!node) {
-                    QMSETUP_WARNING("Failed to read inserted when reading action of type %d.",
-                                    type);
+                    QMSETUP_WARNING("Failed to read inserted when reading action.");
                     return false;
                 }
 
@@ -364,7 +359,7 @@ namespace Substate {
         // Read action data
         auto action = Action::read(in);
         if (!action) {
-            QMSETUP_WARNING("Failed to read action of type %d.", type);
+            QMSETUP_WARNING("Failed to read action.");
             return false;
         }
         in.align(DATA_ALIGN);
@@ -1067,8 +1062,7 @@ namespace Substate {
             current++;
         }
 
-        delete recoverData;
-        recoverData = nullptr;
+        journalData->recoverData.reset();
 
         // Need to prepare a checkpoint to write as if a transaction has been committed
         if (stack.size() % maxSteps == 0) {

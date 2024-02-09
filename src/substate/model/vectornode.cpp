@@ -283,6 +283,7 @@ namespace Substate {
 
     void VectorNode::write(OStream &stream) const {
         QM_D(const VectorNode);
+
         // Write index
         stream << d->index;
 
@@ -298,7 +299,7 @@ namespace Substate {
 
         auto node = new VectorNode();
         auto d2 = node->d_func();
-        if (user)
+        if (!user)
             d2->index = d->index;
 
         // Clone children

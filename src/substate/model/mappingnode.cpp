@@ -210,7 +210,7 @@ namespace Substate {
 
         auto node = new MappingNode();
         auto d2 = node->d_func();
-        if (user)
+        if (!user)
             d2->index = d->index;
 
         // Clone children

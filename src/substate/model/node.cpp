@@ -212,7 +212,7 @@ namespace Substate {
     void Node::addChild(Node *node) {
         QM_D(Node);
         auto d2 = node->d_func();
-        d2->parent = d->parent;
+        d2->parent = this;
         if (d2->managed) {
             d2->setManaged(false);
         }

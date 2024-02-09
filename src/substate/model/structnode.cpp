@@ -182,9 +182,9 @@ namespace Substate {
     Node *StructNode::clone(bool user) const {
         QM_D(const StructNode);
 
-        auto node = new StructNode(d->array.size());
+        auto node = new StructNode(int(d->array.size()));
         auto d2 = node->d_func();
-        if (user)
+        if (!user)
             d2->index = d->index;
 
         // Clone children

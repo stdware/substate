@@ -95,16 +95,16 @@ namespace Substate {
     }
 
     BytesAction *readBytesAction(Action::Type type, IStream &stream) {
-        int parent;
+        int parentIndex;
         int index;
         ByteArray b, oldb;
 
-        stream >> parent >> index >> b >> oldb;
+        stream >> parentIndex >> index >> b >> oldb;
         if (stream.fail())
             return nullptr;
 
-        auto parentNode = reinterpret_cast<Node *>(uintptr_t(index));
-        auto a = new BytesAction(type, parentNode, index, b, oldb);
+        auto parent = reinterpret_cast<Node *>(uintptr_t(parentIndex));
+        auto a = new BytesAction(type, parent, index, b, oldb);
         a->setState(Action::Unreferenced);
         return a;
     }
@@ -183,7 +183,7 @@ namespace Substate {
 
         auto node = new BytesNode();
         auto d2 = node->d_func();
-        if (user)
+        if (!user)
             d2->index = d->index;
         d2->byteArray = d->byteArray;
         return node;
@@ -239,8 +239,8 @@ namespace Substate {
     void BytesAction::virtual_hook(int id, void *data) {
         switch (id) {
             case DetachHook: {
-
-                break;
+                NodeAction::virtual_hook(id, data);
+                return;
             }
             case DeferredReferenceHook: {
                 SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
