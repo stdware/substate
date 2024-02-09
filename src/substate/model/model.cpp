@@ -159,6 +159,8 @@ namespace Substate {
             QMSETUP_FATAL("Attempt to begin a transaction at an invalid state");
         }
         d->state = Transaction;
+
+        d->engine->prepare();
     }
 
     /*!
@@ -180,6 +182,8 @@ namespace Substate {
             delete a;
         }
         stack.clear();
+
+        d->engine->abort();
 
         d->state = Idle;
     }

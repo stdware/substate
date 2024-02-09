@@ -27,6 +27,8 @@ namespace Substate {
 
     public:
         void setup(Model *model) override;
+        void prepare() override;
+        void abort() override;
 
         int minimum() const override;
         int maximum() const override;

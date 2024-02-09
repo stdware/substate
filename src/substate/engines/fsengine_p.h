@@ -14,6 +14,8 @@ namespace Substate {
         void init();
 
         void setup_helper();
+        void prepare_helper();
+        void abort_helper();
 
         // If true, the journal files will be removed when destructs
         bool finished;

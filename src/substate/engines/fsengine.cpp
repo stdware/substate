@@ -687,8 +687,8 @@ namespace Substate {
         class WriteCkptTask : public BaseTask {
         public:
             WriteCkptTask(fs::path dir, int num, Node *root, std::vector<Node *> removedItems)
-                : BaseTask(true), num(num), dir(std::move(dir)), root(nullptr),
-                  removedItems(std::move(removedItems)) {
+                : BaseTask(true), num(num), root(root), removedItems(std::move(removedItems)),
+                  dir(std::move(dir)) {
             }
 
             ~WriteCkptTask() {
@@ -920,20 +920,6 @@ namespace Substate {
         return true;
     }
 
-    static WriteCkptTask *generateWriteCkptTask(FileSystemEnginePrivate *d) {
-        // Collect all removed items
-        std::vector<Node *> removedItems;
-        for (auto i = d->stack.size() - d->maxSteps; i != d->stack.size(); ++i) {
-            const auto &tx = d->stack.at(i);
-            for (const auto &a : std::as_const(tx.actions)) {
-                a->virtual_hook(Action::RemovedNodesHook, &removedItems);
-            }
-        }
-        int num = int(d->min + d->stack.size()) / d->maxSteps;
-        auto root = NodeHelper::clone(d->model->root(), false);
-        return new WriteCkptTask(d->dir, num, root, std::move(removedItems));
-    }
-
     class FileSystemEnginePrivate::JournalData : public BaseProducer {
     public:
         std::unique_ptr<RecoverData> recoverData;
@@ -1063,10 +1049,36 @@ namespace Substate {
         }
 
         journalData->recoverData.reset();
+    }
 
-        // Need to prepare a checkpoint to write as if a transaction has been committed
-        if (stack.size() % maxSteps == 0) {
-            journalData->write_task = generateWriteCkptTask(this);
+    void FileSystemEnginePrivate::prepare_helper() {
+        auto d2 = journalData.get();
+        auto &writeCkptTask = d2->write_task;
+
+        // Prepare deferred writing checkpoint task
+        if (stack.size() == maxSteps) {
+            std::vector<Node *> removedItems;
+            for (auto i = stack.size() - maxSteps; i != stack.size(); ++i) {
+                const auto &tx = stack.at(i);
+                for (const auto &a : std::as_const(tx.actions)) {
+                    a->virtual_hook(Action::RemovedNodesHook, &removedItems);
+                }
+            }
+            int num = int(min + stack.size()) / maxSteps;
+            auto root = model->root();
+            writeCkptTask = new WriteCkptTask(
+                dir, num, root ? NodeHelper::clone(root, false) : nullptr, std::move(removedItems));
+        }
+    }
+
+    void FileSystemEnginePrivate::abort_helper() {
+        QM_UNUSED(this)
+
+        auto d2 = journalData.get();
+        auto &writeCkptTask = d2->write_task;
+        if (writeCkptTask) {
+            writeCkptTask->del();
+            writeCkptTask = nullptr;
         }
     }
 
@@ -1249,7 +1261,6 @@ namespace Substate {
     void FileSystemEnginePrivate::afterCommit(const std::vector<Action *> &actions,
                                               const Engine::StepMessage &message) {
         auto d2 = journalData.get();
-        auto &writeCkptTask = d2->write_task;
 
         auto oldFsMin = fsMin;
         auto oldFsMax = fsMax;
@@ -1271,24 +1282,10 @@ namespace Substate {
         if (current > maxSteps * 1.5)
             d2->abortBackwardReadTask();
 
-        // Delete earlier checkpoint task
-        {
-            auto rem = stack.size() % maxSteps;
-            if (rem == 0) {
-                delete writeCkptTask;
-
-                // Save checkpoint task
-                writeCkptTask = generateWriteCkptTask(this);
-            } else if (rem == 1 && stack.size() > 1) {
-                // Deferred push checkpoint task
-                if (writeCkptTask) {
-                    d2->pushTask(writeCkptTask);
-                    writeCkptTask = nullptr;
-                }
-            } else if (writeCkptTask) {
-                delete writeCkptTask;
-                writeCkptTask = nullptr;
-            }
+        // Add write checkpoint task
+        if (auto &writeCkptTask = d2->write_task; writeCkptTask) {
+            d2->pushTask(writeCkptTask);
+            writeCkptTask = nullptr;
         }
 
         // Add commit task (Must do it after writing checkpoint)
@@ -1483,7 +1480,6 @@ namespace Substate {
         int num = std::min((fsStep + maxSteps / 2 - 1) / maxSteps, maxNum);
 
         QMSETUP_DEBUG("Restore, min=%d, max=%d, cur=%d", fsMin, fsMax, fsStep);
-        QMSETUP_DEBUG("Read checkpoint %d", num);
 
         Node *root = nullptr;
         std::vector<Node *> removedItems;
@@ -1496,6 +1492,8 @@ namespace Substate {
 
             // Read checkpoint
             {
+                QMSETUP_DEBUG("Read checkpoint %d", num);
+
                 auto path = ckpt_path(dir, num);
                 std::ifstream file(path, std::ios::binary);
                 if (!file.is_open() ||
@@ -1565,6 +1563,16 @@ namespace Substate {
         QM_D(FileSystemEngine);
         d->model = model;
         d->setup_helper();
+    }
+
+    void FileSystemEngine::prepare() {
+        QM_D(FileSystemEngine);
+        d->prepare_helper();
+    }
+
+    void FileSystemEngine::abort() {
+        QM_D(FileSystemEngine);
+        d->abort_helper();
     }
 
     int FileSystemEngine::minimum() const {

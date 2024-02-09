@@ -70,7 +70,7 @@ namespace Substate {
     }
 
     inline bool VectorNode::insert(int index, Node *node) {
-        return insert(size(), std::vector<Node *>({node}));
+        return insert(index, std::vector<Node *>({node}));
     }
 
     inline bool VectorNode::removeOne(int index) {

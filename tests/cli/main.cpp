@@ -754,7 +754,7 @@ namespace {
         printIndent();
         if (!msg.empty())
             printf("%s: ", msg.data());
-        printf("%s\n", nodeType2str(static_cast<Node::Type>(node->type())));
+        printf("%s, id=%d\n", nodeType2str(static_cast<Node::Type>(node->type())), node->index());
 
         indent += 2;
 

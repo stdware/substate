@@ -66,6 +66,19 @@ namespace Substate {
     }
 
     /*!
+        Prepare for transaction, this function is called when the model turns into transaction mode.
+    */
+    void Engine::prepare() {
+    }
+
+    /*!
+        Abort transaction, this function is called when the model turns into idle mode without any
+        actions to commit.
+    */
+    void Engine::abort() {
+    }
+
+    /*!
         Commits a list of actions with a message to the engine.
     */
     void Engine::commit(const std::vector<Action *> &actions, const StepMessage &message) {

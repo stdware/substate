@@ -62,7 +62,7 @@ namespace Substate {
                 goto abort;
             }
             node->addChild(child);
-            d->vector.push_back(node);
+            d->vector.push_back(child);
         }
         return node;
 
@@ -144,6 +144,8 @@ namespace Substate {
             ActionNotification n(Notification::ActionTriggered, &a);
             q->dispatch(&n);
         }
+
+        q->endAction();
     }
 
     VectorMoveAction *readVectorMoveAction(IStream &stream) {
@@ -441,8 +443,7 @@ namespace Substate {
             }
             case DeferredReferenceHook: {
                 SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
-
-                if (t == VectorInsert || t == VectorRemove) {
+                {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.reserve(m_children.size());
                     for (auto &child : m_children) {

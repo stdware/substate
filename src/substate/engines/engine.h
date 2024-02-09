@@ -26,6 +26,8 @@ namespace Substate {
         Node *indexOf(int index) const;
 
         virtual void setup(Model *model);
+        virtual void prepare();
+        virtual void abort();
         virtual void commit(const std::vector<Action *> &actions, const StepMessage &message);
         virtual void execute(bool undo) = 0;
         virtual void reset();
