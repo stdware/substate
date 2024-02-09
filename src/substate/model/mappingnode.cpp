@@ -24,23 +24,25 @@ namespace Substate {
         auto node = new MappingNode();
         auto d = node->d_func();
 
-        int size;
-        stream >> d->index >> size;
+        stream >> d->index;
         if (stream.fail()) {
             goto abort;
         }
 
-        d->mapping.reserve(size);
-        for (int i = 0; i < size; ++i) {
-            std::string key;
-            Property prop;
-            stream >> key >> prop;
-            if (stream.fail()) {
-                goto abort;
-            }
-            if (prop.isNode())
+        auto pos = stream.device()->tellg();
+
+        stream >> d->mapping;
+        if (stream.fail()) {
+            goto abort;
+        }
+
+        for (const auto &item : std::as_const(d->mapping)) {
+            const auto &key = item.first;
+            const auto &prop = item.second;
+            if (prop.isNode()) {
+                node->addChild(prop.node());
                 d->mappingIndexes.insert(std::make_pair(prop.node(), key));
-            d->mapping.insert(std::make_pair(key, prop));
+            }
         }
         return node;
 

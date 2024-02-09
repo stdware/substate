@@ -55,6 +55,7 @@ namespace Substate {
 
         static Node *read(IStream &stream);
         static bool registerFactory(int type, Factory fac);
+        inline void writeWithType(OStream &stream) const;
 
     public:
         void dispatch(Notification *n) override;
@@ -85,6 +86,11 @@ namespace Substate {
 
     inline bool Node::isObsolete() const {
         return isManaged();
+    }
+
+    inline void Node::writeWithType(OStream &stream) const {
+        stream << type();
+        write(stream);
     }
 
     class SUBSTATE_EXPORT NodeExtra {

@@ -218,7 +218,7 @@ namespace Substate {
         stream << int(d->records.size());
         for (const auto &pair : d->records) {
             stream << pair.first;
-            pair.second->write(stream);
+            pair.second->writeWithType(stream);
         }
     }
 

@@ -92,7 +92,7 @@ namespace Substate {
             stream << PropertyFlag::InvalidValue;
         } else if (value.isNode()) {
             stream << PropertyFlag::NodeValue;
-            value.node()->write(stream);
+            value.node()->writeWithType(stream);
         } else {
             stream << PropertyFlag::VariantValue;
             stream << value.variant();

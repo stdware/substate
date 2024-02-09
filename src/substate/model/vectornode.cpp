@@ -290,7 +290,7 @@ namespace Substate {
         // Write children
         stream << int(d->vector.size());
         for (const auto &node : d->vector) {
-            node->write(stream);
+            node->writeWithType(stream);
         }
     }
 

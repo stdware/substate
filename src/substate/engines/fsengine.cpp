@@ -10,6 +10,7 @@
 #include <condition_variable>
 #include <thread>
 #include <utility>
+#include <stdexcept>
 
 #include "substateglobal_p.h"
 #include "model/nodehelper.h"
@@ -22,9 +23,9 @@
     "the whole directory, but do not delete or change any file in the directory, otherwise it "    \
     "may cause crash!"
 
-#define CKPT_SIGN   "CKPT"
-#define ACTION_SIGN "ACT "
-#define NODE_SIGN   "NODE"
+#define CKPT_SIGN        "CKPT"
+#define ACTION_SIGN      "ACT "
+#define NODE_SIGN        "NODE"
 #define TRANSACTION_SIGN "TXX "
 
 static constexpr const int DATA_ALIGN = 4;
@@ -273,8 +274,7 @@ namespace Substate {
 
     static inline void writeNode(OStream &out, const Node *node) {
         out.writeRawData(NODE_SIGN, 4);
-        out << node->type();
-        node->write(out);
+        node->writeWithType(out);
         out.align(DATA_ALIGN);
     }
 
@@ -319,11 +319,8 @@ namespace Substate {
         out << (pos1 - pos);
         file.seekp(pos1);
 
-        // Write type
-        out << a->type();
-
         // Write action data
-        a->write(out);
+        a->writeWithType(out);
         out.align(DATA_ALIGN);
     }
 
@@ -549,7 +546,7 @@ namespace Substate {
                     }
 
                     if (!file.is_open())
-                        QMSETUP_FATAL("Failed to open file!");
+                        throw std::runtime_error("Failed to open file");
 
                     // Write initial zeros
                     if (!exists) {
@@ -612,7 +609,7 @@ namespace Substate {
                     auto path = steps_path(dir);
                     std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
                     if (!file.is_open()) {
-                        QMSETUP_FATAL("Failed to open file!");
+                        throw std::runtime_error("Failed to open file");
                     }
 
                     std::string buf;
@@ -671,7 +668,7 @@ namespace Substate {
                 auto path = steps_path(dir);
                 std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
                 if (!file.is_open()) {
-                    QMSETUP_FATAL("Failed to open file!");
+                    throw std::runtime_error("Failed to open file");
                 }
                 file.seekp(16);
 
@@ -704,7 +701,7 @@ namespace Substate {
                 auto path = ckpt_path(dir, num);
                 std::ofstream file(path, std::ios::binary);
                 if (!file.is_open()) {
-                    QMSETUP_FATAL("Failed to open file!");
+                    throw std::runtime_error("Failed to open file");
                 }
                 writeCheckPoint(file, root, removedItems);
             }
@@ -742,11 +739,12 @@ namespace Substate {
                     auto path = ckpt_path(dir, num + 1);
                     std::ifstream file(path, std::ios::binary);
                     if (!file.is_open()) {
-                        QMSETUP_FATAL("Failed to open file!");
+                        throw std::runtime_error("Failed to open file");
                     }
                     if (!readCheckPoint(file, nullptr, &removedItems)) {
-                        QMSETUP_FATAL("Read checkpoint task failed when reading checkpoint %d.",
-                                      num + 1);
+                        throw std::runtime_error(
+                            "Read checkpoint task failed when reading checkpoint " +
+                            std::to_string(num + 1));
                     }
                 }
 
@@ -759,10 +757,12 @@ namespace Substate {
                     auto path = journal_path(dir, num);
                     std::ifstream file(path, std::ios::binary);
                     if (!file.is_open()) {
-                        QMSETUP_FATAL("Failed to open file!");
+                        throw std::runtime_error("Failed to open file");
                     }
                     if (!readJournal(file, maxSteps, data, brief, insertedItems)) {
-                        QMSETUP_FATAL("Read checkpoint task failed when reading journal %d.", num);
+                        throw std::runtime_error(
+                            "Read checkpoint task failed when reading journal " +
+                            std::to_string(num));
                     }
                 }
 
@@ -800,7 +800,7 @@ namespace Substate {
                     auto path = journal_path(dir, num);
                     std::ifstream file(path, std::ios::binary);
                     if (!file.is_open()) {
-                        QMSETUP_FATAL("Failed to open file!");
+                        throw std::runtime_error("Failed to open file");
                     }
                     IStream in(&file);
 
@@ -850,7 +850,7 @@ namespace Substate {
                     bool exists = fs::exists(path);
                     std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
                     if (!file.is_open()) {
-                        QMSETUP_FATAL("Failed to open file!");
+                        throw std::runtime_error("Failed to open file");
                     }
 
                     OStream out(&file);
@@ -1012,7 +1012,7 @@ namespace Substate {
                 auto path = steps_path(dir);
                 std::ofstream file(path, std::ios::binary);
                 if (!file.is_open()) {
-                    QMSETUP_FATAL("Failed to open file!");
+                    throw std::runtime_error("Failed to open file");
                 }
 
                 OStream out(&file);

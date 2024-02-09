@@ -56,6 +56,7 @@ namespace Substate {
 
         static Action *read(IStream &stream);
         static bool registerFactory(int type, Factory fac);
+        inline void writeWithType(OStream &stream) const;
 
     public:
         void detach();
@@ -86,6 +87,11 @@ namespace Substate {
 
     inline void Action::setState(Substate::Action::State state) {
         s = state;
+    }
+
+    inline void Action::writeWithType(OStream &stream) const {
+        stream << t;
+        write(stream);
     }
 
     class SUBSTATE_EXPORT ActionNotification : public Notification {
