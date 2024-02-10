@@ -86,15 +86,15 @@ Q_SIGNALS:                                                                      
     void removed(int id, T *item);                                                                 \
                                                                                                    \
 protected:                                                                                         \
-    inline void sendInserted(int id, Entity *item) {                                               \
+    inline void sendInserted(int id, ::Substate::Entity *item) {                                   \
         sendInsertedHelper(id, item);                                                              \
     }                                                                                              \
                                                                                                    \
-    inline void sendAboutToRemove(int id, Entity *item) {                                          \
+    inline void sendAboutToRemove(int id, ::Substate::Entity *item) {                              \
         sendAboutToRemoveHelper(id, item);                                                         \
     }                                                                                              \
                                                                                                    \
-    inline void sendRemoved(int id, Entity *item) {                                                \
+    inline void sendRemoved(int id, ::Substate::Entity *item) {                                    \
         sendRemovedHelper(id, item);                                                               \
     }
 
@@ -103,10 +103,6 @@ protected:                                                                      
           public SheetEntityHelper<TestSheetEntity, Int8ArrayEntity> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_SHEET(TestSheetEntity, Int8ArrayEntity)
-    public:
-        inline TestSheetEntity(QObject *parent = nullptr) : SheetEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline TestSheetEntity(Node *node, QObject *parent = nullptr)
             : SheetEntityBase(node, parent) {

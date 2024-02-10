@@ -114,10 +114,6 @@ protected:                                                                      
                                              public ArrayEntityHelper<Int8ArrayEntity, qint8> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(Int8ArrayEntity, qint8)
-    public:
-        inline Int8ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline Int8ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -128,10 +124,6 @@ protected:                                                                      
                                               public ArrayEntityHelper<UInt8ArrayEntity, quint8> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(UInt8ArrayEntity, quint8)
-    public:
-        inline UInt8ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline UInt8ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -142,10 +134,6 @@ protected:                                                                      
                                               public ArrayEntityHelper<Int16ArrayEntity, qint16> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(Int16ArrayEntity, qint16)
-    public:
-        inline Int16ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline Int16ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -157,10 +145,6 @@ protected:                                                                      
           public ArrayEntityHelper<UInt16ArrayEntity, quint16> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(UInt16ArrayEntity, quint16)
-    public:
-        inline UInt16ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline UInt16ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -171,10 +155,6 @@ protected:                                                                      
                                               public ArrayEntityHelper<Int32ArrayEntity, qint32> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(Int32ArrayEntity, qint32)
-    public:
-        inline Int32ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline Int32ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -186,10 +166,6 @@ protected:                                                                      
           public ArrayEntityHelper<UInt32ArrayEntity, quint32> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(UInt32ArrayEntity, quint32)
-    public:
-        inline UInt32ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline UInt32ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -200,10 +176,6 @@ protected:                                                                      
                                               public ArrayEntityHelper<Int64ArrayEntity, qint64> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(Int64ArrayEntity, qint64)
-    public:
-        inline Int64ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline Int64ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -215,10 +187,6 @@ protected:                                                                      
           public ArrayEntityHelper<UInt64ArrayEntity, quint64> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_ARRAY(UInt64ArrayEntity, quint64)
-    public:
-        inline UInt64ArrayEntity(QObject *parent = nullptr) : ArrayEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline UInt64ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {

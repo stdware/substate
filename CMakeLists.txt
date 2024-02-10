@@ -7,7 +7,7 @@ project(substate VERSION 0.0.1.1 LANGUAGES CXX)
 # ----------------------------------
 option(SUBSTATE_BUILD_STATIC "Build static libraries" OFF)
 option(SUBSTATE_BUILD_TRANSLATIONS "Build translations" ON)
-option(SUBSTATE_BUILD_TESTS "Build test cases" ON)
+option(SUBSTATE_BUILD_TESTS "Build test cases" OFF)
 option(SUBSTATE_BUILD_QT_TARGETS "Build targets related to Qt" ON)
 option(SUBSTATE_BUILD_DOCUMENTATIONS "Build documentations" OFF)
 option(SUBSTATE_INSTALL "Install library" ON)

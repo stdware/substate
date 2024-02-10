@@ -1,0 +1,5 @@
+#ifndef MAPPINGENTITY_H
+#define MAPPINGENTITY_H
+
+
+#endif // MAPPINGENTITY_H

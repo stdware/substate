@@ -106,7 +106,7 @@ Q_SIGNALS:                                                                      
     void removed(int index, int count);                                                            \
                                                                                                    \
 protected:                                                                                         \
-    void sendInserted(int index, const QVector<Entity *> &items) override {                        \
+    void sendInserted(int index, const QVector<::Substate::Entity *> &items) override {            \
         sendInsertedHelper(index, items);                                                          \
     }                                                                                              \
     void sendAboutToMove(int index, int count, int dest) override {                                \
@@ -115,7 +115,7 @@ protected:                                                                      
     void sendMoved(int index, int count, int dest) override {                                      \
         sendMovedHelper(index, count, dest);                                                       \
     }                                                                                              \
-    void sendAboutToRemove(int index, const QVector<Entity *> &items) override {                   \
+    void sendAboutToRemove(int index, const QVector<::Substate::Entity *> &items) override {       \
         sendAboutToRemoveHelper(index, items);                                                     \
     }                                                                                              \
     void sendRemoved(int index, int count) override {                                              \
@@ -127,10 +127,6 @@ protected:                                                                      
           public VectorEntityHelper<TestVectorEntity, Int8ArrayEntity> {
         Q_OBJECT
         Q_SUBSTATE_DECLARE_VECTOR(TestVectorEntity, Int8ArrayEntity)
-    public:
-        inline TestVectorEntity(QObject *parent = nullptr) : VectorEntityBase(nullptr, parent) {
-        }
-
     protected:
         inline TestVectorEntity(Node *node, QObject *parent = nullptr)
             : VectorEntityBase(node, parent) {
