@@ -86,7 +86,6 @@ namespace Substate {
             Q_EMIT static_cast<Container *>(this)->removed(index / N, int(bytesSize / N));
         }
 
-    protected:
         friend Container;
 
         static constexpr size_t N = sizeof(T);

@@ -173,7 +173,7 @@ namespace Substate {
         return true;
     }
 
-    Node *SheetNode::record(int id) {
+    Node *SheetNode::record(int id) const {
         QM_D(const SheetNode);
         auto it = d->records.find(id);
         if (it == d->records.end())

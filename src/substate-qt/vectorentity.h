@@ -92,7 +92,6 @@ namespace Substate {
             Q_EMIT static_cast<Container *>(this)->removed(index, count);
         }
 
-    protected:
         friend Container;
     };
 
@@ -138,6 +137,6 @@ protected:                                                                      
         }
     };
 
-};
+}
 
 #endif // VECTORENTITY_H

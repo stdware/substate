@@ -1,7 +1,6 @@
 #include "vectorentity.h"
 
 #include <substate/vectornode.h>
-#include <substate/nodehelper.h>
 
 #include "entity_p.h"
 
@@ -104,7 +103,7 @@ namespace Substate {
             QVector<Entity *> items;
             items.reserve(int(nodes.size()));
             for (const auto &node : nodes) {
-                items.append(Entity::createEntity(node));
+                items.append(Entity::extractEntity(node));
             }
 
             q->sendAboutToRemove(index, items);
@@ -129,6 +128,7 @@ namespace Substate {
 
     bool VectorEntityBase::insertImpl(int index, const QVector<Entity *> &items) {
         Q_D(VectorEntityBase);
+
         std::vector<Node *> nodes;
         nodes.reserve(items.size());
         for (const auto &item : items) {
@@ -152,6 +152,7 @@ namespace Substate {
 
     bool VectorEntityBase::removeImpl(int index, int count) {
         Q_D(VectorEntityBase);
+
         d->external = true;
         auto res = static_cast<VectorNode *>(d->internalData())->remove(index, count);
         d->external = false;

@@ -22,7 +22,7 @@ namespace Substate {
         int insert(Node *node);
         bool remove(int id);
         bool remove(Node *node);
-        Node *record(int id);
+        Node *record(int id) const;
         int indexOf(Node *node) const;
         std::vector<int> ids() const;
         const std::unordered_map<int, Node *> &data() const;
