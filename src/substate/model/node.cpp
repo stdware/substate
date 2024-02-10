@@ -172,13 +172,24 @@ namespace Substate {
 
     bool Node::registerFactory(int type, Factory fac) {
         std::unique_lock<std::shared_mutex> lock(factoryLock);
+        return factoryManager.insert(std::make_pair(type, fac)).second;
+    }
 
-        auto it = factoryManager.find(type);
-        if (it == factoryManager.end())
-            return false;
+    Variant Node::dynamicData(const std::string &key) const {
+        QM_D(const Node);
+        auto it = d->dynDataMap.find(key);
+        if (it == d->dynDataMap.end())
+            return {};
+        return it->second;
+    }
 
-        factoryManager.insert(std::make_pair(type, fac));
-        return true;
+    void Node::setDynamicData(const std::string &key, const Variant &var) {
+        QM_D(Node);
+        if (!var.isValid()) {
+            d->dynDataMap.erase(key);
+            return;
+        }
+        d->dynDataMap[key] = var;
     }
 
     void Node::dispatch(Notification *n) {
@@ -255,7 +266,8 @@ namespace Substate {
     }
 
     NodeExtra::NodeExtra(Node *node) : m_node(node) {
-        m_node->d_func()->extra = nullptr;
+        if (node)
+            node->d_func()->extra = this;
     }
 
     NodeExtra::~NodeExtra() {
@@ -268,8 +280,8 @@ namespace Substate {
             m_node->d_func()->extra = nullptr;
         }
         m_node = node;
-        if (m_node) {
-            m_node->d_func()->extra = this;
+        if (node) {
+            node->d_func()->extra = this;
         }
     }
 

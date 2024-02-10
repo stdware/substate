@@ -13,4 +13,14 @@
 #  endif
 #endif
 
+#if defined(Q_CC_MSVC)
+#  define QSUBSTATE_NOINLINE __declspec(noinline)
+#  define QSUBSTATE_INLINE   __forceinline
+#  define QSUBSTATE_USED
+#else
+#  define QSUBSTATE_NOINLINE __attribute__((noinline))
+#  define QSUBSTATE_INLINE   __attribute__((always_inline))
+#  define QSUBSTATE_USED     __attribute__((used))
+#endif
+
 #endif // QSUBSTATE_GLOBAL_H

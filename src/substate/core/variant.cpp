@@ -516,19 +516,19 @@ namespace Substate {
     }
 
     /*!
-        \fn Variant Variant::fromValue(const T &val)
+        \fn Variant Variant::fromValue(const Container &val)
 
         Returns a variant containing a copy of value.
     */
 
     /*!
-        \fn void Variant::setValue(const T &val)
+        \fn void Variant::setValue(const Container &val)
 
         Stores a copy of value.
     */
 
     /*!
-        \fn T Variant::value() const
+        \fn Container Variant::value() const
 
         Returns the stored value if the type matches.
     */

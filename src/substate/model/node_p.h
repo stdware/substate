@@ -1,6 +1,8 @@
 #ifndef NODE_P_H
 #define NODE_P_H
 
+#include <unordered_map>
+
 #include <substate/node.h>
 #include <substate/engine.h>
 #include <substate/private/sender_p.h>
@@ -25,6 +27,8 @@ namespace Substate {
         bool allowDelete = false;
 
         NodeExtra *extra = nullptr;
+
+        std::unordered_map<std::string, Variant> dynDataMap;
 
         void setManaged(bool _managed);
         void propagateEngine(Engine *_engine);

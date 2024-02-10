@@ -222,7 +222,7 @@ namespace Substate {
     template <class T>
     inline T Variant::value() const {
         // Storing a pointer is not supported
-        static_assert(!std::is_pointer<T>::value, "T is a pointer");
+        static_assert(!std::is_pointer<T>::value, "Container is a pointer");
 
         return d.type == typeId<T>() ? *reinterpret_cast<const T *>(constData()) : T();
     }
@@ -230,7 +230,7 @@ namespace Substate {
     template <class T>
     inline int Variant::typeId(int hint) {
         // Storing a pointer is not supported
-        static_assert(!std::is_pointer<T>::value, "T is a pointer");
+        static_assert(!std::is_pointer<T>::value, "Container is a pointer");
 
         static std::atomic_int type_id(0);
         int id = type_id.load();

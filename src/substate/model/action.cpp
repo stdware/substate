@@ -60,13 +60,7 @@ namespace Substate {
 
     bool Action::registerFactory(int type, Factory fac) {
         std::unique_lock<std::shared_mutex> lock(factoryLock);
-
-        auto it = factoryManager.find(type);
-        if (it == factoryManager.end())
-            return false;
-
-        factoryManager.insert(std::make_pair(type, fac));
-        return true;
+        return factoryManager.insert(std::make_pair(type, fac)).second;
     }
 
     /*!

@@ -40,6 +40,13 @@ namespace Substate {
     }
 
     /*!
+        Get the node's extra data.
+    */
+    NodeExtra *NodeHelper::getExtra(Node *node) {
+        return node->d_func()->extra;
+    }
+
+    /*!
         Set the node's special own subscriber, reserved for further use.
     */
     void NodeHelper::setExtra(Node *node, NodeExtra *extra) {

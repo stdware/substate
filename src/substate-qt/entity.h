@@ -2,11 +2,13 @@
 #define ENTITY_H
 
 #include <QObject>
+#include <QVariant>
 
-#include <substate/node.h>
 #include <qsubstate/qsubstate_global.h>
 
 namespace Substate {
+
+    class Node;
 
     class EntityPrivate;
 
@@ -15,6 +17,13 @@ namespace Substate {
         Q_DECLARE_PRIVATE(Entity)
     public:
         ~Entity();
+
+        using Factory = Entity *(*) (Node *node);
+
+        static void registerFactory(const std::string &key, Factory fac);
+        static void removeFactory(const std::string &key);
+        static Entity *createEntity(Node *node);
+        static Entity *extractEntity(Node *node);
 
     public:
         Node *internalData() const;

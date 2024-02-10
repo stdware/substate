@@ -8,6 +8,7 @@
 #include <substate/action.h>
 #include <substate/sender.h>
 #include <substate/stream.h>
+#include <substate/variant.h>
 
 namespace Substate {
 
@@ -56,6 +57,9 @@ namespace Substate {
         static Node *read(IStream &stream);
         static bool registerFactory(int type, Factory fac);
         inline void writeWithType(OStream &stream) const;
+
+        Variant dynamicData(const std::string &key) const;
+        void setDynamicData(const std::string &key, const Variant &var);
 
     public:
         void dispatch(Notification *n) override;
