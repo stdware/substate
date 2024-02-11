@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QVariant>
 
-#include <qsubstate/qsubstate_global.h>
+#include <qsubstate/qsubstateglobal.h>
 
 namespace Substate {
 

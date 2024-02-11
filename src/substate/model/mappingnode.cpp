@@ -145,10 +145,11 @@ namespace Substate {
         return it->second;
     }
 
-    void MappingNode::setProperty(const std::string &key, const Property &value) {
+    bool MappingNode::setProperty(const std::string &key, const Property &value) {
         QM_D(MappingNode);
         assert(d->testModifiable());
         d->setProperty_helper(key, value);
+        return true;
     }
 
     bool MappingNode::remove(Node *node) {

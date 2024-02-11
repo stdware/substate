@@ -14,9 +14,6 @@ namespace Substate {
 
         ~VectorEntityBasePrivate() = default;
 
-        void init() {
-        }
-
         void notified(Notification *n) {
             switch (n->type()) {
                 case Notification::ActionAboutToTrigger: {
@@ -171,11 +168,6 @@ namespace Substate {
 
     VectorEntityBase::VectorEntityBase(Node *node, QObject *parent)
         : Entity(*new VectorEntityBasePrivate(node), parent) {
-    }
-
-    VectorEntityBase::VectorEntityBase(VectorEntityBasePrivate &d, QObject *parent)
-        : Entity(d, parent) {
-        d.init();
     }
 
 }

@@ -8,6 +8,8 @@
 
 namespace Substate {
 
+    class NodeHelper;
+
     class SUBSTATE_EXPORT Property {
     public:
         inline Property();
@@ -34,6 +36,8 @@ namespace Substate {
 
     private:
         std::variant<std::monostate, Node *, Variant> var;
+
+        friend class NodeHelper;
     };
 
     inline Property::Property() = default;
@@ -84,18 +88,18 @@ namespace Substate {
         void virtual_hook(int id, void *data) override;
 
     public:
-        inline Property value() const;
-        inline Property oldValue() const;
+        inline const Property &value() const;
+        inline const Property &oldValue() const;
 
     public:
         Property v, oldv;
     };
 
-    Property PropertyAction::value() const {
+    const Property &PropertyAction::value() const {
         return v;
     }
 
-    Property PropertyAction::oldValue() const {
+    const Property &PropertyAction::oldValue() const {
         return oldv;
     }
 

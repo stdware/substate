@@ -14,9 +14,6 @@ namespace Substate {
 
         ~SheetEntityBasePrivate() = default;
 
-        void init() {
-        }
-
         void notified(Notification *n) {
             switch (n->type()) {
                 case Notification::ActionAboutToTrigger: {
@@ -62,13 +59,7 @@ namespace Substate {
         inline void sendInserted(int id, Node *node) {
             Q_Q(SheetEntityBase);
 
-            Entity *item;
-            if (external) {
-                item = Entity::extractEntity(node);
-            } else {
-                item = Entity::createEntity(node);
-            }
-
+            auto item = external ? Entity::extractEntity(node) : Entity::createEntity(node);
             q->sendInserted(id, item);
         }
 
@@ -82,6 +73,10 @@ namespace Substate {
 
             Q_UNUSED(node)
             q->sendRemoved(id, Entity::extractEntity(node));
+
+            if (!node->isFree()) {
+                delete Entity::extractEntity(node);
+            }
         }
 
         bool external = false;
@@ -127,6 +122,12 @@ namespace Substate {
         return static_cast<SheetNode *>(d->internalData())->indexOf(item->internalData());
     }
 
+    QList<int> SheetEntityBase::idsImpl() const {
+        Q_D(const SheetEntityBase);
+        const auto &arr = static_cast<SheetNode *>(d->internalData())->ids();
+        return {arr.begin(), arr.end()};
+    }
+
     int SheetEntityBase::sizeImpl() const {
         Q_D(const SheetEntityBase);
         return static_cast<SheetNode *>(d->internalData())->size();
@@ -134,11 +135,6 @@ namespace Substate {
 
     SheetEntityBase::SheetEntityBase(Node *node, QObject *parent)
         : Entity(*new SheetEntityBasePrivate(node), parent) {
-    }
-
-    SheetEntityBase::SheetEntityBase(SheetEntityBasePrivate &d, QObject *parent)
-        : Entity(d, parent) {
-        d.init();
     }
 
 }

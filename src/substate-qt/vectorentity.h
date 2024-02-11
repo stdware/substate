@@ -30,7 +30,6 @@ namespace Substate {
 
     protected:
         VectorEntityBase(Node *node, QObject *parent = nullptr);
-        VectorEntityBase(VectorEntityBasePrivate &d, QObject *parent = nullptr);
     };
 
     template <class Container, class T>
@@ -106,7 +105,7 @@ Q_SIGNALS:                                                                      
     void removed(int index, int count);                                                            \
                                                                                                    \
 protected:                                                                                         \
-    void sendInserted(int index, const QVector<::Substate::Entity *> &items) override {            \
+    void sendInserted(int index, const QVector<Substate::Entity *> &items) override {            \
         sendInsertedHelper(index, items);                                                          \
     }                                                                                              \
     void sendAboutToMove(int index, int count, int dest) override {                                \
@@ -115,7 +114,7 @@ protected:                                                                      
     void sendMoved(int index, int count, int dest) override {                                      \
         sendMovedHelper(index, count, dest);                                                       \
     }                                                                                              \
-    void sendAboutToRemove(int index, const QVector<::Substate::Entity *> &items) override {       \
+    void sendAboutToRemove(int index, const QVector<Substate::Entity *> &items) override {       \
         sendAboutToRemoveHelper(index, items);                                                     \
     }                                                                                              \
     void sendRemoved(int index, int count) override {                                              \

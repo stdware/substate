@@ -3,6 +3,7 @@
 
 #include <substate/node.h>
 #include <substate/engine.h>
+#include <substate/property.h>
 
 namespace Substate {
 
@@ -23,6 +24,8 @@ namespace Substate {
         static void propagateEngine(Node *node, Engine *engine);
 
         static void forceDelete(Node *node);
+
+        static inline Variant &getVariant(Property &prop);
     };
 
     inline NodePrivate *NodeHelper::get(Node *node) {
@@ -35,6 +38,10 @@ namespace Substate {
 
     inline void NodeHelper::propagateNode(Node *node, const std::function<void(Node *)> &func) {
         node->propagate(func);
+    }
+
+    Variant &NodeHelper::getVariant(Property &prop) {
+        return std::get<Variant>(prop.var);
     }
 
 }

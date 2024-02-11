@@ -1,5 +1,5 @@
-#ifndef QSUBSTATE_GLOBAL_H
-#define QSUBSTATE_GLOBAL_H
+#ifndef QSUBSTATEGLOBAL_H
+#define QSUBSTATEGLOBAL_H
 
 #include <QtCore/QtGlobal>
 
@@ -23,4 +23,4 @@
 #  define QSUBSTATE_USED     __attribute__((used))
 #endif
 
-#endif // QSUBSTATE_GLOBAL_H
+#endif // QSUBSTATEGLOBAL_H

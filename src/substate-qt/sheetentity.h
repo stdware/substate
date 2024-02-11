@@ -20,6 +20,7 @@ namespace Substate {
         bool removeImpl(Entity *item);
         Entity *valueImpl(int id) const;
         int indexOfImpl(Entity *item) const;
+        QList<int> idsImpl() const;
         int sizeImpl() const;
 
     protected:
@@ -29,7 +30,6 @@ namespace Substate {
 
     protected:
         SheetEntityBase(Node *node, QObject *parent = nullptr);
-        SheetEntityBase(SheetEntityBasePrivate &d, QObject *parent = nullptr);
     };
 
     class SheetEntityBasePrivate;
@@ -55,6 +55,10 @@ namespace Substate {
 
         int indexOf(T *item) const {
             return static_cast<const Container *>(this)->indexOfImpl(item);
+        }
+
+        QList<int> ids() const {
+            return static_cast<const Container *>(this)->idsImpl();
         }
 
         int size() const {
@@ -86,15 +90,15 @@ Q_SIGNALS:                                                                      
     void removed(int id, T *item);                                                                 \
                                                                                                    \
 protected:                                                                                         \
-    inline void sendInserted(int id, ::Substate::Entity *item) {                                   \
+    inline void sendInserted(int id, Substate::Entity *item) {                                     \
         sendInsertedHelper(id, item);                                                              \
     }                                                                                              \
                                                                                                    \
-    inline void sendAboutToRemove(int id, ::Substate::Entity *item) {                              \
+    inline void sendAboutToRemove(int id, Substate::Entity *item) {                                \
         sendAboutToRemoveHelper(id, item);                                                         \
     }                                                                                              \
                                                                                                    \
-    inline void sendRemoved(int id, ::Substate::Entity *item) {                                    \
+    inline void sendRemoved(int id, Substate::Entity *item) {                                      \
         sendRemovedHelper(id, item);                                                               \
     }
 

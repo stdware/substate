@@ -20,8 +20,8 @@ namespace Substate {
 
     public:
         Property property(const std::string &key) const;
-        void setProperty(const std::string &key, const Property &value);
-        inline void clearProperty(const std::string &key);
+        bool setProperty(const std::string &key, const Property &value);
+        inline bool clearProperty(const std::string &key);
         bool remove(Node *node);
         std::string indexOf(Node *node) const;
         std::vector<std::string> keys() const;
@@ -48,7 +48,7 @@ namespace Substate {
         friend class MappingAction;
     };
 
-    inline void MappingNode::clearProperty(const std::string &key) {
+    inline bool MappingNode::clearProperty(const std::string &key) {
         return setProperty(key, {});
     }
 
