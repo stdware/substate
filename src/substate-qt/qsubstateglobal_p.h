@@ -1,7 +1,7 @@
 #ifndef QSUBSTATEGLOBAL_P_H
 #define QSUBSTATEGLOBAL_P_H
 
-#include <QVariant>
+#include <QtCore/QVariant>
 
 #include <substate/stream.h>
 

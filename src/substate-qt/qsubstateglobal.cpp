@@ -1,6 +1,6 @@
 #include "qsubstateglobal_p.h"
 
-#include <QDataStream>
+#include <QtCore/QDataStream>
 
 #include <substate/variant.h>
 

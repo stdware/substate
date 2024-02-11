@@ -1,6 +1,8 @@
 #ifndef MAPPINGENTITY_H
 #define MAPPINGENTITY_H
 
+#include <QtCore/QByteArray>
+
 #include <qsubstate/entity.h>
 
 namespace Substate {
