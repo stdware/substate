@@ -3,7 +3,7 @@
 
 #include <QtCore/QtGlobal>
 
-#ifdef QSUBQSTATE_STATIC
+#ifdef QSUBSTATE_STATIC
 #  define QSUBSTATE_EXPORT
 #else
 #  ifdef QSUBSTATE_LIBRARY
