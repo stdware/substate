@@ -1,6 +1,7 @@
 #ifndef VECTORENTITY_H
 #define VECTORENTITY_H
 
+#include <substate/vectornode.h>
 #include <qsubstate/entity.h>
 #include <qsubstate/arrayentity.h>
 
@@ -95,7 +96,7 @@ namespace Substate {
     };
 
 #define Q_SUBSTATE_DECLARE_VECTOR(Container, T)                                                    \
-    friend class VectorEntityHelper<Container, T>;                                                 \
+    friend class Substate::VectorEntityHelper<Container, T>;                                       \
                                                                                                    \
 Q_SIGNALS:                                                                                         \
     void inserted(int index, const QVector<T *> &items);                                           \
@@ -105,7 +106,7 @@ Q_SIGNALS:                                                                      
     void removed(int index, int count);                                                            \
                                                                                                    \
 protected:                                                                                         \
-    void sendInserted(int index, const QVector<Substate::Entity *> &items) override {            \
+    void sendInserted(int index, const QVector<Substate::Entity *> &items) override {              \
         sendInsertedHelper(index, items);                                                          \
     }                                                                                              \
     void sendAboutToMove(int index, int count, int dest) override {                                \
@@ -114,23 +115,30 @@ protected:                                                                      
     void sendMoved(int index, int count, int dest) override {                                      \
         sendMovedHelper(index, count, dest);                                                       \
     }                                                                                              \
-    void sendAboutToRemove(int index, const QVector<Substate::Entity *> &items) override {       \
+    void sendAboutToRemove(int index, const QVector<Substate::Entity *> &items) override {         \
         sendAboutToRemoveHelper(index, items);                                                     \
     }                                                                                              \
     void sendRemoved(int index, int count) override {                                              \
         sendRemovedHelper(index, count);                                                           \
     }
 
-    class QSUBSTATE_EXPORT TestVectorEntity
-        : public VectorEntityBase,
-          public VectorEntityHelper<TestVectorEntity, Int8ArrayEntity> {
-        Q_OBJECT
-        Q_SUBSTATE_DECLARE_VECTOR(TestVectorEntity, Int8ArrayEntity)
-    protected:
-        inline TestVectorEntity(Node *node, QObject *parent = nullptr)
-            : VectorEntityBase(node, parent) {
-        }
+#define Q_SUBSTATE_DECLARE_VECTOR_CLASS(Container, T)                                              \
+    class Container : public Substate::VectorEntityBase,                                           \
+                      public Substate::VectorEntityHelper<Container, T> {                          \
+        Q_OBJECT                                                                                   \
+        Q_SUBSTATE_DECLARE_VECTOR(Container, T)                                                    \
+    public:                                                                                        \
+        explicit Container(QObject *parent = nullptr)                                              \
+            : Container(new Substate::VectorNode(), parent) {                                      \
+        }                                                                                          \
+                                                                                                   \
+    protected:                                                                                     \
+        inline explicit Container(Node *node, QObject *parent = nullptr)                           \
+            : Substate::VectorEntityBase(node, parent) {                                           \
+        }                                                                                          \
     };
+
+    Q_SUBSTATE_DECLARE_VECTOR_CLASS(TestVectorEntity, Int8ArrayEntity)
 
 }
 

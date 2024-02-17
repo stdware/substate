@@ -14,23 +14,20 @@ namespace Substate {
         ~StructEntityBase();
 
     protected:
-        struct Value {
-            bool is_variant;
-            union {
-                Entity *item;
-                const QVariant *variant;
-            };
-        };
-
         Value valueImpl(int i) const;
         bool setValueImpl(int i, const Value &value);
+        inline bool setVariantImpl(int i, const QVariant &var);
         int sizeImpl() const;
 
-        virtual void sendAssigned(int index, const Value &val, const Value &oldVal) = 0;
+        virtual void sendAssigned(int index, const Value &val, const Value &oldVal);
 
     protected:
         StructEntityBase(Node *node, QObject *parent = nullptr);
     };
+
+    inline bool StructEntityBase::setVariantImpl(int i, const QVariant &var) {
+        return setValueImpl(i, var);
+    }
 
 }
 

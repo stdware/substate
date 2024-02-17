@@ -104,10 +104,9 @@ namespace Substate {
         virtual ~NodeExtra();
 
         inline Node *internalData() const;
-
-    protected:
         void setInternalData(Node *node);
 
+    protected:
         virtual void notified(Notification *n) = 0;
 
     protected:

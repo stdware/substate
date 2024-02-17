@@ -113,6 +113,9 @@ namespace Substate {
         return static_cast<StructNode *>(d->internalData())->size();
     }
 
+    void StructEntityBase::sendAssigned(int index, const Value &val, const Value &oldVal) {
+    }
+
     StructEntityBase::StructEntityBase(Node *node, QObject *parent)
         : Entity(*new StructEntityBasePrivate(node), parent) {
     }

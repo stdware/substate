@@ -101,4 +101,35 @@ namespace Substate {
         d.init();
     }
 
+    Int8ArrayEntity::Int8ArrayEntity(QObject *parent) : Int8ArrayEntity(new BytesNode(), parent) {
+    }
+
+    UInt8ArrayEntity::UInt8ArrayEntity(QObject *parent)
+        : UInt8ArrayEntity(new BytesNode(), parent) {
+    }
+
+    Int16ArrayEntity::Int16ArrayEntity(QObject *parent)
+        : Int16ArrayEntity(new BytesNode(), parent) {
+    }
+
+    UInt16ArrayEntity::UInt16ArrayEntity(QObject *parent)
+        : UInt16ArrayEntity(new BytesNode(), parent) {
+    }
+
+    Int32ArrayEntity::Int32ArrayEntity(QObject *parent)
+        : Int32ArrayEntity(new BytesNode(), parent) {
+    }
+
+    UInt32ArrayEntity::UInt32ArrayEntity(QObject *parent)
+        : UInt32ArrayEntity(new BytesNode(), parent) {
+    }
+
+    Int64ArrayEntity::Int64ArrayEntity(QObject *parent)
+        : Int64ArrayEntity(new BytesNode(), parent) {
+    }
+
+    UInt64ArrayEntity::UInt64ArrayEntity(QObject *parent)
+        : UInt64ArrayEntity(new BytesNode(), parent) {
+    }
+
 }

@@ -7,10 +7,6 @@ if(MSVC)
     list(APPEND _cxx_flags "/Zc:preprocessor")
 endif()
 
-# Set language options
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED on)
-
 # Add library
 if(SUBSTATE_BUILD_STATIC)
     add_library(${PROJECT_NAME} STATIC)
@@ -24,6 +20,8 @@ else()
         )
     endif()
 endif()
+
+target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 
 # Configure target
 add_library(substate::${PROJECT_NAME} ALIAS ${PROJECT_NAME})

@@ -90,7 +90,7 @@ namespace Substate {
             static_cast<MappingNodePrivate *>(NodeHelper::get(d->internalData()))->mapping;
         auto it = map.find(key.toStdString());
         if (it == map.end())
-            return {false, nullptr};
+            return {};
 
         auto &prop = it->second;
 
@@ -131,6 +131,10 @@ namespace Substate {
     int MappingEntityBase::sizeImpl() const {
         Q_D(const MappingEntityBase);
         return static_cast<MappingNode *>(d->internalData())->size();
+    }
+
+    void MappingEntityBase::sendInserted(const QByteArray &key, const Value &val,
+                                         const Value &oldVal) {
     }
 
     MappingEntityBase::MappingEntityBase(Node *node, QObject *parent)

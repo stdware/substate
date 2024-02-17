@@ -4,11 +4,10 @@
 #include <QObject>
 #include <QVariant>
 
+#include <substate/node.h>
 #include <qsubstate/qsubstateglobal.h>
 
 namespace Substate {
-
-    class Node;
 
     class EntityPrivate;
 
@@ -18,7 +17,7 @@ namespace Substate {
     public:
         ~Entity();
 
-        using Factory = Entity *(*) (Node *node);
+        using Factory = Entity *(*) (Node *node, QObject *parent);
 
         static void registerFactory(const std::string &key, Factory fac);
         static void removeFactory(const std::string &key);
@@ -27,6 +26,30 @@ namespace Substate {
 
     public:
         Node *internalData() const;
+
+    protected:
+        struct Value {
+            bool is_variant;
+            union {
+                Entity *item;
+                const QVariant *variant;
+            };
+
+            inline Value() : is_variant(false) {
+                item = nullptr;
+            }
+
+            inline Value(const QVariant &var) : is_variant(true) {
+                variant = &var;
+            }
+
+            inline Value(Entity *item) : is_variant(false) {
+                this->item = item;
+            }
+        };
+
+        QVariant dynamicDataImpl(const QByteArray &key) const;
+        void setDynamicDataImpl(const QByteArray &key, const QVariant &value);
 
     protected:
         Entity(EntityPrivate &d, QObject *parent = nullptr);

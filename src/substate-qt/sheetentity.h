@@ -1,6 +1,7 @@
 #ifndef SHEETENTITY_H
 #define SHEETENTITY_H
 
+#include <substate/sheetnode.h>
 #include <qsubstate/entity.h>
 #include <qsubstate/arrayentity.h>
 
@@ -82,7 +83,7 @@ namespace Substate {
     };
 
 #define Q_SUBSTATE_DECLARE_SHEET(Container, T)                                                     \
-    friend class SheetEntityHelper<Container, T>;                                                  \
+    friend class Substate::SheetEntityHelper<Container, T>;                                        \
                                                                                                    \
 Q_SIGNALS:                                                                                         \
     void inserted(int id, T *item);                                                                \
@@ -102,16 +103,23 @@ protected:                                                                      
         sendRemovedHelper(id, item);                                                               \
     }
 
-    class QSUBSTATE_EXPORT TestSheetEntity
-        : public SheetEntityBase,
-          public SheetEntityHelper<TestSheetEntity, Int8ArrayEntity> {
-        Q_OBJECT
-        Q_SUBSTATE_DECLARE_SHEET(TestSheetEntity, Int8ArrayEntity)
-    protected:
-        inline TestSheetEntity(Node *node, QObject *parent = nullptr)
-            : SheetEntityBase(node, parent) {
-        }
+#define Q_SUBSTATE_DECLARE_SHEET_CLASS(Container, T)                                               \
+    class Container : public Substate::SheetEntityBase,                                            \
+                      public Substate::SheetEntityHelper<Container, T> {                           \
+        Q_OBJECT                                                                                   \
+        Q_SUBSTATE_DECLARE_SHEET(Container, T)                                                     \
+    public:                                                                                        \
+        explicit Container(QObject *parent = nullptr)                                              \
+            : Container(new Substate::SheetNode(), parent) {                                       \
+        }                                                                                          \
+                                                                                                   \
+    protected:                                                                                     \
+        inline explicit Container(Substate::Node *node, QObject *parent = nullptr)                 \
+            : Substate::SheetEntityBase(node, parent) {                                            \
+        }                                                                                          \
     };
+
+    Q_SUBSTATE_DECLARE_SHEET_CLASS(TestSheetEntity, Int8ArrayEntity)
 
 }
 

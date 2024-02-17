@@ -5,6 +5,8 @@
 
 #include <substate/nodehelper.h>
 
+#include "qsubstateglobal_p.h"
+
 namespace Substate {
 
     static std::shared_mutex factoryLock;
@@ -49,7 +51,7 @@ namespace Substate {
     }
 
     Entity *Entity::createEntity(Node *node) {
-        return getFactory(node->dynamicData(entity_dyn_key).toString())(node);
+        return getFactory(node->dynamicData(entity_dyn_key).toString())(node, nullptr);
     }
 
     Entity *Entity::extractEntity(Node *node) {
@@ -59,6 +61,16 @@ namespace Substate {
     Node *Entity::internalData() const {
         Q_D(const Entity);
         return d->internalData();
+    }
+
+    QVariant Entity::dynamicDataImpl(const QByteArray &key) const {
+        Q_D(const Entity);
+        return d->internalData()->dynamicData(key.toStdString()).value<QVariant>();
+    }
+
+    void Entity::setDynamicDataImpl(const QByteArray &key, const QVariant &value) {
+        Q_D(Entity);
+        d->internalData()->dynamicData(key.toStdString()).setValue(value);
     }
 
     Entity::Entity(EntityPrivate &d, QObject *parent) : QObject(parent), d_ptr(&d) {

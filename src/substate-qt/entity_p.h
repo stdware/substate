@@ -7,7 +7,7 @@
 
 namespace Substate {
 
-    extern const std::string entity_dyn_key;
+    QSUBSTATE_EXPORT extern const std::string entity_dyn_key;
 
     class QSUBSTATE_EXPORT EntityPrivate : public NodeExtra {
         Q_DECLARE_PUBLIC(Entity)
@@ -17,6 +17,14 @@ namespace Substate {
         void init();
 
         Entity *q_ptr;
+
+        static EntityPrivate *get(Entity *q) {
+            return q->d_func();
+        }
+
+        static const EntityPrivate *get(const Entity *q) {
+            return q->d_func();
+        }
     };
 
 }
