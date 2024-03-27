@@ -27,7 +27,7 @@ target_compile_features(${PROJECT_NAME} PUBLIC cxx_std_17)
 add_library(substate::${PROJECT_NAME} ALIAS ${PROJECT_NAME})
 qm_configure_target(${PROJECT_NAME}
     SOURCES ${_src}
-    INCLUDE_PRIVATE .
+    INCLUDE_PRIVATE *
     CCFLAGS ${_cxx_flags}
     LINKS qmsetup::library
 )
