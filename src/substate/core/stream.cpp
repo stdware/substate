@@ -1,5 +1,6 @@
 #include "stream.h"
 
+#include <cstdint>
 #include <sstream>
 
 namespace Substate {

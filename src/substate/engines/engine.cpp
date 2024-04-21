@@ -1,6 +1,8 @@
 #include "engine.h"
 #include "engine_p.h"
 
+#include <utility>
+
 #include "model/nodehelper.h"
 #include "model/model_p.h"
 
