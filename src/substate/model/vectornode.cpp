@@ -33,7 +33,8 @@ namespace Substate {
         std::copy(tmp.begin(), tmp.end(), arr.begin() + correctDest);
     }
 
-    VectorNodePrivate::VectorNodePrivate(int type) : NodePrivate(type) {
+    VectorNodePrivate::VectorNodePrivate(const std::string &name)
+        : NodePrivate(Node::Vector, name) {
     }
 
     VectorNodePrivate::~VectorNodePrivate() {
@@ -46,7 +47,12 @@ namespace Substate {
     }
 
     VectorNode *VectorNodePrivate::read(IStream &stream) {
-        auto node = new VectorNode();
+        std::string name;
+        stream >> name;
+        if (stream.fail())
+            return nullptr;
+
+        auto node = new VectorNode(name);
         auto d = node->d_func();
 
         int size;
@@ -183,7 +189,7 @@ namespace Substate {
         return a;
     }
 
-    VectorNode::VectorNode() : VectorNode(*new VectorNodePrivate(Vector)) {
+    VectorNode::VectorNode(const std::string &name) : VectorNode(*new VectorNodePrivate(name)) {
     }
 
     VectorNode::~VectorNode() {
@@ -286,8 +292,8 @@ namespace Substate {
     void VectorNode::write(OStream &stream) const {
         QM_D(const VectorNode);
 
-        // Write index
-        stream << d->index;
+        // Write name and index
+        stream << d->name << d->index;
 
         // Write children
         stream << int(d->vector.size());
@@ -299,7 +305,7 @@ namespace Substate {
     Node *VectorNode::clone(bool user) const {
         QM_D(const VectorNode);
 
-        auto node = new VectorNode();
+        auto node = new VectorNode(d->name);
         auto d2 = node->d_func();
         if (!user)
             d2->index = d->index;
@@ -442,8 +448,7 @@ namespace Substate {
                 return;
             }
             case DeferredReferenceHook: {
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
-                {
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent) {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.reserve(m_children.size());
                     for (auto &child : m_children) {

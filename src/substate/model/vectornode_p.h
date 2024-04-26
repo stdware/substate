@@ -9,7 +9,7 @@ namespace Substate {
     class SUBSTATE_EXPORT VectorNodePrivate : public NodePrivate {
         QMSETUP_DECL_PUBLIC(VectorNode)
     public:
-        VectorNodePrivate(int type);
+        VectorNodePrivate(const std::string &name);
         ~VectorNodePrivate();
         void init();
 

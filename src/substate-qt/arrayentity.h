@@ -142,6 +142,7 @@ protected:                                                                      
         Q_SUBSTATE_DECLARE_ARRAY(Int16ArrayEntity, qint16)
     public:
         explicit Int16ArrayEntity(QObject *parent = nullptr);
+
     protected:
         inline Int16ArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
@@ -212,6 +213,32 @@ protected:                                                                      
 
     protected:
         inline UInt64ArrayEntity(Node *node, QObject *parent = nullptr)
+            : ArrayEntityBase(node, parent) {
+        }
+    };
+
+    class QSUBSTATE_EXPORT FloatArrayEntity : public ArrayEntityBase,
+                                              public ArrayEntityHelper<FloatArrayEntity, float> {
+        Q_OBJECT
+        Q_SUBSTATE_DECLARE_ARRAY(FloatArrayEntity, float)
+    public:
+        explicit FloatArrayEntity(QObject *parent = nullptr);
+
+    protected:
+        inline FloatArrayEntity(Node *node, QObject *parent = nullptr)
+            : ArrayEntityBase(node, parent) {
+        }
+    };
+
+    class QSUBSTATE_EXPORT DoubleArrayEntity : public ArrayEntityBase,
+                                               public ArrayEntityHelper<DoubleArrayEntity, double> {
+        Q_OBJECT
+        Q_SUBSTATE_DECLARE_ARRAY(DoubleArrayEntity, double)
+    public:
+        explicit DoubleArrayEntity(QObject *parent = nullptr);
+
+    protected:
+        inline DoubleArrayEntity(Node *node, QObject *parent = nullptr)
             : ArrayEntityBase(node, parent) {
         }
     };

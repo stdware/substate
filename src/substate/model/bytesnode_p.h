@@ -11,7 +11,7 @@ namespace Substate {
     class BytesNodePrivate : public NodePrivate {
         QMSETUP_DECL_PUBLIC(BytesNode)
     public:
-        BytesNodePrivate();
+        BytesNodePrivate(const std::string &name);
         ~BytesNodePrivate();
 
         static BytesNode *read(IStream &stream);

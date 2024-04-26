@@ -7,14 +7,19 @@
 
 namespace Substate {
 
-    BytesNodePrivate::BytesNodePrivate() : NodePrivate(Node::Bytes) {
+    BytesNodePrivate::BytesNodePrivate(const std::string &name) : NodePrivate(Node::Bytes, name) {
     }
 
     BytesNodePrivate::~BytesNodePrivate() {
     }
 
     BytesNode *BytesNodePrivate::read(IStream &stream) {
-        auto node = new BytesNode();
+        std::string name;
+        stream >> name;
+        if (stream.fail())
+            return nullptr;
+
+        auto node = new BytesNode(name);
         auto d = node->d_func();
 
         int size;
@@ -109,7 +114,7 @@ namespace Substate {
         return a;
     }
 
-    BytesNode::BytesNode() : Node(*new BytesNodePrivate()) {
+    BytesNode::BytesNode(const std::string &name) : Node(*new BytesNodePrivate(name)) {
     }
 
     BytesNode::~BytesNode() {
@@ -171,7 +176,7 @@ namespace Substate {
         QM_D(const BytesNode);
 
         // Write index
-        stream << d->index;
+        stream << d->name << d->index;
 
         // Write data
         stream << int(d->byteArray.size());
@@ -181,7 +186,7 @@ namespace Substate {
     Node *BytesNode::clone(bool user) const {
         QM_D(const BytesNode);
 
-        auto node = new BytesNode();
+        auto node = new BytesNode(d->name);
         auto d2 = node->d_func();
         if (!user)
             d2->index = d->index;

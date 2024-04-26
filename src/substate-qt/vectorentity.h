@@ -1,9 +1,7 @@
 #ifndef VECTORENTITY_H
 #define VECTORENTITY_H
 
-#include <substate/vectornode.h>
 #include <qsubstate/entity.h>
-#include <qsubstate/arrayentity.h>
 
 namespace Substate {
 
@@ -121,24 +119,6 @@ protected:                                                                      
     void sendRemoved(int index, int count) override {                                              \
         sendRemovedHelper(index, count);                                                           \
     }
-
-#define Q_SUBSTATE_DECLARE_VECTOR_CLASS(Container, T)                                              \
-    class Container : public Substate::VectorEntityBase,                                           \
-                      public Substate::VectorEntityHelper<Container, T> {                          \
-        Q_OBJECT                                                                                   \
-        Q_SUBSTATE_DECLARE_VECTOR(Container, T)                                                    \
-    public:                                                                                        \
-        explicit Container(QObject *parent = nullptr)                                              \
-            : Container(new Substate::VectorNode(), parent) {                                      \
-        }                                                                                          \
-                                                                                                   \
-    protected:                                                                                     \
-        inline explicit Container(Node *node, QObject *parent = nullptr)                           \
-            : Substate::VectorEntityBase(node, parent) {                                           \
-        }                                                                                          \
-    };
-
-    Q_SUBSTATE_DECLARE_VECTOR_CLASS(TestVectorEntity, Int8ArrayEntity)
 
 }
 

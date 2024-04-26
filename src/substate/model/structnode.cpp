@@ -7,7 +7,8 @@
 
 namespace Substate {
 
-    StructNodePrivate::StructNodePrivate(int type, int size) : NodePrivate(type) {
+    StructNodePrivate::StructNodePrivate(const std::string &name, int size)
+        : NodePrivate(Node::Struct, name) {
         array.resize(size);
     }
 
@@ -21,13 +22,18 @@ namespace Substate {
     }
 
     StructNode *StructNodePrivate::read(IStream &stream) {
+        std::string name;
+        stream >> name;
+        if (stream.fail())
+            return nullptr;
+
         int size, index;
         stream >> index >> size;
         if (stream.fail()) {
             return nullptr;
         }
 
-        auto node = new StructNode(size);
+        auto node = new StructNode(name, size);
         auto d = node->d_func();
 
         d->index = index;
@@ -111,7 +117,8 @@ namespace Substate {
         return a;
     }
 
-    StructNode::StructNode(int size) : StructNode(*new StructNodePrivate(Struct, size)) {
+    StructNode::StructNode(const std::string &name, int size)
+        : StructNode(*new StructNodePrivate(name, size)) {
     }
 
     StructNode::~StructNode() {
@@ -176,13 +183,13 @@ namespace Substate {
 
     void StructNode::write(OStream &stream) const {
         QM_D(const StructNode);
-        stream << d->index << d->array;
+        stream << d->name << d->index << d->array;
     }
 
     Node *StructNode::clone(bool user) const {
         QM_D(const StructNode);
 
-        auto node = new StructNode(int(d->array.size()));
+        auto node = new StructNode(d->name, int(d->array.size()));
         auto d2 = node->d_func();
         if (!user)
             d2->index = d->index;

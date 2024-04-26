@@ -1,9 +1,7 @@
 #ifndef SHEETENTITY_H
 #define SHEETENTITY_H
 
-#include <substate/sheetnode.h>
 #include <qsubstate/entity.h>
-#include <qsubstate/arrayentity.h>
 
 namespace Substate {
 
@@ -102,24 +100,6 @@ protected:                                                                      
     inline void sendRemoved(int id, Substate::Entity *item) {                                      \
         sendRemovedHelper(id, item);                                                               \
     }
-
-#define Q_SUBSTATE_DECLARE_SHEET_CLASS(Container, T)                                               \
-    class Container : public Substate::SheetEntityBase,                                            \
-                      public Substate::SheetEntityHelper<Container, T> {                           \
-        Q_OBJECT                                                                                   \
-        Q_SUBSTATE_DECLARE_SHEET(Container, T)                                                     \
-    public:                                                                                        \
-        explicit Container(QObject *parent = nullptr)                                              \
-            : Container(new Substate::SheetNode(), parent) {                                       \
-        }                                                                                          \
-                                                                                                   \
-    protected:                                                                                     \
-        inline explicit Container(Substate::Node *node, QObject *parent = nullptr)                 \
-            : Substate::SheetEntityBase(node, parent) {                                            \
-        }                                                                                          \
-    };
-
-    Q_SUBSTATE_DECLARE_SHEET_CLASS(TestSheetEntity, Int8ArrayEntity)
 
 }
 

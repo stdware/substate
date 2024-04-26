@@ -22,8 +22,6 @@ namespace Substate {
         return it->second;
     }
 
-    const std::string entity_dyn_key = "_q_substate_entity_type";
-
     EntityPrivate::EntityPrivate(Node *node) : NodeExtra(node) {
     }
 
@@ -51,7 +49,7 @@ namespace Substate {
     }
 
     Entity *Entity::createEntity(Node *node) {
-        return getFactory(node->dynamicData(entity_dyn_key).toString())(node, nullptr);
+        return getFactory(node->name())(node, nullptr);
     }
 
     Entity *Entity::extractEntity(Node *node) {

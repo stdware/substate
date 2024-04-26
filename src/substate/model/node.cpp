@@ -32,7 +32,7 @@ namespace Substate {
 
     // static int g_cnt = 0;
 
-    NodePrivate::NodePrivate(int type) : type(type) {
+    NodePrivate::NodePrivate(int type, const std::string &name) : type(type) {
         // printf("+ %d\n", ++g_cnt);
     }
 
@@ -103,7 +103,7 @@ namespace Substate {
         return a;
     }
 
-    Node::Node(int type) : Node(*new NodePrivate(type)) {
+    Node::Node(int type, const std::string &name) : Node(*new NodePrivate(type, name)) {
     }
 
     Node::~Node() {
@@ -112,6 +112,11 @@ namespace Substate {
     int Node::type() const {
         QM_D(const Node);
         return d->type;
+    }
+
+    std::string Node::name() const {
+        QM_D(const Node);
+        return d->name;
     }
 
     Node *Node::parent() const {

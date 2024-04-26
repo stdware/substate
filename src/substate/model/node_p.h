@@ -12,11 +12,12 @@ namespace Substate {
     class SUBSTATE_EXPORT NodePrivate : public SenderPrivate {
         QMSETUP_DECL_PUBLIC(Node)
     public:
-        NodePrivate(int type);
+        NodePrivate(int type, const std::string &name);
         ~NodePrivate();
         void init();
 
         int type;
+        std::string name;
         Node *parent = nullptr;
 
         Engine *engine = nullptr;

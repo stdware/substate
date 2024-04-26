@@ -8,7 +8,8 @@
 
 namespace Substate {
 
-    MappingNodePrivate::MappingNodePrivate(int type) : NodePrivate(type) {
+    MappingNodePrivate::MappingNodePrivate(const std::string &name)
+        : NodePrivate(Node::Mapping, name) {
     }
 
     MappingNodePrivate::~MappingNodePrivate() {
@@ -21,7 +22,12 @@ namespace Substate {
     }
 
     MappingNode *MappingNodePrivate::read(IStream &stream) {
-        auto node = new MappingNode();
+        std::string name;
+        stream >> name;
+        if (stream.fail())
+            return nullptr;
+
+        auto node = new MappingNode(name);
         auto d = node->d_func();
 
         stream >> d->index;
@@ -130,7 +136,7 @@ namespace Substate {
         return a;
     }
 
-    MappingNode::MappingNode() : Node(*new MappingNodePrivate(Mapping)) {
+    MappingNode::MappingNode(const std::string &name) : Node(*new MappingNodePrivate(name)) {
     }
 
     MappingNode::~MappingNode() {
@@ -203,13 +209,13 @@ namespace Substate {
 
     void MappingNode::write(OStream &stream) const {
         QM_D(const MappingNode);
-        stream << d->index << d->mapping;
+        stream << d->name << d->index << d->mapping;
     }
 
     Node *MappingNode::clone(bool user) const {
         QM_D(const MappingNode);
 
-        auto node = new MappingNode();
+        auto node = new MappingNode(d->name);
         auto d2 = node->d_func();
         if (!user)
             d2->index = d->index;

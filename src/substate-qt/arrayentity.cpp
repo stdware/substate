@@ -101,35 +101,44 @@ namespace Substate {
         d.init();
     }
 
-    Int8ArrayEntity::Int8ArrayEntity(QObject *parent) : Int8ArrayEntity(new BytesNode(), parent) {
+    Int8ArrayEntity::Int8ArrayEntity(QObject *parent)
+        : Int8ArrayEntity(new BytesNode("substate_int8_array"), parent) {
     }
 
     UInt8ArrayEntity::UInt8ArrayEntity(QObject *parent)
-        : UInt8ArrayEntity(new BytesNode(), parent) {
+        : UInt8ArrayEntity(new BytesNode("substate_uint8_array"), parent) {
     }
 
     Int16ArrayEntity::Int16ArrayEntity(QObject *parent)
-        : Int16ArrayEntity(new BytesNode(), parent) {
+        : Int16ArrayEntity(new BytesNode("substate_int16_array"), parent) {
     }
 
     UInt16ArrayEntity::UInt16ArrayEntity(QObject *parent)
-        : UInt16ArrayEntity(new BytesNode(), parent) {
+        : UInt16ArrayEntity(new BytesNode("substate_uint16_array"), parent) {
     }
 
     Int32ArrayEntity::Int32ArrayEntity(QObject *parent)
-        : Int32ArrayEntity(new BytesNode(), parent) {
+        : Int32ArrayEntity(new BytesNode("substate_int32_array"), parent) {
     }
 
     UInt32ArrayEntity::UInt32ArrayEntity(QObject *parent)
-        : UInt32ArrayEntity(new BytesNode(), parent) {
+        : UInt32ArrayEntity(new BytesNode("substate_uint32_array"), parent) {
     }
 
     Int64ArrayEntity::Int64ArrayEntity(QObject *parent)
-        : Int64ArrayEntity(new BytesNode(), parent) {
+        : Int64ArrayEntity(new BytesNode("substate_int64_array"), parent) {
     }
 
     UInt64ArrayEntity::UInt64ArrayEntity(QObject *parent)
-        : UInt64ArrayEntity(new BytesNode(), parent) {
+        : UInt64ArrayEntity(new BytesNode("substate_uint64_array"), parent) {
+    }
+
+    FloatArrayEntity::FloatArrayEntity(QObject *parent)
+        : FloatArrayEntity(new BytesNode("substate_float_array"), parent) {
+    }
+
+    DoubleArrayEntity::DoubleArrayEntity(QObject *parent)
+        : DoubleArrayEntity(new BytesNode("substate_double_array"), parent) {
     }
 
 }

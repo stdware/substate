@@ -9,7 +9,7 @@ namespace Substate {
     class SUBSTATE_EXPORT MappingNodePrivate : public NodePrivate {
         QMSETUP_DECL_PUBLIC(MappingNode)
     public:
-        MappingNodePrivate(int type);
+        MappingNodePrivate(const std::string &name);
         ~MappingNodePrivate();
         void init();
 

@@ -7,8 +7,6 @@
 
 namespace Substate {
 
-    QSUBSTATE_EXPORT extern const std::string entity_dyn_key;
-
     class QSUBSTATE_EXPORT EntityPrivate : public NodeExtra {
         Q_DECLARE_PUBLIC(Entity)
     public:

@@ -15,7 +15,7 @@ namespace Substate {
     class SUBSTATE_EXPORT SheetNode : public Node {
         QMSETUP_DECL_PRIVATE(SheetNode)
     public:
-        SheetNode();
+        SheetNode(const std::string &name);
         ~SheetNode();
 
     public:

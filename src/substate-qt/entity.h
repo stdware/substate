@@ -4,10 +4,11 @@
 #include <QObject>
 #include <QVariant>
 
-#include <substate/node.h>
 #include <qsubstate/qsubstateglobal.h>
 
 namespace Substate {
+
+    class Node;
 
     class EntityPrivate;
 

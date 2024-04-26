@@ -34,10 +34,11 @@ namespace Substate {
             User = 1024,
         };
 
-        explicit Node(int type);
+        explicit Node(int type, const std::string &name);
         ~Node();
 
         int type() const;
+        std::string name() const;
 
         typedef Node *(*Factory)(IStream &);
 

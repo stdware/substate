@@ -9,7 +9,7 @@
 
 namespace Substate {
 
-    SheetNodePrivate::SheetNodePrivate(int type) : NodePrivate(type) {
+    SheetNodePrivate::SheetNodePrivate(const std::string &name) : NodePrivate(Node::Sheet, name) {
     }
 
     SheetNodePrivate::~SheetNodePrivate() {
@@ -22,7 +22,12 @@ namespace Substate {
     }
 
     SheetNode *SheetNodePrivate::read(IStream &stream) {
-        auto node = new SheetNode();
+        std::string name;
+        stream >> name;
+        if (stream.fail())
+            return nullptr;
+
+        auto node = new SheetNode(name);
         auto d = node->d_func();
 
         int size;
@@ -118,7 +123,7 @@ namespace Substate {
         return a;
     }
 
-    SheetNode::SheetNode() : SheetNode(*new SheetNodePrivate(Sheet)) {
+    SheetNode::SheetNode(const std::string &name) : SheetNode(*new SheetNodePrivate(name)) {
     }
 
     SheetNode::~SheetNode() {
@@ -211,8 +216,8 @@ namespace Substate {
 
     void SheetNode::write(OStream &stream) const {
         QM_D(const SheetNode);
-        // Write index
-        stream << d->index;
+        // Write name and index
+        stream << d->name << d->index;
 
         // Write children
         stream << int(d->records.size());
@@ -225,7 +230,7 @@ namespace Substate {
     Node *SheetNode::clone(bool user) const {
         QM_D(const SheetNode);
 
-        auto node = new SheetNode();
+        auto node = new SheetNode(d->name);
         auto d2 = node->d_func();
         if (!user)
             d2->index = d->index;
