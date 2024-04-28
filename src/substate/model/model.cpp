@@ -213,6 +213,14 @@ namespace Substate {
     }
 
     /*!
+       Returns the message of the given \a step.
+    */
+    Engine::StepMessage Model::stepMessage(int step) const {
+        QM_D(const Model);
+        return d->engine->stepMessage(step);
+    }
+
+    /*!
         Rollback to the previous step.
     */
     void Model::undo() {

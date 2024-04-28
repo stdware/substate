@@ -50,6 +50,8 @@ namespace Substate {
         void abortTransaction();
         void commitTransaction(const Engine::StepMessage &message);
 
+        Engine::StepMessage stepMessage(int step) const;
+
         void undo();
         void redo();
 
