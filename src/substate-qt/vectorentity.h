@@ -14,9 +14,9 @@ namespace Substate {
         ~VectorEntityBase();
 
     protected:
-        bool insertImpl(int index, const QVector<Entity *> &items);
-        bool moveImpl(int index, int count, int dest); // dest: destination index before move
-        bool removeImpl(int index, int count);
+        Q_INVOKABLE bool insertImpl(int index, const QVector<Entity *> &items);
+        Q_INVOKABLE bool moveImpl(int index, int count, int dest); // dest: dest index before move
+        Q_INVOKABLE bool removeImpl(int index, int count);
         Entity *atImpl(int index) const;
         int sizeImpl() const;
 

@@ -14,9 +14,9 @@ namespace Substate {
         ~SheetEntityBase();
 
     protected:
-        int insertImpl(Entity *item);
-        bool removeImpl(int id);
-        bool removeImpl(Entity *item);
+        Q_INVOKABLE int insertImpl(Entity *item);
+        Q_INVOKABLE bool removeImpl(int id);
+        Q_INVOKABLE bool removeImpl(Entity *item);
         Entity *valueImpl(int id) const;
         int indexOfImpl(Entity *item) const;
         QList<int> idsImpl() const;
