@@ -34,7 +34,7 @@ namespace Substate {
     template <class Container, class T>
     class VectorEntityHelper {
     public:
-        bool insert(int index, const std::vector<T *> &items) {
+        bool insert(int index, const QVector<T *> &items) {
             QVector<Entity *> newItems;
             newItems.reserve(items.size());
             for (const auto &item : items) {
