@@ -1,5 +1,6 @@
 #include "action.h"
 
+#include <mutex>
 #include <shared_mutex>
 
 #include "bytesnode_p.h"

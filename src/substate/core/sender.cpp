@@ -1,6 +1,8 @@
 #include "sender.h"
 #include "sender_p.h"
 
+#include <mutex>
+
 namespace Substate {
 
     SenderPrivate::SenderPrivate() {

@@ -1,6 +1,7 @@
 #include "entity.h"
 #include "entity_p.h"
 
+#include <mutex>
 #include <shared_mutex>
 
 #include <substate/nodehelper.h>
