@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <utility>
 
 #include "nodehelper.h"
 

@@ -2,6 +2,7 @@
 #include "structnode_p.h"
 
 #include <cassert>
+#include <utility>
 
 #include "nodehelper.h"
 

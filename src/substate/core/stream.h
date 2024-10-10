@@ -8,6 +8,7 @@
 #include <unordered_map>
 #include <iostream>
 #include <string>
+#include <cstdint>
 
 #include <substate/substateglobal.h>
 

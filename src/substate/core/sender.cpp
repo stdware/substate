@@ -2,6 +2,7 @@
 #include "sender_p.h"
 
 #include <mutex>
+#include <utility>
 
 namespace Substate {
 

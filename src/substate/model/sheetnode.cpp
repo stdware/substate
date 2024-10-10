@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <utility>
 
 #include "substateglobal_p.h"
 #include "nodehelper.h"

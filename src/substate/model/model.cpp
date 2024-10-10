@@ -2,6 +2,7 @@
 #include "model_p.h"
 
 #include <cassert>
+#include <utility>
 
 #include "node_p.h"
 #include "engines/memengine.h"
