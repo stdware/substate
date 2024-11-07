@@ -10,6 +10,7 @@
 namespace Substate {
 
     // Move item inside the array
+    // TODO: use std::rotate
     template <class T>
     static void arrayMove(std::vector<T> &arr, int index, int count, int dest) {
         std::vector<T> tmp;
