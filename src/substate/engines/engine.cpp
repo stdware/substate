@@ -3,6 +3,7 @@
 
 #include <utility>
 
+#include "substateglobal_p.h"
 #include "model/nodehelper.h"
 #include "model/model_p.h"
 

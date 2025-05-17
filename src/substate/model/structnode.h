@@ -10,7 +10,7 @@ namespace Substate {
     class StructNodePrivate;
 
     class SUBSTATE_EXPORT StructNode : public Node {
-        QMSETUP_DECL_PRIVATE(StructNode)
+        SUBSTATE_DECL_PRIVATE(StructNode)
     public:
         StructNode(const std::string &name, int size);
         ~StructNode();

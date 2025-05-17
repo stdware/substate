@@ -17,11 +17,9 @@ namespace Substate {
 
         auto buf = new char[size];
         memcpy(buf, data, size);
-        m_data.reset(buf);
+        m_data.reset(buf, std::default_delete<char[]>());
         m_size = size;
     }
-
-    ByteArray::~ByteArray() = default;
 
     bool ByteArray::operator==(const ByteArray &other) const {
         if (this == &other) {

@@ -10,7 +10,7 @@ namespace Substate {
     class FileSystemEnginePrivate;
 
     class SUBSTATE_EXPORT FileSystemEngine : public MemoryEngine {
-        QMSETUP_DECL_PRIVATE(FileSystemEngine)
+        SUBSTATE_DECL_PRIVATE(FileSystemEngine)
     public:
         FileSystemEngine();
         ~FileSystemEngine();

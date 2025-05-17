@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
 
     Model model(engine);
 
-    auto rootNode = new MappingNode();
+    auto rootNode = new MappingNode({});
     rootNode->setProperty("1", Variant("a"));
 
     model.beginTransaction();

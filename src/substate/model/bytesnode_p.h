@@ -9,7 +9,7 @@
 namespace Substate {
 
     class BytesNodePrivate : public NodePrivate {
-        QMSETUP_DECL_PUBLIC(BytesNode)
+        SUBSTATE_DECL_PUBLIC(BytesNode)
     public:
         BytesNodePrivate(const std::string &name);
         ~BytesNodePrivate();

@@ -44,7 +44,7 @@ namespace Substate {
             // The node is deleted by a wrong behavior in user code, the application must
             // abort otherwise the user data may be corrupted.
             if (!allowDelete) {
-                QMSETUP_FATAL("Deleting a managed item, crash now!!!");
+                SUBSTATE_FATAL("Deleting a managed item, crash now!!!");
             }
 
             // The node is deleted forcefully, which is possibly due to the following reasons.
@@ -354,8 +354,8 @@ namespace Substate {
                 return;
             }
             case DeferredReferenceHook: {
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, r, r)
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, oldr, oldr)
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, r, r);
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, oldr, oldr);
                 return;
             }
             default:

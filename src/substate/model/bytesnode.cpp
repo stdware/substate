@@ -126,7 +126,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayQueryArguments(index, d->byteArray.size()) || (!data || size == 0)) {
-            QMSETUP_WARNING("invalid parameters");
+            SUBSTATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -140,7 +140,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayRemoveArguments(index, size, d->byteArray.size()) || size == 0) {
-            QMSETUP_WARNING("invalid parameters");
+            SUBSTATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -154,7 +154,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayQueryArguments(index, d->byteArray.size()) || (!data || size == 0)) {
-            QMSETUP_WARNING("invalid parameters");
+            SUBSTATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -248,7 +248,7 @@ namespace Substate {
                 return;
             }
             case DeferredReferenceHook: {
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent);
                 return;
             }
             default:

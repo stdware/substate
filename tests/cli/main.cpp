@@ -406,7 +406,7 @@ namespace {
     void Environment::cmd_byte(const std::vector<std::string_view> &args) {
         auto &env = Environment::instance();
 
-        auto node = new BytesNode();
+        auto node = new BytesNode({});
         auto id = env.maxTempId--;
         env.tempItems.insert(std::make_pair(id, node));
         printf("Create new bytes node %d\n", id);
@@ -415,7 +415,7 @@ namespace {
     void Environment::cmd_vec(const std::vector<std::string_view> &args) {
         auto &env = Environment::instance();
 
-        auto node = new VectorNode();
+        auto node = new VectorNode({});
         auto id = env.maxTempId--;
         env.tempItems.insert(std::make_pair(id, node));
         printf("Create new vector node %d\n", id);
@@ -424,7 +424,7 @@ namespace {
     void Environment::cmd_map(const std::vector<std::string_view> &args) {
         auto &env = Environment::instance();
 
-        auto node = new MappingNode();
+        auto node = new MappingNode({});
         auto id = env.maxTempId--;
         env.tempItems.insert(std::make_pair(id, node));
         printf("Create new mapping node %d\n", id);
@@ -433,7 +433,7 @@ namespace {
     void Environment::cmd_sht(const std::vector<std::string_view> &args) {
         auto &env = Environment::instance();
 
-        auto node = new SheetNode();
+        auto node = new SheetNode({});
         auto id = env.maxTempId--;
         env.tempItems.insert(std::make_pair(id, node));
         printf("Create new sheet node %d\n", id);

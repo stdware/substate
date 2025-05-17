@@ -11,7 +11,6 @@ namespace Substate {
     public:
         inline ByteArray();
         ByteArray(const char *data, int size = -1);
-        ~ByteArray();
 
         inline const char *data() const;
         inline int size() const;

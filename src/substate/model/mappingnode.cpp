@@ -5,6 +5,7 @@
 #include <cassert>
 #include <utility>
 
+#include "substateglobal_p.h"
 #include "nodehelper.h"
 
 namespace Substate {
@@ -165,13 +166,13 @@ namespace Substate {
 
         // Validate
         if (!node) {
-            QMSETUP_WARNING("trying to remove a null node from %p", this);
+            SUBSTATE_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         auto it = d->mappingIndexes.find(node);
         if (it == d->mappingIndexes.end()) {
-            QMSETUP_WARNING("node %p is not the child of %p", node, this);
+            SUBSTATE_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 

@@ -141,16 +141,16 @@ namespace Substate {
                 return;
             }
             case DeferredReferenceHook: {
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent)
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent);
 
                 // Find new node
                 if (v.isNode()) {
-                    SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, v.node(), v)
+                    SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, v.node(), v);
                 }
 
                 // Find old node
                 if (oldv.isNode()) {
-                    SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, oldv.node(), oldv)
+                    SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, oldv.node(), oldv);
                 }
                 return;
             }

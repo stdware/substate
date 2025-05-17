@@ -3,6 +3,9 @@
 
 #include <unordered_map>
 
+#define QM_D(Class) Class##Private *const d = d_func()
+#define QM_Q(Class) Class *const q = q_func()
+
 #define SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(DATA, NODE, OUT)                                     \
     {                                                                                              \
         auto &map = *reinterpret_cast<const std::unordered_map<int, Node *> *>(DATA);              \
@@ -12,7 +15,7 @@
         } else {                                                                                   \
             auto it = map.find(idx);                                                               \
             if (it == map.end()) {                                                                 \
-                QMSETUP_FATAL("Deferred reference node of id %d not found", idx);                  \
+                SUBSTATE_FATAL("Deferred reference node of id %d not found", idx);                  \
             }                                                                                      \
             OUT = it->second;                                                                      \
         }                                                                                          \

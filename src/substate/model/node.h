@@ -23,7 +23,7 @@ namespace Substate {
     class NodePrivate;
 
     class SUBSTATE_EXPORT Node : public Sender {
-        QMSETUP_DECL_PRIVATE(Node)
+        SUBSTATE_DECL_PRIVATE(Node)
     public:
         enum Type {
             Bytes,

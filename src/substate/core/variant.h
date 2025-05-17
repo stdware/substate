@@ -188,7 +188,7 @@ namespace Substate {
     }
 
     inline Variant::Variant(Variant &&other) noexcept : d(other.d) {
-        other.d = Private();
+        other.d = {};
     }
 
     inline Variant &Variant::operator=(Variant &&other) noexcept {

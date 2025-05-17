@@ -4,6 +4,8 @@
 #include <mutex>
 #include <utility>
 
+#include "substateglobal_p.h"
+
 namespace Substate {
 
     SenderPrivate::SenderPrivate() {

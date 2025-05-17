@@ -3,6 +3,8 @@
 
 #include <utility>
 
+#include "substateglobal_p.h"
+
 namespace Substate {
 
     MemoryEnginePrivate::MemoryEnginePrivate() {
@@ -68,12 +70,12 @@ namespace Substate {
     void MemoryEngine::setPreservedSteps(int steps) {
         QM_D(MemoryEngine);
         if (d->model) {
-            QMSETUP_WARNING("changing engine parameters after setup is prohibited");
+            SUBSTATE_WARNING("changing engine parameters after setup is prohibited");
             return;
         }
 
         if (!d->acceptChangeMaxSteps(steps)) {
-            QMSETUP_WARNING("specified steps %d is too small", steps);
+            SUBSTATE_WARNING("specified steps %d is too small", steps);
             return;
         }
         d->maxSteps = steps;

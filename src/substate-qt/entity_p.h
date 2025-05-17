@@ -11,7 +11,8 @@ namespace Substate {
         Q_DECLARE_PUBLIC(Entity)
     public:
         EntityPrivate(Node *node);
-        virtual ~EntityPrivate();
+        ~EntityPrivate();
+
         void init();
 
         Entity *q_ptr;

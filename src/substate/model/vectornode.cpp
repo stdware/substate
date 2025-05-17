@@ -203,12 +203,12 @@ namespace Substate {
 
         // Validate
         if (!validateArrayQueryArguments(index, d->vector.size()) || nodes.empty()) {
-            QMSETUP_WARNING("invalid parameters");
+            SUBSTATE_WARNING("invalid parameters");
             return false;
         }
         for (const auto &node : nodes) {
             if (!d->testInsertable(node)) {
-                QMSETUP_WARNING("node %p is not able to be inserted", node);
+                SUBSTATE_WARNING("node %p is not able to be inserted", node);
                 return false;
             }
         }
@@ -225,7 +225,7 @@ namespace Substate {
         if (!validateArrayRemoveArguments(index, count, d->vector.size()) ||
             (dest >= index && dest <= index + count) // dest bound
         ) {
-            QMSETUP_WARNING("invalid parameters");
+            SUBSTATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -239,7 +239,7 @@ namespace Substate {
 
         // Validate
         if (!validateArrayRemoveArguments(index, count, d->vector.size())) {
-            QMSETUP_WARNING("invalid parameters");
+            SUBSTATE_WARNING("invalid parameters");
             return false;
         }
 
@@ -253,14 +253,14 @@ namespace Substate {
 
         // Validate
         if (!node) {
-            QMSETUP_WARNING("trying to remove a null node from %p", this);
+            SUBSTATE_WARNING("trying to remove a null node from %p", this);
             return false;
         }
 
         decltype(d->vector)::const_iterator it;
         if (node->parent() != this ||
             (it = std::find(d->vector.begin(), d->vector.end(), node)) == d->vector.end()) {
-            QMSETUP_WARNING("node %p is not the child of %p", node, this);
+            SUBSTATE_WARNING("node %p is not the child of %p", node, this);
             return false;
         }
 
@@ -450,11 +450,12 @@ namespace Substate {
                 return;
             }
             case DeferredReferenceHook: {
-                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent) {
+                SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, m_parent, m_parent);
+                {
                     auto &res = *reinterpret_cast<std::vector<Node *> *>(data);
                     res.reserve(m_children.size());
                     for (auto &child : m_children) {
-                        SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, child, child)
+                        SUBSTATE_FIND_DEFERRED_REFERENCE_NODE(data, child, child);
                     }
                 }
                 return;

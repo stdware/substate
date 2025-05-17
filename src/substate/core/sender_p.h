@@ -10,7 +10,7 @@
 namespace Substate {
 
     class SenderPrivate {
-        QMSETUP_DECL_PUBLIC(Sender)
+        SUBSTATE_DECL_PUBLIC(Sender)
     public:
         SenderPrivate();
         virtual ~SenderPrivate();

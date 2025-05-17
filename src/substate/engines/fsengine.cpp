@@ -133,7 +133,7 @@ namespace {
     inline void BaseProducer::pushTask(BaseTask *task, bool unshift) {
         QM_UNUSED(this)
 
-        QMSETUP_DEBUG("Push task %s", typeid(*task).name());
+        SUBSTATE_DEBUG("Push task %s", typeid(*task).name());
 
         taskManager->pushTask(task, unshift);
     }
@@ -344,7 +344,7 @@ namespace Substate {
             for (int i = 0; i < size; ++i) {
                 auto node = readNode(in);
                 if (!node) {
-                    QMSETUP_WARNING("Failed to read inserted when reading action.");
+                    SUBSTATE_WARNING("Failed to read inserted when reading action.");
                     return false;
                 }
 
@@ -356,7 +356,7 @@ namespace Substate {
         // Read action data
         auto action = Action::read(in);
         if (!action) {
-            QMSETUP_WARNING("Failed to read action.");
+            SUBSTATE_WARNING("Failed to read action.");
             return false;
         }
         in.align(DATA_ALIGN);
@@ -418,7 +418,7 @@ namespace Substate {
                 // Read root
                 root = readNode(in);
                 if (!root) {
-                    QMSETUP_WARNING("Failed to read root item.");
+                    SUBSTATE_WARNING("Failed to read root item.");
                     goto abort;
                 }
             }
@@ -434,7 +434,7 @@ namespace Substate {
             for (int i = 0; i < sz; ++i) {
                 auto item = readNode(in);
                 if (!item) {
-                    QMSETUP_WARNING("Failed to read one of the removed items.");
+                    SUBSTATE_WARNING("Failed to read one of the removed items.");
                     goto abort;
                 }
                 removedItems.push_back(item);
@@ -473,7 +473,7 @@ namespace Substate {
         }
 
         if (!in.good()) {
-            QMSETUP_WARNING("Read journal failed when reading positions.");
+            SUBSTATE_WARNING("Read journal failed when reading positions.");
             return false;
         }
 
@@ -804,7 +804,7 @@ namespace Substate {
                     }
                     IStream in(&file);
 
-                    QMSETUP_DEBUG("Read attributes at %d in journal %d.", step, num);
+                    SUBSTATE_DEBUG("Read attributes at %d in journal %d.", step, num);
 
                     int64_t pos0 = file.tellg();
 
@@ -914,7 +914,7 @@ namespace Substate {
 
     static bool checkDir_helper(const fs::path &dir) {
         if (dir.empty() || !fs::is_directory(dir)) {
-            QMSETUP_WARNING("%s: not a directory.", dir.string().data());
+            SUBSTATE_WARNING("%s: not a directory.", dir.string().data());
             return false;
         }
         return true;
@@ -1092,7 +1092,7 @@ namespace Substate {
                 // Remove tail
                 removeActions(2 * maxSteps, int(stack.size()));
 
-                QMSETUP_DEBUG(
+                SUBSTATE_DEBUG(
                     "Remove forward transactions, size=%d, min=%d, current=%d, stack_size=%d", size,
                     min, current, int(stack.size()));
             }
@@ -1105,7 +1105,7 @@ namespace Substate {
             min += maxSteps;
             current -= maxSteps;
 
-            QMSETUP_DEBUG(
+            SUBSTATE_DEBUG(
                 "Remove backward transactions, size=%d, min=%d, current=%d, stack_size=%d",
                 maxSteps, min, current, int(stack.size()));
         }
@@ -1211,7 +1211,7 @@ namespace Substate {
 
                 // Insert backward transactions
                 if (backward && backward->finished) {
-                    QMSETUP_DEBUG("Prepend backward transactions, size=%d",
+                    SUBSTATE_DEBUG("Prepend backward transactions, size=%d",
                                   int(backward->data.size()));
                     extractBackwardJournal(backward->data, backward->removedItems);
                     backward->del();
@@ -1245,7 +1245,7 @@ namespace Substate {
 
                 // Insert forward transactions
                 if (forward && forward->finished) {
-                    QMSETUP_DEBUG("Append backward transactions, size=%d",
+                    SUBSTATE_DEBUG("Append backward transactions, size=%d",
                                   int(forward->data.size()));
                     extractForwardJournal(forward->data, forward->insertedItems);
                     forward->del();
@@ -1356,7 +1356,7 @@ namespace Substate {
         }
 
         if (!createWarningFile(dir)) {
-            QMSETUP_WARNING("%s: create text failed, may need write permission.",
+            SUBSTATE_WARNING("%s: create text failed, may need write permission.",
                             dir.string().data());
             return false;
         }
@@ -1388,7 +1388,7 @@ namespace Substate {
             auto path = steps_path(dir);
             std::ifstream file(path, std::ios::binary);
             if (!file.is_open() || !readSteps(file)) {
-                QMSETUP_WARNING("Read steps file failed.");
+                SUBSTATE_WARNING("Read steps file failed.");
                 return false;
             }
         }
@@ -1406,7 +1406,7 @@ namespace Substate {
                 auto path = journal_path(dir, num);
                 std::fstream file(path, std::ios::binary | std::ios::in | std::ios::out);
                 if (!file.is_open()) {
-                    QMSETUP_WARNING("Read journal %d failed.", num);
+                    SUBSTATE_WARNING("Read journal %d failed.", num);
                     return false;
                 }
 
@@ -1416,7 +1416,7 @@ namespace Substate {
                 in >> cur;
 
                 if (cur != expected) {
-                    QMSETUP_WARNING("Journal step inconsistent, expected %lld, actual %lld.",
+                    SUBSTATE_WARNING("Journal step inconsistent, expected %lld, actual %lld.",
                                     expected, cur);
 
                     file.seekp(0);
@@ -1458,7 +1458,7 @@ namespace Substate {
             // Check existence
             for (int i = minNum; i <= maxNum; ++i) {
                 if (!truncateJournals(dir, i, true)) {
-                    QMSETUP_WARNING("Check checkpoint or journal failed at %d.", i);
+                    SUBSTATE_WARNING("Check checkpoint or journal failed at %d.", i);
                     return false;
                 }
             }
@@ -1479,7 +1479,7 @@ namespace Substate {
         int maxNum = std::max((fsMax - 1) / maxSteps, 0);
         int num = std::min((fsStep + maxSteps / 2 - 1) / maxSteps, maxNum);
 
-        QMSETUP_DEBUG("Restore, min=%d, max=%d, cur=%d", fsMin, fsMax, fsStep);
+        SUBSTATE_DEBUG("Restore, min=%d, max=%d, cur=%d", fsMin, fsMax, fsStep);
 
         Node *root = nullptr;
         std::vector<Node *> removedItems;
@@ -1492,26 +1492,26 @@ namespace Substate {
 
             // Read checkpoint
             {
-                QMSETUP_DEBUG("Read checkpoint %d", num);
+                SUBSTATE_DEBUG("Read checkpoint %d", num);
 
                 auto path = ckpt_path(dir, num);
                 std::ifstream file(path, std::ios::binary);
                 if (!file.is_open() ||
                     !readCheckPoint(file, &root, needBackward ? &removedItems : nullptr)) {
-                    QMSETUP_WARNING("Read checkpoint %d failed.", num);
+                    SUBSTATE_WARNING("Read checkpoint %d failed.", num);
                     return false;
                 }
             }
 
             // Read backward transactions
             if (needBackward) {
-                QMSETUP_DEBUG("Restore backward transactions %d", num - 1);
+                SUBSTATE_DEBUG("Restore backward transactions %d", num - 1);
 
                 auto path = journal_path(dir, num - 1);
                 std::ifstream file(path, std::ios::binary);
                 if (!file.is_open() ||
                     !readJournal(file, maxSteps, backwardData, true, insertedItems)) {
-                    QMSETUP_WARNING("Read journal %d failed.", num - 1);
+                    SUBSTATE_WARNING("Read journal %d failed.", num - 1);
                     goto failed;
                 }
             }
@@ -1519,13 +1519,13 @@ namespace Substate {
 
         {
             // Read forward transactions
-            QMSETUP_DEBUG("Restore forward transactions %d", num);
+            SUBSTATE_DEBUG("Restore forward transactions %d", num);
 
             auto path = journal_path(dir, num);
             std::ifstream file(path, std::ios::binary);
             if (!file.is_open() ||
                 !readJournal(file, maxSteps, forwardData, false, insertedItems)) {
-                QMSETUP_WARNING("Read journal %d failed.", num);
+                SUBSTATE_WARNING("Read journal %d failed.", num);
                 goto failed;
             }
         }

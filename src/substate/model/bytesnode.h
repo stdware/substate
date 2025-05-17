@@ -12,7 +12,7 @@ namespace Substate {
     class BytesNodePrivate;
 
     class SUBSTATE_EXPORT BytesNode : public Node {
-        QMSETUP_DECL_PRIVATE(BytesNode)
+        SUBSTATE_DECL_PRIVATE(BytesNode)
     public:
         BytesNode(const std::string &name);
         ~BytesNode();

@@ -8,7 +8,7 @@ namespace Substate {
     class MemoryEnginePrivate;
 
     class SUBSTATE_EXPORT MemoryEngine : public Engine {
-        QMSETUP_DECL_PRIVATE(MemoryEngine)
+        SUBSTATE_DECL_PRIVATE(MemoryEngine)
     public:
         MemoryEngine();
         ~MemoryEngine();

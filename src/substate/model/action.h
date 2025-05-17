@@ -59,9 +59,11 @@ namespace Substate {
         inline void writeWithType(OStream &stream) const;
 
     public:
+        // internal APIs, should not be called by user code
         void detach();
         void deferredReference(const std::unordered_map<int, Node *> &existingItems);
 
+    public:
         virtual void write(OStream &stream) const = 0;
         virtual Action *clone() const = 0;
         virtual void execute(bool undo) = 0;
@@ -71,7 +73,7 @@ namespace Substate {
         int t;
         int s;
 
-        QMSETUP_DISABLE_COPY_MOVE(Action)
+        SUBSTATE_DISABLE_COPY_MOVE(Action)
     };
 
     inline Action::Action(int type) : t(type), s(Normal) {

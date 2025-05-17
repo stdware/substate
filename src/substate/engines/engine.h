@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <map>
 
 #include <substate/action.h>
 #include <substate/node.h>
@@ -15,11 +16,11 @@ namespace Substate {
     class EnginePrivate;
 
     class SUBSTATE_EXPORT Engine {
-        QMSETUP_DECL_PRIVATE(Engine)
+        SUBSTATE_DECL_PRIVATE(Engine)
     public:
         virtual ~Engine();
 
-        using StepMessage = std::unordered_map<std::string, Variant>;
+        using StepMessage = std::map<std::string, Variant>;
 
     public:
         Model *model() const;
@@ -44,7 +45,7 @@ namespace Substate {
         friend class Node;
         friend class NodePrivate;
 
-        QMSETUP_DISABLE_COPY_MOVE(Engine)
+        SUBSTATE_DISABLE_COPY_MOVE(Engine)
     };
 
 }

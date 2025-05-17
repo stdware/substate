@@ -4,6 +4,7 @@
 #include <cassert>
 #include <utility>
 
+#include "substateglobal_p.h"
 #include "node_p.h"
 #include "engines/memengine.h"
 #include "nodehelper.h"
@@ -140,7 +141,7 @@ namespace Substate {
     void Model::reset() {
         QM_D(Model);
         if (d->state != Idle) {
-            QMSETUP_FATAL("Attempt to reset at an invalid state");
+            SUBSTATE_FATAL("Attempt to reset at an invalid state");
         }
 
         Notification n(Notification::AboutToReset);
@@ -157,7 +158,7 @@ namespace Substate {
     void Model::beginTransaction() {
         QM_D(Model);
         if (d->state != Idle) {
-            QMSETUP_FATAL("Attempt to begin a transaction at an invalid state");
+            SUBSTATE_FATAL("Attempt to begin a transaction at an invalid state");
         }
         d->state = Transaction;
 
@@ -172,7 +173,7 @@ namespace Substate {
     void Model::abortTransaction() {
         QM_D(Model);
         if (d->state != Transaction) {
-            QMSETUP_FATAL("Cannot abort the transaction without an ongoing transaction");
+            SUBSTATE_FATAL("Cannot abort the transaction without an ongoing transaction");
         }
 
         auto &stack = d->txActions;
@@ -197,7 +198,7 @@ namespace Substate {
     void Model::commitTransaction(const Engine::StepMessage &message) {
         QM_D(Model);
         if (d->state != Transaction) {
-            QMSETUP_FATAL("Cannot commit the transaction without an ongoing transaction");
+            SUBSTATE_FATAL("Cannot commit the transaction without an ongoing transaction");
         }
         if (d->txActions.empty()) {
             d->state = Idle;
@@ -227,7 +228,7 @@ namespace Substate {
     void Model::undo() {
         QM_D(Model);
         if (d->state != Idle) {
-            QMSETUP_FATAL("Attempt to undo at an invalid state");
+            SUBSTATE_FATAL("Attempt to undo at an invalid state");
         }
         d->state = Undo;
         d->engine->execute(true);
@@ -243,7 +244,7 @@ namespace Substate {
     void Model::redo() {
         QM_D(Model);
         if (d->state != Idle) {
-            QMSETUP_FATAL("Attempt to redo at an invalid state");
+            SUBSTATE_FATAL("Attempt to redo at an invalid state");
         }
         d->state = Redo;
         d->engine->execute(false);
