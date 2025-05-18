@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <sstream>
 
+#include "substateglobal_p.h"
+
 namespace Substate {
 
     template <class T>
@@ -100,6 +102,12 @@ namespace Substate {
         // Read string
         auto buf = new char[size];
         in->read(buf, size);
+
+        // align data size to DATA_ALIGN
+        if (int align = size % DATA_ALIGN; align > 0) {
+            skipRawData(DATA_ALIGN - align);
+        }
+
         if (in->good()) {
             s = std::string(buf, size);
         }
@@ -130,7 +138,7 @@ namespace Substate {
         }
 
         static const constexpr std::size_t blockSize = 8;
-        static const constexpr char buffer[blockSize] = {};
+        static const constexpr char buffer[blockSize] = {0};
 
         std::size_t fullBlocks = len / blockSize;
         std::size_t lastBlockSize = len % blockSize;
@@ -142,7 +150,7 @@ namespace Substate {
         }
 
         if (lastBlockSize > 0) {
-            out->write(buffer, std::streamsize(lastBlockSize));
+            out->write(buffer, lastBlockSize);
         }
         return int(out->tellp() - org);
     }
@@ -198,6 +206,11 @@ namespace Substate {
 
         // Write string
         out->write(s.data(), std::streamsize(s.size()));
+
+        // align data size to DATA_ALIGN
+        if (int align = s.size() % DATA_ALIGN; align > 0) {
+            skipRawData(DATA_ALIGN - align);
+        }
         return *this;
     }
     OStream &OStream::operator<<(const std::string &s) {

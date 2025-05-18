@@ -2,6 +2,8 @@
 
 #include <cstring>
 
+#include "substateglobal_p.h"
+
 namespace Substate {
 
     ByteArray::ByteArray(const char *data, int size) {
@@ -45,12 +47,18 @@ namespace Substate {
 
         auto buf = new char[size];
         stream.readRawData(buf, size);
+
+        // align data size to DATA_ALIGN
+        if (int align = size % DATA_ALIGN; align > 0) {
+            stream.skipRawData(DATA_ALIGN - align);
+        }
+
         if (stream.fail()) {
             delete[] buf;
             return stream;
         }
 
-        a.m_data.reset(buf);
+        a.m_data.reset(buf, std::default_delete<char[]>());
         a.m_size = size;
         return stream;
     }
@@ -59,6 +67,11 @@ namespace Substate {
         stream << a.m_size;
         if (a.m_size > 0) {
             stream.writeRawData(a.m_data.get(), a.m_size);
+        }
+
+        // align data size to DATA_ALIGN
+        if (int align = a.m_size % DATA_ALIGN; align > 0) {
+            stream.skipRawData(DATA_ALIGN - align);
         }
         return stream;
     }

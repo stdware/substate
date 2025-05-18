@@ -1,12 +1,24 @@
 #include "sender.h"
 #include "sender_p.h"
 
-#include <mutex>
+#include <array>
+#include <shared_mutex>
 #include <utility>
 
 #include "substateglobal_p.h"
 
 namespace Substate {
+
+    // ###FIXME: support multi-threading
+
+    // static std::array<std::shared_mutex, 131> senderLockPool;
+
+    /*!
+        \internal
+    */
+    // static inline std::shared_mutex &senderLock(const Sender *sender) {
+    //     return senderLockPool[uint32_t(uintptr_t(sender)) % senderLockPool.size()];
+    // }
 
     SenderPrivate::SenderPrivate() {
         is_clearing = false;
@@ -45,7 +57,7 @@ namespace Substate {
     void Sender::addSubscriber(Subscriber *sub) {
         QM_D(Sender);
 
-        std::unique_lock<std::shared_mutex> lock(d->shared_lock);
+        // std::unique_lock<std::shared_mutex> lock(senderLock(this));
 
         auto it = d->subscriberIndexes.find(sub);
         if (it != d->subscriberIndexes.end())
@@ -62,7 +74,7 @@ namespace Substate {
     void Sender::removeSubscriber(Subscriber *sub) {
         QM_D(Sender);
 
-        std::unique_lock<std::shared_mutex> lock(d->shared_lock);
+        // std::unique_lock<std::shared_mutex> lock(senderLock(this));
 
         auto it = d->subscriberIndexes.find(sub);
         if (it == d->subscriberIndexes.end())
@@ -87,16 +99,19 @@ namespace Substate {
     void Sender::dispatch(Notification *n) {
         QM_D(Sender);
 
-        decltype(d->subscribers) subs;
+        // decltype(d->subscribers) subs;
 
         // Make a copy
-        {
-            std::shared_lock<std::shared_mutex> lock(d->shared_lock);
-            subs = d->subscribers;
-        }
+        // {
+        //     std::shared_lock<std::shared_mutex> lock(senderLock(this));
+        //     subs = d->subscribers;
+        // }
 
-        // Notify
-        for (const auto &sub : std::as_const(subs)) {
+        // // Notify
+        // for (const auto &sub : std::as_const(subs)) {
+        //     sub->notified(n);
+        // }
+        for (const auto &sub : std::as_const(d->subscribers)) {
             sub->notified(n);
         }
     }

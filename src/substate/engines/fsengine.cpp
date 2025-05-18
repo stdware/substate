@@ -11,26 +11,37 @@
 #include <thread>
 #include <utility>
 #include <stdexcept>
+#include <cassert>
 
 #include "substateglobal_p.h"
-#include "model/nodehelper.h"
-#include "model/model_p.h"
-
-#define BINARY_FILE_SUFFIX ".dat"
-#define WARNING_FILE_NAME  "WARNING.txt"
-#define WARNING_FILE_CONTENT                                                                       \
-    "This directory contains the binary log files of the current editing project, you can remove " \
-    "the whole directory, but do not delete or change any file in the directory, otherwise it "    \
-    "may cause crash!"
-
-#define CKPT_SIGN        "CKPT"
-#define ACTION_SIGN      "ACT "
-#define NODE_SIGN        "NODE"
-#define TRANSACTION_SIGN "TXX "
-
-static constexpr const int DATA_ALIGN = 4;
+#include "nodehelper.h"
+#include "model.h"
 
 namespace fs = std::filesystem;
+
+namespace Substate {
+
+    static constexpr const char WARNING_FILE_NAME[] = "WARNING.txt";
+
+    static constexpr const char WARNING_FILE_CONTENT[] =
+        R"([WARNING]
+
+This directory contains the binary log files of the current editing project, you can remove
+the whole directory, but do not delete or change any file in the directory, otherwise it
+may cause crash!
+)";
+
+    static constexpr const char CKPT_SIGN[] = "CKPT";
+
+    static constexpr const char ACTION_SIGN[] = "ACT ";
+
+    static constexpr const char NODE_SIGN[] = "NODE";
+
+    static constexpr const char TRANSACTION_SIGN[] = "TXX ";
+
+}
+
+#define BINARY_FILE_SUFFIX ".dat"
 
 namespace {
 
@@ -46,7 +57,7 @@ namespace {
         virtual ~BaseTask();
 
         inline void abort();
-        inline void del();          // Call delete only
+        inline void del(); // Call delete only
 
         virtual void execute() = 0; // May need to check if obsolete and need to delete?
 
@@ -85,8 +96,9 @@ namespace {
 
         std::mutex mtx;
         std::condition_variable cv;
-        std::thread *workThread;
-        static inline std::list<BaseTask *> task_queue;
+        std::unique_ptr<std::thread> workThread;
+
+        std::list<BaseTask *> task_queue;
     };
 
     BaseTask::BaseTask(bool deleteOnFinish)
@@ -139,14 +151,14 @@ namespace {
     }
 
     TaskManager::TaskManager()
-        : finished(false), workThread(new std::thread(&TaskManager::workRoutine, this)) {
+        : finished(false),
+          workThread(std::make_unique<std::thread>(&TaskManager::workRoutine, this)) {
     }
 
     TaskManager::~TaskManager() {
         finished = true;
         cv.notify_all();
         workThread->join(); // Wait for finish
-        delete workThread;
     }
 
     void TaskManager::pushTask(BaseTask *task, bool unshift) {
@@ -202,7 +214,7 @@ namespace {
  *
  */
 
-/* Checkpoint data (ckpt_XXX.dat)
+/* Checkpoint data (ckpt_<num>.dat)
  *
  * 0x0          CKPT
  * 0x4          removed items pos
@@ -213,7 +225,7 @@ namespace {
  *
  */
 
-/* Transaction data (journal_XXX.dat)
+/* Transaction data (journal_<num>.dat)
  *
  * 0x8              max entries
  * 0x10             entry 1
@@ -324,6 +336,8 @@ namespace Substate {
         out.align(DATA_ALIGN);
     }
 
+    // If read in non-brief mode, the inserted items will be read first and appended to
+    // the "insertedItems" map.
     static bool readAction(std::istream &file, Action *&a, bool brief,
                            std::unordered_map<int, Node *> &insertedItems) {
         IStream in(&file);
@@ -361,6 +375,10 @@ namespace Substate {
         }
         in.align(DATA_ALIGN);
         a = action;
+
+        // Note that the deserialized action now stores its node indexes instead of the node
+        // instances, need to be fixed by calling "deferredReference" later.
+
         return true;
     }
 
@@ -530,6 +548,8 @@ namespace Substate {
             }
 
             void execute() override {
+                assert(fsStep > 0);
+
                 int fsMax = fsStep;
 
                 // Write transaction
@@ -812,7 +832,7 @@ namespace Substate {
                     if (cur == 1) {
                         file.seekg((maxSteps + 2) * INT64_SIZE); // Data section start
                     } else {
-                        file.seekg((cur - 1) * INT64_SIZE);      // Previous transaction end
+                        file.seekg((cur - 1) * INT64_SIZE); // Previous transaction end
                         int64_t pos;
                         in >> pos;
                         file.seekg(pos);
@@ -982,6 +1002,7 @@ namespace Substate {
 
         if (finished) {
             // Remove journal
+            // TODO
         }
     }
 
@@ -1058,8 +1079,7 @@ namespace Substate {
         // Prepare deferred writing checkpoint task
         if (stack.size() == maxSteps) {
             std::vector<Node *> removedItems;
-            for (auto i = stack.size() - maxSteps; i != stack.size(); ++i) {
-                const auto &tx = stack.at(i);
+            for (const auto &tx : std::as_const(stack)) {
                 for (const auto &a : std::as_const(tx.actions)) {
                     a->virtual_hook(Action::RemovedNodesHook, &removedItems);
                 }
@@ -1193,7 +1213,7 @@ namespace Substate {
                 // Abort forward transactions reading task
                 d2->abortForwardReadTask();
 
-                // Need to read backward transactions from file system
+                // Need to read backward transactions from filesystem
                 if (!backward) {
                     int num = min / maxSteps - 1;
 
@@ -1212,7 +1232,7 @@ namespace Substate {
                 // Insert backward transactions
                 if (backward && backward->finished) {
                     SUBSTATE_DEBUG("Prepend backward transactions, size=%d",
-                                  int(backward->data.size()));
+                                   int(backward->data.size()));
                     extractBackwardJournal(backward->data, backward->removedItems);
                     backward->del();
                     backward = nullptr;
@@ -1228,7 +1248,7 @@ namespace Substate {
                 // Abort backward transactions reading task
                 d2->abortBackwardReadTask();
 
-                // Need to read forward transactions from file system
+                // Need to read forward transactions from filesystem
                 if (!forward) {
                     int num = int(min + stack.size()) / maxSteps;
                     forward = new ReadCkptTask(dir, num, false, maxSteps);
@@ -1246,7 +1266,7 @@ namespace Substate {
                 // Insert forward transactions
                 if (forward && forward->finished) {
                     SUBSTATE_DEBUG("Append backward transactions, size=%d",
-                                  int(forward->data.size()));
+                                   int(forward->data.size()));
                     extractForwardJournal(forward->data, forward->insertedItems);
                     forward->del();
                     forward = nullptr;
@@ -1282,7 +1302,7 @@ namespace Substate {
         if (current > maxSteps * 1.5)
             d2->abortBackwardReadTask();
 
-        // Add write checkpoint task
+        // Add write checkpoint task if the task was created in prepare phase
         if (auto &writeCkptTask = d2->write_task; writeCkptTask) {
             d2->pushTask(writeCkptTask);
             writeCkptTask = nullptr;
@@ -1357,7 +1377,7 @@ namespace Substate {
 
         if (!createWarningFile(dir)) {
             SUBSTATE_WARNING("%s: create text failed, may need write permission.",
-                            dir.string().data());
+                             dir.string().data());
             return false;
         }
 
@@ -1417,7 +1437,7 @@ namespace Substate {
 
                 if (cur != expected) {
                     SUBSTATE_WARNING("Journal step inconsistent, expected %lld, actual %lld.",
-                                    expected, cur);
+                                     expected, cur);
 
                     file.seekp(0);
                     out << expected;
