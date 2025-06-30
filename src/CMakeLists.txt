@@ -1,54 +1,57 @@
-set(SUBSTATE_PROJECT_DESCRIPTION "Crash Consistent Undo Framework")
-set(SUBSTATE_PROJECT_COPYRIGHT "Copyright (C) 2022-2024 Stdware Collections")
+function(substate_add_library _target)
+    string(TOUPPER ${_target} _target_upper)
 
-# ----------------------------------
-# Main Project
-# ----------------------------------
-add_subdirectory(substate)
-
-if(SUBSTATE_BUILD_QT_TARGETS)
-    add_subdirectory(substate-qt)
-endif()
-
-# ----------------------------------
-# Documentation
-# ----------------------------------
-if(SUBSTATE_BUILD_DOCUMENTATIONS)
-    if(NOT DOXYGEN_EXECUTABLE)
-        find_package(Doxygen REQUIRED)
+    if(SUBSTATE_BUILD_STATIC OR(NOT SUBSTATE_BUILD_SHARED AND NOT BUILD_SHARED_LIBS))
+        add_library(${_target} STATIC)
+        target_compile_definitions(${_target} PUBLIC ${_target_upper}_STATIC)
+    else()
+        add_library(${_target} SHARED)
     endif()
 
-    set(_install_options)
+    add_library(${SUBSTATE_INSTALL_NAME}::${_target} ALIAS ${_target})
+
+    target_compile_definitions(${_target} PRIVATE ${_target_upper}_LIBRARY)
+    target_include_directories(${_target} INTERFACE
+        $<BUILD_INTERFACE:${SUBSTATE_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+    )
+    target_include_directories(${_target} PRIVATE
+        ${SUBSTATE_SOURCE_DIR}/include
+        ${SUBSTATE_SOURCE_DIR}/include/${_target}
+        src/${_target}
+    )
+
+    target_compile_features(${_target} PUBLIC cxx_std_17)
+    set_target_properties(${_target} PROPERTIES
+        CXX_STANDARD 17
+        CXX_STANDARD_REQUIRED ON
+    )
+
+    # Add platform specific
+    if(WIN32)
+        set(RC_DESCRIPTION "Crash Consistent Undo Framework")
+        set(RC_COPYRIGHT "Copyright (C) 2022-2025 Stdware Collections")
+        include("${SUBSTATE_SOURCE_DIR}/cmake/winrc.cmake")
+    endif()
 
     if(SUBSTATE_INSTALL)
-        set(_install_options INSTALL_DIR share/doc/${SUBSTATE_INSTALL_NAME})
+        install(TARGETS ${_target}
+            EXPORT ${SUBSTATE_INSTALL_NAME}Targets
+            RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}" OPTIONAL
+            LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}" OPTIONAL
+            ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}" OPTIONAL
+            COMPONENT ${_target}
+        )
     endif()
 
-    set(_doc_targets substate)
+    if(NOT WIN32)
+        target_link_libraries(${_target} PRIVATE dl)
+        target_link_options(${_target} PRIVATE -Wl,-z,defs)
+    endif()
+endfunction()
 
-    set(SUBSTATE_DOXYGEN_TAGFILE ${CMAKE_BUILD_SHARE_DIR}/doc/${SUBSTATE_INSTALL_NAME}/substate_tagfile.xml
-        CACHE FILEPATH "substate doxygen tag file path" FORCE
-    )
+add_subdirectory(substate)
 
-    qm_import(Doxygen)
-    qm_setup_doxygen(substate_RunDoxygen
-        NAME "Substate"
-        DESCRIPTION "${SUBSTATE_PROJECT_DESCRIPTION}"
-        MDFILE ../README.md
-        OUTPUT_DIR ${CMAKE_BUILD_SHARE_DIR}/doc/${SUBSTATE_INSTALL_NAME}
-        INPUT substate
-        TARGETS ${_doc_targets}
-        DEPENDS ${_doc_targets}
-        NO_EXPAND_MACROS Q_OBJECT Q_GADGET Q_DECLARE_TR_FUNCTIONS
-        COMPILE_DEFINITIONS Q_SIGNALS=Q_SIGNALS Q_SLOTS=Q_SLOTS QMSETUP_DECL_EXPORT= QMSETUP_DECL_IMPORT=
-        GENERATE_TAGFILE "${SUBSTATE_DOXYGEN_TAGFILE}"
-        ${_install_options}
-    )
-endif()
-
-# ----------------------------------
-# Install
-# ----------------------------------
 if(SUBSTATE_INSTALL)
     # Add install target
     set(_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/${SUBSTATE_INSTALL_NAME})
@@ -80,5 +83,10 @@ if(SUBSTATE_INSTALL)
         FILE "${SUBSTATE_INSTALL_NAME}Targets.cmake"
         NAMESPACE substate::
         DESTINATION ${_install_dir}
+    )
+
+    install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../include
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+        FILES_MATCHING PATTERN "*.h"
     )
 endif()
