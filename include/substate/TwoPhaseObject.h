@@ -1,8 +1,12 @@
+// Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef SUBSTATE_TWOPHASEOBJECT_H
 #define SUBSTATE_TWOPHASEOBJECT_H
 
 #include <type_traits>
 #include <cassert>
+#include <utility>
 
 namespace ss {
 

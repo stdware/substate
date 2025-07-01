@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <algorithm>
+#include <utility>
 
 #include "Node_p.h"
 

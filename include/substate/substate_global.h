@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef SUBSTATE_SUBSTATE_GLOBAL_H
 #define SUBSTATE_SUBSTATE_GLOBAL_H
 

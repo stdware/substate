@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef SUBSTATE_ACTION_H
 #define SUBSTATE_ACTION_H
 
@@ -6,7 +9,6 @@
 #include <iostream>
 
 #include <substate/Notification.h>
-#include <substate/TwoPhaseObject.h>
 #include <substate/Node.h>
 
 namespace ss {

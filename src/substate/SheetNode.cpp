@@ -2,6 +2,7 @@
 #include "SheetNode_p.h"
 
 #include <cassert>
+#include <utility>
 
 #include "Node_p.h"
 

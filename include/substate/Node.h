@@ -1,3 +1,6 @@
+// Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
+// SPDX-License-Identifier: Apache-2.0
+
 #ifndef SUBSTATE_NODE_H
 #define SUBSTATE_NODE_H
 
@@ -151,7 +154,7 @@ namespace ss {
 
         inline std::ostream &out() const;
 
-        virtual void witeOne(const std::shared_ptr<Node> &node) const = 0;
+        virtual void writeOne(const std::shared_ptr<Node> &node) const = 0;
 
     protected:
         std::ostream &_out;
