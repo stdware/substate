@@ -4,71 +4,73 @@
 #include <vector>
 
 #include <substate/Node.h>
+#include <substate/Action.h>
 #include <substate/ArrayView.h>
 
 namespace ss {
 
+    class VectorNodePrivate;
+
+    /// VectorNode - Vector data structure node.
     class SUBSTATE_EXPORT VectorNode : public Node {
     public:
-        inline explicit VectorNode(int classType);
+        inline VectorNode(int type = Vector);
         ~VectorNode();
 
     public:
-        inline bool prepend(const std::shared_ptr<Node> &node);
-        inline bool prepend(const ArrayView<std::shared_ptr<Node>> &nodes);
-        inline bool append(const std::shared_ptr<Node> &node);
-        inline bool append(const ArrayView<std::shared_ptr<Node>> &nodes);
-        inline bool insert(int index, const std::shared_ptr<Node> &node);
-        inline bool removeOne(int index);
-        bool insert(int index, const ArrayView<std::shared_ptr<Node>> &nodes);
-        bool move(int index, int count, int dest);         // dest: destination index before move
-        inline bool move2(int index, int count, int dest); // dest: destination index after move
-        bool remove(int index, int count);
+        inline void prepend(const std::shared_ptr<Node> &node);
+        inline void prepend(const ArrayView<std::shared_ptr<Node>> &nodes);
+        inline void append(const std::shared_ptr<Node> &node);
+        inline void append(const ArrayView<std::shared_ptr<Node>> &nodes);
+        inline void insert(int index, const std::shared_ptr<Node> &node);
+        inline void removeOne(int index);
+        void insert(int index, const ArrayView<std::shared_ptr<Node>> &nodes);
+        void move(int index, int count, int dest);         // dest: destination index before move
+        inline void move2(int index, int count, int dest); // dest: destination index after move
+        void remove(int index, int count);
         inline std::shared_ptr<Node> at(int index) const;
         inline ArrayView<std::shared_ptr<Node>> data() const;
         inline int count() const;
         inline int size() const;
-
-    public:
-        void write(std::ostream &os) const override;
-        void read(std::istream &is, NodeReader &nr) override;
 
     protected:
         std::shared_ptr<Node> clone(bool copyId) const override;
         void propagateChildren(const std::function<void(Node *)> &func) override;
 
         std::vector<std::shared_ptr<Node>> _vec;
+
+        friend class VectorNodePrivate;
     };
 
-    inline VectorNode::VectorNode(int classType) : Node(Vector, classType) {
+    inline VectorNode::VectorNode(int type) : Node(type) {
     }
 
-    inline bool VectorNode::prepend(const std::shared_ptr<Node> &node) {
-        return insert(0, node);
+    inline void VectorNode::prepend(const std::shared_ptr<Node> &node) {
+        insert(0, node);
     }
 
-    inline bool VectorNode::prepend(const ArrayView<std::shared_ptr<Node>> &nodes) {
-        return insert(0, nodes);
+    inline void VectorNode::prepend(const ArrayView<std::shared_ptr<Node>> &nodes) {
+        insert(0, nodes);
     }
 
-    inline bool VectorNode::append(const std::shared_ptr<Node> &node) {
-        return insert(size(), node);
+    inline void VectorNode::append(const std::shared_ptr<Node> &node) {
+        insert(size(), node);
     }
 
-    inline bool VectorNode::append(const ArrayView<std::shared_ptr<Node>> &nodes) {
-        return insert(size(), nodes);
+    inline void VectorNode::append(const ArrayView<std::shared_ptr<Node>> &nodes) {
+        insert(size(), nodes);
     }
 
-    inline bool VectorNode::insert(int index, const std::shared_ptr<Node> &node) {
-        return insert(index, ArrayView<std::shared_ptr<Node>>(node));
+    inline void VectorNode::insert(int index, const std::shared_ptr<Node> &node) {
+        insert(index, ArrayView<std::shared_ptr<Node>>(node));
     }
 
-    inline bool VectorNode::removeOne(int index) {
-        return remove(index, 1);
+    inline void VectorNode::removeOne(int index) {
+        remove(index, 1);
     }
 
-    inline bool VectorNode::move2(int index, int count, int dest) {
-        return move(index, count, (dest <= index) ? dest : (dest + count));
+    inline void VectorNode::move2(int index, int count, int dest) {
+        move(index, count, (dest <= index) ? dest : (dest + count));
     }
 
     inline std::shared_ptr<Node> VectorNode::at(int index) const {
@@ -85,6 +87,94 @@ namespace ss {
 
     inline int VectorNode::size() const {
         return int(_vec.size());
+    }
+
+
+    /// VectorAction - Action for \c VectorNode operations.
+    class VectorAction : public NodeAction {
+    public:
+        inline VectorAction(Type type, const std::shared_ptr<Node> &parent, int index);
+        ~VectorAction() = default;
+
+    public:
+        inline int index() const;
+
+    public:
+        int _index;
+    };
+
+    inline int VectorAction::index() const {
+        return _index;
+    }
+
+    inline VectorAction::VectorAction(Type type, const std::shared_ptr<Node> &parent, int index)
+        : NodeAction(type, parent), _index(index) {
+    }
+
+
+    /// VectorMoveAction - Action for \c VectorNode movement.
+    class SUBSTATE_EXPORT VectorMoveAction : public VectorAction {
+    public:
+        inline VectorMoveAction(const std::shared_ptr<Node> &parent, int index, int count,
+                                int dest);
+        ~VectorMoveAction() = default;
+
+    public:
+        std::unique_ptr<Action> clone(bool detach) const override;
+        void queryNodes(bool inserted,
+                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
+        void execute(bool undo) override;
+
+    public:
+        inline int count() const;
+        inline int destination() const;
+
+    protected:
+        int _count, _dest;
+    };
+
+    inline VectorMoveAction::VectorMoveAction(const std::shared_ptr<Node> &parent, int index,
+                                              int count, int dest)
+        : VectorAction(VectorMove, parent, index), _count(count), _dest(dest) {
+    }
+
+    inline int VectorMoveAction::count() const {
+        return _count;
+    }
+
+    inline int VectorMoveAction::destination() const {
+        return _dest;
+    }
+
+
+    /// VectorInsDelAction - Action for \c VectorNode insertion or deletion.
+    class SUBSTATE_EXPORT VectorInsDelAction : public VectorAction {
+    public:
+        inline VectorInsDelAction(Type type, const std::shared_ptr<Node> &parent, int index,
+                                  std::vector<std::shared_ptr<Node>> children);
+        ~VectorInsDelAction() = default;
+
+    public:
+        std::unique_ptr<Action> clone(bool detach) const override;
+        void queryNodes(bool inserted,
+                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
+        void execute(bool undo) override;
+
+    public:
+        inline ArrayView<std::shared_ptr<Node>> children() const;
+
+    protected:
+        std::vector<std::shared_ptr<Node>> _children;
+    };
+
+    inline VectorInsDelAction::VectorInsDelAction(Type type, const std::shared_ptr<Node> &parent,
+                                                  int index,
+                                                  std::vector<std::shared_ptr<Node>> children)
+        : VectorAction(type, parent, index), _children(std::move(children)) {
+    }
+
+    inline ArrayView<std::shared_ptr<Node>> VectorInsDelAction::children() const {
+        return _children;
     }
 
 }

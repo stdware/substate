@@ -6,8 +6,6 @@
 #include <iostream>
 
 #include <substate/Notification.h>
-#include <substate/Action.h>
-#include <substate/TwoPhaseObject.h>
 
 namespace ss {
 
@@ -17,15 +15,13 @@ namespace ss {
 
     class NodePrivate;
 
-    class NodeReader;
-
     /// Node - Document information storage unit.
-    /// \note The node should be created by \c std::make_shared or \c make_node instead of created
-    /// by direct construction.
+    /// \note The node should be created by \c std::make_shared instead of created by direct
+    /// construction.
     class SUBSTATE_EXPORT Node : public NotificationObserver,
                                  public std::enable_shared_from_this<Node> {
     public:
-        inline Node(int type, int classType);
+        inline Node(int type);
         ~Node();
 
         enum Type {
@@ -45,9 +41,8 @@ namespace ss {
         };
 
         inline int type() const;
-        inline int classType() const;
-        inline size_t id() const;
         inline State state() const;
+        inline size_t id() const;
         inline std::shared_ptr<Node> parent() const;
         inline Model *model() const;
 
@@ -60,18 +55,6 @@ namespace ss {
 
         /// Execute \a func on this node and all its children.
         inline void propagate(const std::function<void(Node *)> &func);
-
-        /// Serialize the node.
-        /// \note The \c type and \c classType should not be written, as they are used to determine
-        /// the constructor and already written by the caller.
-        virtual void write(std::ostream &os) const = 0;
-
-        /// Deserialize the node.
-        virtual void read(std::istream &is, NodeReader &nr) = 0;
-
-    public:
-        /// Serialize the action with the preceding \c type and \c classType enum.
-        static void write(Node &node, std::ostream &os);
 
     protected:
         void beginAction();
@@ -91,9 +74,8 @@ namespace ss {
 
     protected:
         int _type;
-        int _classType; // metadata
-        size_t _id = 0;
         State _state = Created;
+        size_t _id = 0;
         Node *_parent;
         Model *_model = nullptr;
 
@@ -102,23 +84,19 @@ namespace ss {
         friend class NodePrivate;
     };
 
-    inline Node::Node(int type, int classType) : _type(type), _classType(classType) {
+    inline Node::Node(int type) : _type(type) {
     }
 
     inline int Node::type() const {
         return _type;
     }
 
-    inline int Node::classType() const {
-        return _classType;
+    inline Node::State Node::state() const {
+        return _state;
     }
 
     inline size_t Node::id() const {
         return _id;
-    }
-
-    inline Node::State Node::state() const {
-        return _state;
     }
 
     inline std::shared_ptr<Node> Node::parent() const {
@@ -142,99 +120,49 @@ namespace ss {
         propagateChildren(func);
     }
 
-    /// Create a \c Node instance of type \c T with arguments \a args.
-    template <class T, class... Args>
-    std::shared_ptr<T> make_node(Args &&...args) {
-        static_assert(std::is_base_of<Node, T>::value, "T must derive from Node.");
-        return std::make_shared<T>(std::forward<Args>(args)...);
-    }
 
-    /// NodeAction - Base action for node change.
-    class SUBSTATE_EXPORT NodeAction : public Action {
+    /// NodeReader - Node deserialize interface.
+    class NodeReader {
     public:
-        inline NodeAction(int type, const std::shared_ptr<Node> &parent);
-        ~NodeAction();
-
-        void write(std::ostream &os) const override;
-
-        void read(std::istream &is) override;
-        void initialize(const std::function<std::shared_ptr<Node>(size_t /*id*/)> &find) override;
-
-        inline std::shared_ptr<Node> parent() const;
-
-    protected:
-        TwoPhaseObject<std::shared_ptr<Node>, size_t> _parent;
-    };
-
-    inline NodeAction::NodeAction(int type, const std::shared_ptr<Node> &parent)
-        : Action(type), _parent(parent) {
-    }
-
-    inline std::shared_ptr<Node> NodeAction::parent() const {
-        return _parent.value();
-    }
-
-    /// RootChangeAction - Action for model root change.
-    class SUBSTATE_EXPORT RootChangeAction : public Action {
-    public:
-        inline RootChangeAction(const std::shared_ptr<Node> &oldRoot,
-                                const std::shared_ptr<Node> &newRoot);
-        ~RootChangeAction();
-
-        std::unique_ptr<Action> clone(bool detach) const override;
-        void write(std::ostream &os) const override;
-        void queryNodes(bool inserted,
-                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
-        void execute(bool undo) override;
-
-        void read(std::istream &is) override;
-        void initialize(const std::function<std::shared_ptr<Node>(size_t /*id*/)> &find) override;
-
-    public:
-        inline std::shared_ptr<Node> root() const;
-        inline std::shared_ptr<Node> oldRoot() const;
-
-        /// For deserialization only.
-        static inline std::unique_ptr<RootChangeAction> allocate();
-
-    protected:
-        inline RootChangeAction();
-
-        TwoPhaseObject<std::shared_ptr<Node>, size_t> _oldRoot;
-        TwoPhaseObject<std::shared_ptr<Node>, size_t> _newRoot;
-    };
-
-    inline RootChangeAction::RootChangeAction(const std::shared_ptr<Node> &oldRoot,
-                                              const std::shared_ptr<Node> &newRoot)
-        : Action(Action::RootChange), _oldRoot(oldRoot), _newRoot(newRoot) {
-    }
-
-    inline std::shared_ptr<Node> RootChangeAction::root() const {
-        return _newRoot.value();
-    }
-
-    inline std::shared_ptr<Node> RootChangeAction::oldRoot() const {
-        return _oldRoot.value();
-    }
-
-    inline std::unique_ptr<RootChangeAction> RootChangeAction::allocate() {
-        return std::unique_ptr<RootChangeAction>(new RootChangeAction());
-    }
-
-    inline RootChangeAction::RootChangeAction()
-        : Action(Action::RootChange), _oldRoot(0), _newRoot(0) {
-    }
-
-    class SUBSTATE_EXPORT NodeReader {
-    public:
+        inline NodeReader(std::istream &is);
         virtual ~NodeReader() = default;
 
-        std::shared_ptr<Node> readNode(std::istream &is);
+        inline std::istream &in() const;
+
+        virtual std::shared_ptr<Node> readOne() const = 0;
 
     protected:
-        /// Returns a new node deserialized from \a is with the \a type and \a classType.
-        virtual std::shared_ptr<Node> readNode(int type, int classType, std::istream &is) const = 0;
+        std::istream &_in;
     };
+
+    inline NodeReader::NodeReader(std::istream &in) : _in(in) {
+    }
+
+    inline std::istream &NodeReader::in() const {
+        return _in;
+    }
+
+
+    /// NodeWriter - Node serialize interface.
+    class NodeWriter {
+    public:
+        inline NodeWriter(std::ostream &os);
+        virtual ~NodeWriter() = default;
+
+        inline std::ostream &out() const;
+
+        virtual void witeOne(const std::shared_ptr<Node> &node) const = 0;
+
+    protected:
+        std::ostream &_out;
+    };
+
+    inline NodeWriter::NodeWriter(std::ostream &os) : _out(os) {
+    }
+
+    inline std::ostream &NodeWriter::out() const {
+        return _out;
+    }
 
 }
 

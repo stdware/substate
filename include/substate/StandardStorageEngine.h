@@ -25,9 +25,6 @@ namespace ss {
         std::map<std::string, std::string> stepMessage(int step) const override;
 
     protected:
-        /// Determine if the given preserved step number is acceptable
-        virtual bool acceptChangeMaxSteps(int steps) const;
-
         int _maxSteps = 100; // Maximum number of actions kept in memory
         int _min = 0;        // Minimum step the engine can reach
         int _current = 0;    // Current index of undo stack

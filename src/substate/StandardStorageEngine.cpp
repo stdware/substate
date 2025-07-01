@@ -13,7 +13,7 @@ namespace ss {
             return;
         }
 
-        if (!acceptChangeMaxSteps(steps)) {
+        if (steps < 4) {
             return;
         }
         _maxSteps = steps;
@@ -27,9 +27,7 @@ namespace ss {
         }
 
         // Commit
-        std::vector<std::unique_ptr<Action>> tmpActions;
-        tmpActions.swap(actions);
-        _stack.emplace_back(std::vector<std::unique_ptr<Action>>(), message);
+        _stack.emplace_back(std::move(actions), message);
         _current++;
 
         // Post actions
@@ -98,10 +96,6 @@ namespace ss {
         if (step < 0 || step >= _stack.size())
             return {};
         return _stack.at(step).message;
-    }
-
-    bool StandardStorageEngine::acceptChangeMaxSteps(int steps) const {
-        return steps >= 100;
     }
 
 }

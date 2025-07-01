@@ -5,12 +5,16 @@
 #include <unordered_map>
 
 #include <substate/Node.h>
+#include <substate/Action.h>
 
 namespace ss {
 
+    class SheetNodePrivate;
+
+    /// SheetNode - Auto-incrementing ID map data structure.
     class SUBSTATE_EXPORT SheetNode : public Node {
     public:
-        inline explicit SheetNode(int classType);
+        inline explicit SheetNode(int type = Sheet);
         ~SheetNode();
 
     public:
@@ -21,31 +25,29 @@ namespace ss {
         inline int count() const;
         inline int size() const;
 
-    public:
-        void write(std::ostream &os) const override;
-        void read(std::istream &is, NodeReader &nr) override;
-
     protected:
         std::shared_ptr<Node> clone(bool copyId) const override;
         void propagateChildren(const std::function<void(Node *)> &func) override;
 
-        std::unordered_map<int, std::shared_ptr<Node>> _rec;
+        std::unordered_map<int, std::shared_ptr<Node>> _sheet;
         std::set<int> _idSet;
+
+        friend class SheetNodePrivate;
     };
 
-    inline SheetNode::SheetNode(int classType) : Node(Sheet, classType) {
+    inline SheetNode::SheetNode(int type) : Node(type) {
     }
 
     inline std::shared_ptr<Node> SheetNode::at(int id) const {
-        auto it = _rec.find(id);
-        if (it == _rec.end()) {
+        auto it = _sheet.find(id);
+        if (it == _sheet.end()) {
             return {};
         }
         return it->second;
     }
 
     inline const std::unordered_map<int, std::shared_ptr<Node>> &SheetNode::data() const {
-        return _rec;
+        return _sheet;
     }
 
     inline int SheetNode::count() const {
@@ -53,7 +55,43 @@ namespace ss {
     }
 
     inline int SheetNode::size() const {
-        return int(_rec.size());
+        return int(_sheet.size());
+    }
+
+
+    /// SheetAction - Action for \c SheetNode operations.
+    class SUBSTATE_EXPORT SheetAction : public NodeAction {
+    public:
+        inline SheetAction(Type type, const std::shared_ptr<Node> &parent, int id,
+                           const std::shared_ptr<Node> &child);
+        ~SheetAction() = default;
+
+    public:
+        std::unique_ptr<Action> clone(bool detach) const override;
+        void queryNodes(bool inserted,
+                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
+        void execute(bool undo) override;
+
+    public:
+        inline int id() const;
+        inline std::shared_ptr<Node> child() const;
+
+    protected:
+        int _id;
+        std::shared_ptr<Node> _child;
+    };
+
+    inline SheetAction::SheetAction(Type type, const std::shared_ptr<Node> &parent, int id,
+                                    const std::shared_ptr<Node> &child)
+        : NodeAction(type, parent), _id(id), _child(child) {
+    }
+
+    inline int SheetAction::id() const {
+        return _id;
+    }
+
+    inline std::shared_ptr<Node> SheetAction::child() const {
+        return _child;
     }
 
 }

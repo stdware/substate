@@ -6,10 +6,10 @@
 #include <iostream>
 
 #include <substate/Notification.h>
+#include <substate/TwoPhaseObject.h>
+#include <substate/Node.h>
 
 namespace ss {
-
-    class Node;
 
     class ActionReader;
 
@@ -28,12 +28,6 @@ namespace ss {
             User = 1024,
         };
 
-        enum State {
-            Allocated,
-            BeforeInitialize,
-            Initialized,
-        };
-
         /// Default constructor creates an invalid action.
         inline explicit Action(int type);
         virtual ~Action() = default;
@@ -50,11 +44,6 @@ namespace ss {
         /// \param detach If true, the associated nodes should be assigned as the cloned nodes.
         virtual std::unique_ptr<Action> clone(bool detach) const = 0;
 
-        /// Serialize the action to a stream.
-        /// \note The \c type should not be written, as they are used to determine the constructor
-        /// and already written by the caller.
-        virtual void write(std::ostream &os) const = 0;
-
         /// Query the nodes associated with the action.
         virtual void queryNodes( //
             bool inserted, const std::function<void(const std::shared_ptr<Node> &)> &add) = 0;
@@ -62,38 +51,75 @@ namespace ss {
         /// Undo or redo the action.
         virtual void execute(bool undo) = 0;
 
-        /// Read the action in \c Allocated state from a stream, and change to \c BeforeInitialize
-        /// state.
-        virtual void read(std::istream &is) = 0;
-
-        /// Initialize the action, and change to the \c Initialized state.
-        virtual void initialize( //
-            const std::function<std::shared_ptr<Node>(size_t /*id*/)> &find) = 0;
-
-    public:
-        /// Serialize the action with the preceding \c type enum.
-        SUBSTATE_EXPORT static void write(Action &action, std::ostream &os);
-
     protected:
         int _type;
-        int _state;
     };
 
-    inline Action::Action(int type) : _type(type), _state(Allocated) {
+    inline Action::Action(int type) : _type(type) {
     }
 
     inline int Action::type() const {
         return _type;
     }
 
-    inline int Action::state() const {
-        return _state;
+
+    /// NodeAction - Base action for node change.
+    class NodeAction : public Action {
+    public:
+        inline NodeAction(int type, const std::shared_ptr<Node> &parent);
+        ~NodeAction() = default;
+
+        inline std::shared_ptr<Node> parent() const;
+
+    protected:
+        std::shared_ptr<Node> _parent;
+    };
+
+    inline NodeAction::NodeAction(int type, const std::shared_ptr<Node> &parent)
+        : Action(type), _parent(parent) {
     }
 
-    inline void Action::setState(int state) {
-        _state = state;
+    inline std::shared_ptr<Node> NodeAction::parent() const {
+        return _parent;
     }
 
+
+    /// RootChangeAction - Action for model root change.
+    class SUBSTATE_EXPORT RootChangeAction : public Action {
+    public:
+        inline RootChangeAction(const std::shared_ptr<Node> &oldRoot,
+                                const std::shared_ptr<Node> &newRoot);
+        ~RootChangeAction() = default;
+
+        std::unique_ptr<Action> clone(bool detach) const override;
+        void queryNodes(bool inserted,
+                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
+        void execute(bool undo) override;
+
+    public:
+        inline std::shared_ptr<Node> root() const;
+        inline std::shared_ptr<Node> oldRoot() const;
+
+    protected:
+        std::shared_ptr<Node> _oldRoot;
+        std::shared_ptr<Node> _newRoot;
+    };
+
+    inline RootChangeAction::RootChangeAction(const std::shared_ptr<Node> &oldRoot,
+                                              const std::shared_ptr<Node> &newRoot)
+        : Action(Action::RootChange), _oldRoot(oldRoot), _newRoot(newRoot) {
+    }
+
+    inline std::shared_ptr<Node> RootChangeAction::root() const {
+        return _newRoot;
+    }
+
+    inline std::shared_ptr<Node> RootChangeAction::oldRoot() const {
+        return _oldRoot;
+    }
+
+
+    /// ActionNotification - Notification carrying an action.
     class ActionNotification : public Notification {
     public:
         inline ActionNotification(Type type, Action *action);
@@ -113,16 +139,49 @@ namespace ss {
         : Notification(type), _action(action) {
     }
 
-    class SUBSTATE_EXPORT ActionReader {
+
+    /// ActionReader - Action deserialize interface.
+    class ActionReader {
     public:
+        inline ActionReader(std::istream &is);
         virtual ~ActionReader() = default;
 
-        std::unique_ptr<Action> readAction(std::istream &is);
+        inline std::istream &in() const;
+
+        virtual std::shared_ptr<Action> readOne() const;
 
     protected:
-        /// Returns a new action deserialized from \a is with the \a type.
-        virtual std::unique_ptr<Action> readAction(int type, std::istream &is) const = 0;
+        std::istream &_in;
     };
+
+    inline ActionReader::ActionReader(std::istream &in) : _in(in) {
+    }
+
+    inline std::istream &ActionReader::in() const {
+        return _in;
+    }
+
+
+    /// ActionWriter - Node serialize interface.
+    class ActionWriter {
+    public:
+        inline ActionWriter(std::ostream &os);
+        virtual ~ActionWriter() = default;
+
+        inline std::ostream &out() const;
+
+        virtual void witeOne(const std::shared_ptr<Action> &action) const = 0;
+
+    protected:
+        std::ostream &_out;
+    };
+
+    inline ActionWriter::ActionWriter(std::ostream &os) : _out(os) {
+    }
+
+    inline std::ostream &ActionWriter::out() const {
+        return _out;
+    }
 
 }
 

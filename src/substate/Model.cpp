@@ -40,6 +40,7 @@ namespace ss {
 
     Model::Model(std::unique_ptr<StorageEngine> storageEngine)
         : _storageEngine(std::move(storageEngine)) {
+        _storageEngine->setup(this);
     }
 
     Model::~Model() {
@@ -108,9 +109,11 @@ namespace ss {
         }
 
         // Commit transaction to storage engine
-        std::vector<std::unique_ptr<Action>> actions;
-        actions.swap(_txActions);
-        _storageEngine->commit(std::move(actions), std::move(message));
+        {
+            std::vector<std::unique_ptr<Action>> actions;
+            actions.swap(_txActions);
+            _storageEngine->commit(std::move(actions), std::move(message));
+        }
 
         _state = Idle;
 
