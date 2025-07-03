@@ -33,11 +33,13 @@ namespace ss {
         return _type;
     }
 
-    class NotificationObserver {
+    class NotificationSubject {
     public:
-        virtual ~NotificationObserver() = default;
+        NotificationSubject() = default;
+        virtual ~NotificationSubject() = default;
 
-        virtual void notified(Notification *n) = 0;
+    protected:
+        virtual void notify(Notification *n) = 0;
     };
 
 }

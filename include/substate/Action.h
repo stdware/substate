@@ -18,33 +18,27 @@ namespace ss {
     class Action {
     public:
         enum Type {
-            BytesReplace = 1,
-            BytesInsert,
-            BytesRemove,
+            RootChange = 1,
             VectorInsert,
-            VectorMove,
             VectorRemove,
+            VectorMove,
             SheetInsert,
             SheetRemove,
-            RootChange,
-            User = 1024,
+            BytesReplace,
+            BytesInsert,
+            BytesRemove,
+            MappingAssign,
+            StructAssign,
         };
 
         /// Default constructor creates an invalid action.
         inline explicit Action(int type);
         virtual ~Action() = default;
 
-        Action(const Action &) = delete;
-        Action &operator=(const Action &) = delete;
-
         inline int type() const;
 
         inline int state() const;
         inline void setState(int state);
-
-        /// Clone the action.
-        /// \param detach If true, the associated nodes should be assigned as the cloned nodes.
-        virtual std::unique_ptr<Action> clone(bool detach) const = 0;
 
         /// Query the nodes associated with the action.
         virtual void queryNodes( //
@@ -93,7 +87,6 @@ namespace ss {
                                 const std::shared_ptr<Node> &newRoot);
         ~RootChangeAction() = default;
 
-        std::unique_ptr<Action> clone(bool detach) const override;
         void queryNodes(bool inserted,
                         const std::function<void(const std::shared_ptr<Node> &)> &add) override;
         void execute(bool undo) override;
@@ -124,20 +117,20 @@ namespace ss {
     /// ActionNotification - Notification carrying an action.
     class ActionNotification : public Notification {
     public:
-        inline ActionNotification(Type type, Action *action);
+        inline ActionNotification(Type type, const Action *action);
         ~ActionNotification() = default;
 
-        inline Action *action() const;
+        inline const Action *action() const;
 
     protected:
-        Action *_action;
+        const Action *_action;
     };
 
-    inline Action *ActionNotification::action() const {
+    inline const Action *ActionNotification::action() const {
         return _action;
     }
 
-    ActionNotification::ActionNotification(Type type, Action *action)
+    ActionNotification::ActionNotification(Type type, const Action *action)
         : Notification(type), _action(action) {
     }
 
@@ -172,7 +165,7 @@ namespace ss {
 
         inline std::ostream &out() const;
 
-        virtual void witeOne(const std::shared_ptr<Action> &action) const = 0;
+        virtual void writeOne(const std::shared_ptr<Action> &action) const = 0;
 
     protected:
         std::ostream &_out;

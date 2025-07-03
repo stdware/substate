@@ -76,12 +76,12 @@ namespace ss {
         (void) func;
     }
 
-    void Node::notified(Notification *n) {
+    void Node::notify(Notification *n) {
         switch (n->type()) {
             case Notification::ActionAboutToTrigger:
             case Notification::ActionTriggered: {
                 if (_model) {
-                    _model->notified(n);
+                    _model->notify(n);
                 }
                 break;
             }

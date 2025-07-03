@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <utility>
 
+#include "Model_p.h"
 #include "Node_p.h"
 
 namespace ss {
@@ -45,93 +46,6 @@ namespace ss {
         // }
     }
 
-    void VectorNodePrivate::insert_TX(VectorNode *q, int index,
-                                      const ArrayView<std::shared_ptr<Node>> &nodes) {
-        q->beginAction();
-
-        auto insertedVec = nodes.vec();
-        auto &vec = q->_vec;
-
-        VectorInsDelAction a(Action::VectorInsert, q->shared_from_this(), index, nodes.vec());
-
-        // Pre-Propagate
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            q->notified(&n);
-        }
-
-        // Do change
-        for (const auto &node : std::as_const(insertedVec)) {
-            q->addChild(node.get());
-        }
-        vec.insert(vec.begin() + index, insertedVec.begin(), insertedVec.end());
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, &a);
-            q->notified(&n);
-        }
-
-        q->endAction();
-    }
-
-    void VectorNodePrivate::remove_TX(VectorNode *q, int index, int count) {
-        q->beginAction();
-
-        auto &vec = q->_vec;
-
-        std::vector<std::shared_ptr<Node>> removedVec;
-        removedVec.resize(count);
-        std::copy(vec.begin() + index, vec.begin() + index + count, removedVec.begin());
-
-        VectorInsDelAction a(Action::VectorRemove, q->shared_from_this(), index, removedVec);
-
-        // Pre-Propagate signal
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            q->notified(&n);
-        }
-
-        // Do change
-        vec.erase(vec.begin() + index, vec.begin() + index + count);
-        for (const auto &node : std::as_const(removedVec)) {
-            q->removeChild(node.get());
-        }
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, &a);
-            q->notified(&n);
-        }
-
-        q->endAction();
-    }
-
-    void VectorNodePrivate::move_TX(VectorNode *q, int index, int count, int dest) {
-        q->beginAction();
-
-        auto &vec = q->_vec;
-
-        VectorMoveAction a(q->shared_from_this(), index, count, dest);
-
-        // Pre-Propagate signal
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            q->notified(&n);
-        }
-
-        // Do change
-        arrayMove(vec, index, count, dest);
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, &a);
-            q->notified(&n);
-        }
-
-        q->endAction();
-    }
-
     void VectorNodePrivate::copy(VectorNode *dest, const VectorNode *src, bool copyId) {
         if (!copyId) {
             dest->_id = src->_id;
@@ -147,7 +61,7 @@ namespace ss {
 
     VectorNode::~VectorNode() = default;
 
-    void VectorNode::insert(int index, const ArrayView<std::shared_ptr<Node>> &nodes) {
+    void VectorNode::insert(int index, std::vector<std::shared_ptr<Node>> nodes) {
         assert(isWritable());
         assert(VectorNodePrivate::validateArrayQueryArguments(index, _vec.size()));
         assert(!nodes.empty());
@@ -158,20 +72,34 @@ namespace ss {
         }
 #endif
 
-        VectorNodePrivate::insert_TX(this, index, nodes);
+        auto action = std::make_unique<VectorInsDelAction>(Action::VectorInsert, shared_from_this(),
+                                                           index, std::move(nodes));
+        action->execute(false);
+        ModelPrivate::pushAction(_model, std::move(action));
     }
 
     void VectorNode::move(int index, int count, int dest) {
         assert(isWritable());
         assert(VectorNodePrivate::validateArrayRemoveArguments(index, count, _vec.size()) &&
                !(dest >= index && dest < index + count));
-        VectorNodePrivate::move_TX(this, index, count, dest);
+
+        auto action = std::make_unique<VectorMoveAction>(shared_from_this(), index, count, dest);
+        action->execute(false);
+        ModelPrivate::pushAction(_model, std::move(action));
     }
 
     void VectorNode::remove(int index, int count) {
         assert(isWritable());
         assert(VectorNodePrivate::validateArrayRemoveArguments(index, count, _vec.size()));
-        VectorNodePrivate::remove_TX(this, index, count);
+
+        std::vector<std::shared_ptr<Node>> nodes;
+        nodes.resize(count);
+        std::copy(_vec.begin() + index, _vec.begin() + index + count, nodes.begin());
+
+        auto action = std::make_unique<VectorInsDelAction>(Action::VectorRemove, shared_from_this(),
+                                                           index, std::move(nodes));
+        action->execute(false);
+        ModelPrivate::pushAction(_model, std::move(action));
     }
 
     std::shared_ptr<Node> VectorNode::clone(bool copyId) const {
@@ -186,10 +114,6 @@ namespace ss {
         }
     }
 
-    std::unique_ptr<Action> VectorMoveAction::clone(bool detach) const {
-        return std::make_unique<VectorMoveAction>(_parent, _index, _count, _dest);
-    }
-
     void VectorMoveAction::queryNodes(
         bool inserted, const std::function<void(const std::shared_ptr<Node> &)> &add) {
         (void) inserted;
@@ -198,34 +122,38 @@ namespace ss {
 
     void VectorMoveAction::execute(bool undo) {
         auto parent = static_cast<VectorNode *>(_parent.get());
-        if (undo) {
-            int r_index;
-            int r_dest;
-            if (_dest > _index) {
-                r_index = _dest - _count;
-                r_dest = _index;
-            } else {
-                r_index = _dest;
-                r_dest = _index + _count;
-            }
-            VectorNodePrivate::move_TX(parent, r_index, _count, r_dest);
-        } else {
-            VectorNodePrivate::move_TX(parent, _index, _count, _dest);
-        }
-    }
+        auto &vec = parent->_vec;
 
-    std::unique_ptr<Action> VectorInsDelAction::clone(bool detach) const {
-        if (detach) {
-            std::vector<std::shared_ptr<Node>> children;
-            children.reserve(_children.size());
-            for (const auto &node : std::as_const(_children)) {
-                children.emplace_back(NodePrivate::clone(node.get(), true));
-            }
-            return std::make_unique<VectorInsDelAction>(static_cast<Type>(_type), _parent, _index,
-                                                        std::move(children));
+        parent->beginAction();
+        // Pre-Propagate signal
+        {
+            ActionNotification n(Notification::ActionAboutToTrigger, this);
+            parent->notify(&n);
         }
-        return std::make_unique<VectorInsDelAction>(static_cast<Type>(_type), _parent, _index,
-                                                    _children);
+
+        // Do change
+        int index;
+        int dest;
+        if (undo) {
+            if (_dest > _index) {
+                index = _dest - _count;
+                dest = _index;
+            } else {
+                index = _dest;
+                dest = _index + _count;
+            }
+        } else {
+            index = _index;
+            dest = _dest;
+        }
+        arrayMove(vec, index, _count, dest);
+
+        // Propagate signal
+        {
+            ActionNotification n(Notification::ActionTriggered, this);
+            parent->notify(&n);
+        }
+        parent->endAction();
     }
 
     void VectorInsDelAction::queryNodes(
@@ -239,9 +167,36 @@ namespace ss {
 
     void VectorInsDelAction::execute(bool undo) {
         auto parent = static_cast<VectorNode *>(_parent.get());
-        ((_type == VectorRemove) ^ undo)
-            ? VectorNodePrivate::remove_TX(parent, _index, _children.size())
-            : VectorNodePrivate::insert_TX(parent, _index, _children);
+        auto &vec = parent->_vec;
+
+        parent->beginAction();
+        // Pre-Propagate signal
+        {
+            ActionNotification n(Notification::ActionAboutToTrigger, this);
+            parent->notify(&n);
+        }
+
+        // Do change
+        if (((_type == VectorRemove) ^ undo)) {
+            auto begin = vec.begin() + _index;
+            auto end = vec.begin() + _index + _children.size();
+            for (auto it = begin; it != end; ++it) {
+                parent->removeChild(it->get());
+            }
+            vec.erase(begin, end);
+        } else {
+            for (const auto &node : std::as_const(_children)) {
+                parent->addChild(node.get());
+            }
+            vec.insert(vec.begin() + _index, _children.begin(), _children.end());
+        }
+
+        // Post-propagate signal
+        {
+            ActionNotification n(Notification::ActionTriggered, this);
+            parent->notify(&n);
+        }
+        parent->endAction();
     }
 
 }

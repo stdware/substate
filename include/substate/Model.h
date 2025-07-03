@@ -22,7 +22,7 @@ namespace ss {
     class ModelPrivate;
 
     /// Model - Document model and undo/redo manager.
-    class SUBSTATE_EXPORT Model : public NotificationObserver {
+    class SUBSTATE_EXPORT Model : public NotificationSubject {
     public:
         explicit Model(std::unique_ptr<StorageEngine> storageEngine);
         ~Model();
@@ -83,7 +83,7 @@ namespace ss {
         int currentStep() const;
 
     protected:
-        void notified(Notification *n) override;
+        void notify(Notification *n) override;
 
         Node *_lockedNode;
         std::shared_ptr<Node> _root;

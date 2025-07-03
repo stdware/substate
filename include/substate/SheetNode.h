@@ -12,6 +12,8 @@
 
 namespace ss {
 
+    class SheetAction;
+
     class SheetNodePrivate;
 
     /// SheetNode - Auto-incrementing ID map data structure.
@@ -33,9 +35,10 @@ namespace ss {
         void propagateChildren(const std::function<void(Node *)> &func) override;
 
         std::unordered_map<int, std::shared_ptr<Node>> _sheet;
-        std::set<int> _idSet;
+        int _maxId = 0;
 
         friend class SheetNodePrivate;
+        friend class SheetAction;
     };
 
     inline SheetNode::SheetNode(int type) : Node(type) {
@@ -70,7 +73,6 @@ namespace ss {
         ~SheetAction() = default;
 
     public:
-        std::unique_ptr<Action> clone(bool detach) const override;
         void queryNodes(bool inserted,
                         const std::function<void(const std::shared_ptr<Node> &)> &add) override;
         void execute(bool undo) override;

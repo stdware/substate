@@ -12,22 +12,26 @@
 
 namespace ss {
 
+    class VectorInsDelAction;
+
+    class VectorMoveAction;
+
     class VectorNodePrivate;
 
     /// VectorNode - Vector data structure node.
     class SUBSTATE_EXPORT VectorNode : public Node {
     public:
-        inline VectorNode(int type = Vector);
+        inline explicit VectorNode(int type = Vector);
         ~VectorNode();
 
     public:
         inline void prepend(const std::shared_ptr<Node> &node);
-        inline void prepend(const ArrayView<std::shared_ptr<Node>> &nodes);
+        inline void prepend(std::vector<std::shared_ptr<Node>> nodes);
         inline void append(const std::shared_ptr<Node> &node);
-        inline void append(const ArrayView<std::shared_ptr<Node>> &nodes);
+        inline void append(std::vector<std::shared_ptr<Node>>nodes);
         inline void insert(int index, const std::shared_ptr<Node> &node);
         inline void removeOne(int index);
-        void insert(int index, const ArrayView<std::shared_ptr<Node>> &nodes);
+        void insert(int index, std::vector<std::shared_ptr<Node>>nodes);
         void move(int index, int count, int dest);         // dest: destination index before move
         inline void move2(int index, int count, int dest); // dest: destination index after move
         void remove(int index, int count);
@@ -43,6 +47,8 @@ namespace ss {
         std::vector<std::shared_ptr<Node>> _vec;
 
         friend class VectorNodePrivate;
+        friend class VectorInsDelAction;
+        friend class VectorMoveAction;
     };
 
     inline VectorNode::VectorNode(int type) : Node(type) {
@@ -52,20 +58,20 @@ namespace ss {
         insert(0, node);
     }
 
-    inline void VectorNode::prepend(const ArrayView<std::shared_ptr<Node>> &nodes) {
-        insert(0, nodes);
+    inline void VectorNode::prepend(std::vector<std::shared_ptr<Node>>nodes) {
+        insert(0, std::move(nodes));
     }
 
     inline void VectorNode::append(const std::shared_ptr<Node> &node) {
         insert(size(), node);
     }
 
-    inline void VectorNode::append(const ArrayView<std::shared_ptr<Node>> &nodes) {
-        insert(size(), nodes);
+    inline void VectorNode::append(std::vector<std::shared_ptr<Node>>nodes) {
+        insert(size(), std::move(nodes));
     }
 
     inline void VectorNode::insert(int index, const std::shared_ptr<Node> &node) {
-        insert(index, ArrayView<std::shared_ptr<Node>>(node));
+        insert(index, std::vector<std::shared_ptr<Node>>{node});
     }
 
     inline void VectorNode::removeOne(int index) {
@@ -123,7 +129,6 @@ namespace ss {
         ~VectorMoveAction() = default;
 
     public:
-        std::unique_ptr<Action> clone(bool detach) const override;
         void queryNodes(bool inserted,
                         const std::function<void(const std::shared_ptr<Node> &)> &add) override;
         void execute(bool undo) override;
@@ -158,7 +163,6 @@ namespace ss {
         ~VectorInsDelAction() = default;
 
     public:
-        std::unique_ptr<Action> clone(bool detach) const override;
         void queryNodes(bool inserted,
                         const std::function<void(const std::shared_ptr<Node> &)> &add) override;
         void execute(bool undo) override;

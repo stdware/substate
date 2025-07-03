@@ -26,6 +26,9 @@ namespace ss {
         StorageEngine(const StorageEngine &) = delete;
         StorageEngine &operator=(const StorageEngine &) = delete;
 
+        StorageEngine(StorageEngine &&) = default;
+        StorageEngine &operator=(StorageEngine &&) = default;
+
     public:
         inline Model *model() const;
 

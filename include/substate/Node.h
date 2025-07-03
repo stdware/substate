@@ -21,7 +21,7 @@ namespace ss {
     /// Node - Document information storage unit.
     /// \note The node should be created by \c std::make_shared instead of created by direct
     /// construction.
-    class SUBSTATE_EXPORT Node : public NotificationObserver,
+    class SUBSTATE_EXPORT Node : public NotificationSubject,
                                  public std::enable_shared_from_this<Node> {
     public:
         inline Node(int type);
@@ -31,6 +31,7 @@ namespace ss {
             Bytes,
             Vector,
             Sheet,
+            Mapping,
             User = 1024,
         };
 
@@ -73,7 +74,7 @@ namespace ss {
         /// Execute \a func on all children.
         virtual void propagateChildren(const std::function<void(Node *)> &func);
 
-        void notified(Notification *n) override;
+        void notify(Notification *n) override;
 
     protected:
         int _type;

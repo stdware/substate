@@ -4,6 +4,8 @@
 #ifndef SUBSTATE_MODEL_P_H
 #define SUBSTATE_MODEL_P_H
 
+#include <cassert>
+
 #include <substate/Model.h>
 
 namespace ss {
@@ -17,6 +19,11 @@ namespace ss {
             node->propagate([model](Node *n) { n->_model = model; });
             model->_root = node;
             node->_state = Node::Created;
+        }
+
+        static inline void pushAction(Model *model, std::unique_ptr<Action> action) {
+            assert(model->inTransaction());
+            model->_txActions.push_back(std::move(action));
         }
     };
 

@@ -4,67 +4,10 @@
 #include <cassert>
 #include <utility>
 
+#include "Model_p.h"
 #include "Node_p.h"
 
 namespace ss {
-
-    void SheetNodePrivate::insert_TX(SheetNode *q, int id, const std::shared_ptr<Node> &node) {
-        q->beginAction();
-
-        SheetAction a(Action::SheetInsert, q->shared_from_this(), id, node);
-
-        // Pre-Propagate
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            q->notified(&n);
-        }
-
-        // Do change
-        q->addChild(node.get());
-
-        q->_sheet.insert(std::make_pair(id, node));
-        q->_idSet.insert(id);
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, &a);
-            q->notified(&n);
-        }
-
-        q->endAction();
-    }
-
-    bool SheetNodePrivate::remove_TX(SheetNode *q, int id) {
-        q->beginAction();
-
-        auto it = q->_sheet.find(id);
-        if (it == q->_sheet.end())
-            return false;
-
-        const auto &node = it->second;
-
-        SheetAction a(Action::SheetRemove, q->shared_from_this(), id, node);
-
-        // Pre-Propagate signal
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            q->notified(&n);
-        }
-
-        // Do change
-        q->removeChild(node.get());
-        q->_sheet.erase(it);
-        q->_idSet.erase(id);
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, &a);
-            q->notified(&n);
-        }
-
-        q->endAction();
-        return true;
-    }
 
     void SheetNodePrivate::copy(SheetNode *dest, const SheetNode *src, bool copyId) {
         if (!copyId) {
@@ -77,7 +20,7 @@ namespace ss {
             dest->addChild(newChild.get());
             dest->_sheet.insert(std::make_pair(it->first, newChild));
         }
-        dest->_idSet = src->_idSet;
+        dest->_maxId = src->_maxId;
     }
 
     SheetNode::~SheetNode() = default;
@@ -86,14 +29,45 @@ namespace ss {
         assert(isWritable());
         assert(node && node->isFree());
 
-        auto id = _idSet.empty() ? 1 : (*_idSet.rbegin() + 1);
-        SheetNodePrivate::insert_TX(this, id, node);
+        int id = _maxId = _maxId + 1;
+        auto a = std::make_unique<SheetAction>(Action::SheetInsert, shared_from_this(), id, node);
+        a->execute(false);
+        ModelPrivate::pushAction(_model, std::move(a));
         return id;
     }
 
     bool SheetNode::remove(int id) {
         assert(isWritable());
-        return SheetNodePrivate::remove_TX(this, id);
+
+        auto it = _sheet.find(_id);
+        if (it == _sheet.end()) {
+            return false;
+        }
+        const auto &node = it->second;
+
+        beginAction();
+
+        auto a = std::make_unique<SheetAction>(Action::SheetRemove, shared_from_this(), id, node);
+
+        // Pre-Propagate
+        {
+            ActionNotification n(Notification::ActionAboutToTrigger, a.get());
+            notify(&n);
+        }
+
+        // Do change
+        removeChild(node.get());
+        _sheet.erase(it);
+
+        // Propagate signal
+        {
+            ActionNotification n(Notification::ActionTriggered, a.get());
+            notify(&n);
+        }
+
+        endAction();
+        ModelPrivate::pushAction(_model, std::move(a));
+        return true;
     }
 
     std::shared_ptr<Node> SheetNode::clone(bool copyId) const {
@@ -108,14 +82,6 @@ namespace ss {
         }
     }
 
-    std::unique_ptr<Action> SheetAction::clone(bool detach) const {
-        if (detach) {
-            return std::make_unique<SheetAction>(static_cast<Type>(_type), _parent, _id,
-                                                 NodePrivate::clone(_child.get(), true));
-        }
-        return std::make_unique<SheetAction>(static_cast<Type>(_type), _parent, _id, _child);
-    }
-
     void SheetAction::queryNodes(bool inserted,
                                  const std::function<void(const std::shared_ptr<Node> &)> &add) {
         if (inserted == (_type == Action::SheetInsert)) {
@@ -125,8 +91,36 @@ namespace ss {
 
     void SheetAction::execute(bool undo) {
         auto parent = static_cast<SheetNode *>(_parent.get());
-        ((_type == SheetRemove) ^ undo) ? (void) SheetNodePrivate::remove_TX(parent, _id)
-                                        : SheetNodePrivate::insert_TX(parent, _id, _child);
+
+        // Pre-Propagate
+        {
+            ActionNotification n(Notification::ActionAboutToTrigger, this);
+            parent->notify(&n);
+        }
+
+        // Do change
+        if ((_type == SheetRemove) ^ undo) {
+            auto it = parent->_sheet.find(_id);
+            assert(it != parent->_sheet.end());
+
+            const auto &node = it->second;
+            assert(node.get() == _child.get());
+
+            // Do change
+            parent->removeChild(node.get());
+            parent->_sheet.erase(it);
+        } else {
+            parent->addChild(_child.get());
+            parent->_sheet.insert(std::make_pair(_id, _child));
+        }
+
+        // Propagate signal
+        {
+            ActionNotification n(Notification::ActionTriggered, this);
+            parent->notify(&n);
+        }
+
+        parent->endAction();
     }
 
 }

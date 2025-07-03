@@ -52,6 +52,8 @@ endfunction()
 
 add_subdirectory(substate)
 
+add_subdirectory(qsubstate)
+
 if(SUBSTATE_INSTALL)
     # Add install target
     set(_install_dir ${CMAKE_INSTALL_LIBDIR}/cmake/${SUBSTATE_INSTALL_NAME})

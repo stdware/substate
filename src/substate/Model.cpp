@@ -18,7 +18,7 @@ namespace ss {
         // Pre-Propagate
         {
             ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            model->notified(&n);
+            model->notify(&n);
         }
 
         // Do change
@@ -33,7 +33,7 @@ namespace ss {
         // Propagate signal
         {
             ActionNotification n(Notification::ActionTriggered, &a);
-            model->notified(&n);
+            model->notify(&n);
         }
 
         model->_lockedNode = nullptr;
@@ -66,7 +66,7 @@ namespace ss {
         assert(_state == Idle);
 
         Notification n(Notification::AboutToReset);
-        notified(&n);
+        notify(&n);
         _storageEngine->reset();
     }
 
@@ -119,7 +119,7 @@ namespace ss {
         _state = Idle;
 
         Notification n(Notification::StepChange);
-        notified(&n);
+        notify(&n);
     }
 
     std::map<std::string, std::string> Model::stepMessage(int step) const {
@@ -134,7 +134,7 @@ namespace ss {
         _state = Idle;
 
         Notification n(Notification::StepChange);
-        notified(&n);
+        notify(&n);
     }
 
     void Model::redo() {
@@ -144,7 +144,7 @@ namespace ss {
         _state = Idle;
 
         Notification n(Notification::StepChange);
-        notified(&n);
+        notify(&n);
     }
 
     int Model::minimumStep() const {
@@ -159,18 +159,7 @@ namespace ss {
         return _storageEngine->current();
     }
 
-    void Model::notified(Notification *n) {
-        switch (n->type()) {
-            case Notification::ActionTriggered: {
-                auto n2 = static_cast<ActionNotification *>(n);
-                if (_state == Transaction) {
-                    _txActions.emplace_back(n2->action()->clone(false));
-                }
-                break;
-            }
-            default:
-                break;
-        }
+    void Model::notify(Notification *n) {
     }
 
 }
