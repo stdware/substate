@@ -10,6 +10,7 @@ namespace ss {
 
     class SUBSTATE_EXPORT BytesNodePrivate {
     public:
+        static void copy(BytesNode *dest, const BytesNode *src, bool copyId);
     };
 
 }

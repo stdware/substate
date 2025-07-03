@@ -27,6 +27,19 @@ namespace ss {
         static inline void setId(Node *node, size_t id) {
             node->_id = id;
         }
+
+        // Debug use
+        static inline bool validateArrayQueryArguments(int index, int size) {
+            return index >= 0 && index <= size;
+        }
+
+        // Debug use
+        static inline bool validateArrayRemoveArguments(int index, int count, int size) {
+            return (index >= 0 && index < size)            // index bound
+                   && (count > 0 && count <= size - index) // count bound
+                ;
+        }
+
     };
 
 }

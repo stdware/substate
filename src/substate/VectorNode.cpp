@@ -10,40 +10,15 @@
 
 namespace ss {
 
-    // Move item inside the array
-    // TODO: use std::rotate
     template <class T>
-    static void arrayMove(std::vector<T> &arr, int index, int count, int dest) {
-        std::vector<T> tmp;
-        tmp.resize(count);
-        std::copy(arr.begin() + index, arr.begin() + index + count, tmp.begin());
-
-        // Do change
-        int correctDest;
-        if (dest > index) {
-            correctDest = dest - count;
-            auto sz = correctDest - index;
-            for (int i = 0; i < sz; ++i) {
-                arr[index + i] = arr[index + count + i];
-            }
+    static inline void arrayMove(std::vector<T> &arr, int index, int count, int dest) {
+        assert(dest != index && count > 0);
+        if (dest < index) {
+            std::rotate(arr.begin() + dest, arr.begin() + index, arr.begin() + index + count);
         } else {
-            correctDest = dest;
-            auto sz = index - dest;
-            for (int i = sz - 1; i >= 0; --i) {
-                arr[dest + count + i] = arr[dest + i];
-            }
+            std::rotate(arr.begin() + index, arr.begin() + index + count,
+                        arr.begin() + dest + count);
         }
-        std::copy(tmp.begin(), tmp.end(), arr.begin() + correctDest);
-
-        // TODO: Using std::rotate
-        // if (dest < index) {
-        //     // 目标在源之前：旋转区间[dest, index+count) 使块移动到dest
-        //     std::rotate(arr.begin() + dest, arr.begin() + index, arr.begin() + index + count);
-        // } else { // dest > index
-        //     // 目标在源之后：旋转区间[index, dest+count) 使块移动到dest
-        //     std::rotate(arr.begin() + index, arr.begin() + index + count,
-        //                 arr.begin() + dest + count);
-        // }
     }
 
     void VectorNodePrivate::copy(VectorNode *dest, const VectorNode *src, bool copyId) {
@@ -63,7 +38,7 @@ namespace ss {
 
     void VectorNode::insert(int index, std::vector<std::shared_ptr<Node>> nodes) {
         assert(isWritable());
-        assert(VectorNodePrivate::validateArrayQueryArguments(index, _vec.size()));
+        assert(NodePrivate::validateArrayQueryArguments(index, _vec.size()));
         assert(!nodes.empty());
 
 #ifndef NDEBUG
@@ -80,7 +55,7 @@ namespace ss {
 
     void VectorNode::move(int index, int count, int dest) {
         assert(isWritable());
-        assert(VectorNodePrivate::validateArrayRemoveArguments(index, count, _vec.size()) &&
+        assert(NodePrivate::validateArrayRemoveArguments(index, count, _vec.size()) &&
                !(dest >= index && dest < index + count));
 
         auto action = std::make_unique<VectorMoveAction>(shared_from_this(), index, count, dest);
@@ -90,7 +65,7 @@ namespace ss {
 
     void VectorNode::remove(int index, int count) {
         assert(isWritable());
-        assert(VectorNodePrivate::validateArrayRemoveArguments(index, count, _vec.size()));
+        assert(NodePrivate::validateArrayRemoveArguments(index, count, _vec.size()));
 
         std::vector<std::shared_ptr<Node>> nodes;
         nodes.resize(count);

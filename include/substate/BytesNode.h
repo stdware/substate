@@ -16,8 +16,11 @@ namespace ss {
 
     class BytesAction;
 
+    class BytesReplaceAction;
+
     class BytesNodePrivate;
 
+    /// BytesNode - Byte array data structure node.
     class SUBSTATE_EXPORT BytesNode : public Node {
     public:
         inline explicit BytesNode(int type);
@@ -36,11 +39,18 @@ namespace ss {
         inline int size() const;
 
     protected:
+        std::shared_ptr<Node> clone(bool copyId) const override;
+
+    protected:
         std::vector<char> _data;
 
         friend class BytesNodePrivate;
         friend class BytesAction;
+        friend class BytesReplaceAction;
     };
+
+    inline BytesNode::BytesNode(int type) : Node(type) {
+    }
 
     inline void BytesNode::prepend(std::vector<char> data) {
         insert(0, data);
@@ -70,15 +80,16 @@ namespace ss {
         return size();
     }
 
+
+    /// BytesAction - Action for \c BytesNode operations.
     class SUBSTATE_EXPORT BytesAction : public NodeAction {
     public:
         inline BytesAction(Type type, const std::shared_ptr<Node> &parent, int index,
-                           std::vector<char> oldBytes, std::vector<char> bytes);
+                           std::vector<char> bytes);
         ~BytesAction();
 
     public:
         inline int index() const;
-        inline ArrayView<char> oldBytes() const;
         inline ArrayView<char> bytes() const;
 
     public:
@@ -88,27 +99,54 @@ namespace ss {
 
     protected:
         int _index;
-        std::vector<char> _oldBytes;
         std::vector<char> _bytes;
     };
 
     inline BytesAction::BytesAction(Type type, const std::shared_ptr<Node> &parent, int index,
-                                    std::vector<char> oldBytes, std::vector<char> bytes)
-        : NodeAction(type, parent), _index(index), _oldBytes(std::move(oldBytes)),
-          _bytes(std::move(bytes)) {
+                                    std::vector<char> bytes)
+        : NodeAction(type, parent), _index(index), _bytes(std::move(bytes)) {
     }
 
     inline int BytesAction::index() const {
         return _index;
     }
 
-    inline ArrayView<char> BytesAction::oldBytes() const {
-        return _oldBytes;
-    }
-
     inline ArrayView<char> BytesAction::bytes() const {
         return _bytes;
     }
+
+
+    /// BytesReplaceAction - Action for \c BytesNode replacement.
+    class SUBSTATE_EXPORT BytesReplaceAction : public BytesAction {
+    public:
+        inline BytesReplaceAction(const std::shared_ptr<Node> &parent, int index,
+                                  std::vector<char> bytes, std::vector<char> oldBytes);
+        ~BytesReplaceAction() = default;
+
+    public:
+        inline ArrayView<char> oldBytes() const;
+
+    public:
+        void queryNodes(bool inserted,
+                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
+        void execute(bool undo) override;
+
+
+    protected:
+        std::vector<char> _oldBytes;
+    };
+
+    inline BytesReplaceAction::BytesReplaceAction(const std::shared_ptr<Node> &parent, int index,
+                                                  std::vector<char> bytes,
+                                                  std::vector<char> oldBytes)
+        : BytesAction(BytesReplace, parent, index, std::move(bytes)),
+          _oldBytes(std::move(oldBytes)) {
+    }
+
+    inline ArrayView<char> BytesReplaceAction::oldBytes() const {
+        return _oldBytes;
+    }
+
 
 }
 
