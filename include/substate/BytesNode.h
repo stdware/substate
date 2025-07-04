@@ -84,7 +84,7 @@ namespace ss {
     /// BytesAction - Action for \c BytesNode operations.
     class SUBSTATE_EXPORT BytesAction : public NodeAction {
     public:
-        inline BytesAction(Type type, const std::shared_ptr<Node> &parent, int index,
+        inline BytesAction(Type type, const std::shared_ptr<BytesNode> &parent, int index,
                            std::vector<char> bytes);
         ~BytesAction();
 
@@ -102,7 +102,7 @@ namespace ss {
         std::vector<char> _bytes;
     };
 
-    inline BytesAction::BytesAction(Type type, const std::shared_ptr<Node> &parent, int index,
+    inline BytesAction::BytesAction(Type type, const std::shared_ptr<BytesNode> &parent, int index,
                                     std::vector<char> bytes)
         : NodeAction(type, parent), _index(index), _bytes(std::move(bytes)) {
     }
@@ -119,7 +119,7 @@ namespace ss {
     /// BytesReplaceAction - Action for \c BytesNode replacement.
     class SUBSTATE_EXPORT BytesReplaceAction : public BytesAction {
     public:
-        inline BytesReplaceAction(const std::shared_ptr<Node> &parent, int index,
+        inline BytesReplaceAction(const std::shared_ptr<BytesNode> &parent, int index,
                                   std::vector<char> bytes, std::vector<char> oldBytes);
         ~BytesReplaceAction() = default;
 
@@ -131,13 +131,12 @@ namespace ss {
                         const std::function<void(const std::shared_ptr<Node> &)> &add) override;
         void execute(bool undo) override;
 
-
     protected:
         std::vector<char> _oldBytes;
     };
 
-    inline BytesReplaceAction::BytesReplaceAction(const std::shared_ptr<Node> &parent, int index,
-                                                  std::vector<char> bytes,
+    inline BytesReplaceAction::BytesReplaceAction(const std::shared_ptr<BytesNode> &parent,
+                                                  int index, std::vector<char> bytes,
                                                   std::vector<char> oldBytes)
         : BytesAction(BytesReplace, parent, index, std::move(bytes)),
           _oldBytes(std::move(oldBytes)) {

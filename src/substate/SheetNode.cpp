@@ -30,7 +30,8 @@ namespace ss {
         assert(node && node->isFree());
 
         int id = _maxId = _maxId + 1;
-        auto a = std::make_unique<SheetAction>(Action::SheetInsert, shared_from_this(), id, node);
+        auto a = std::make_unique<SheetAction>(
+            Action::SheetInsert, std::static_pointer_cast<SheetNode>(shared_from_this()), id, node);
         a->execute(false);
         ModelPrivate::pushAction(_model, std::move(a));
         return id;
@@ -47,7 +48,8 @@ namespace ss {
 
         beginAction();
 
-        auto a = std::make_unique<SheetAction>(Action::SheetRemove, shared_from_this(), id, node);
+        auto a = std::make_unique<SheetAction>(
+            Action::SheetRemove, std::static_pointer_cast<SheetNode>(shared_from_this()), id, node);
 
         // Pre-Propagate
         {

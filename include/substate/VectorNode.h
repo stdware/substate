@@ -28,10 +28,10 @@ namespace ss {
         inline void prepend(const std::shared_ptr<Node> &node);
         inline void prepend(std::vector<std::shared_ptr<Node>> nodes);
         inline void append(const std::shared_ptr<Node> &node);
-        inline void append(std::vector<std::shared_ptr<Node>>nodes);
+        inline void append(std::vector<std::shared_ptr<Node>> nodes);
         inline void insert(int index, const std::shared_ptr<Node> &node);
         inline void removeOne(int index);
-        void insert(int index, std::vector<std::shared_ptr<Node>>nodes);
+        void insert(int index, std::vector<std::shared_ptr<Node>> nodes);
         void move(int index, int count, int dest);         // dest: destination index before move
         inline void move2(int index, int count, int dest); // dest: destination index after move
         void remove(int index, int count);
@@ -58,7 +58,7 @@ namespace ss {
         insert(0, node);
     }
 
-    inline void VectorNode::prepend(std::vector<std::shared_ptr<Node>>nodes) {
+    inline void VectorNode::prepend(std::vector<std::shared_ptr<Node>> nodes) {
         insert(0, std::move(nodes));
     }
 
@@ -66,7 +66,7 @@ namespace ss {
         insert(size(), node);
     }
 
-    inline void VectorNode::append(std::vector<std::shared_ptr<Node>>nodes) {
+    inline void VectorNode::append(std::vector<std::shared_ptr<Node>> nodes) {
         insert(size(), std::move(nodes));
     }
 
@@ -102,7 +102,7 @@ namespace ss {
     /// VectorAction - Action for \c VectorNode operations.
     class VectorAction : public NodeAction {
     public:
-        inline VectorAction(Type type, const std::shared_ptr<Node> &parent, int index);
+        inline VectorAction(Type type, const std::shared_ptr<VectorNode> &parent, int index);
         ~VectorAction() = default;
 
     public:
@@ -116,7 +116,8 @@ namespace ss {
         return _index;
     }
 
-    inline VectorAction::VectorAction(Type type, const std::shared_ptr<Node> &parent, int index)
+    inline VectorAction::VectorAction(Type type, const std::shared_ptr<VectorNode> &parent,
+                                      int index)
         : NodeAction(type, parent), _index(index) {
     }
 
@@ -124,7 +125,7 @@ namespace ss {
     /// VectorMoveAction - Action for \c VectorNode movement.
     class SUBSTATE_EXPORT VectorMoveAction : public VectorAction {
     public:
-        inline VectorMoveAction(const std::shared_ptr<Node> &parent, int index, int count,
+        inline VectorMoveAction(const std::shared_ptr<VectorNode> &parent, int index, int count,
                                 int dest);
         ~VectorMoveAction() = default;
 
@@ -141,7 +142,7 @@ namespace ss {
         int _count, _dest;
     };
 
-    inline VectorMoveAction::VectorMoveAction(const std::shared_ptr<Node> &parent, int index,
+    inline VectorMoveAction::VectorMoveAction(const std::shared_ptr<VectorNode> &parent, int index,
                                               int count, int dest)
         : VectorAction(VectorMove, parent, index), _count(count), _dest(dest) {
     }
@@ -158,7 +159,7 @@ namespace ss {
     /// VectorInsDelAction - Action for \c VectorNode insertion or deletion.
     class SUBSTATE_EXPORT VectorInsDelAction : public VectorAction {
     public:
-        inline VectorInsDelAction(Type type, const std::shared_ptr<Node> &parent, int index,
+        inline VectorInsDelAction(Type type, const std::shared_ptr<VectorNode> &parent, int index,
                                   std::vector<std::shared_ptr<Node>> children);
         ~VectorInsDelAction() = default;
 
@@ -174,7 +175,8 @@ namespace ss {
         std::vector<std::shared_ptr<Node>> _children;
     };
 
-    inline VectorInsDelAction::VectorInsDelAction(Type type, const std::shared_ptr<Node> &parent,
+    inline VectorInsDelAction::VectorInsDelAction(Type type,
+                                                  const std::shared_ptr<VectorNode> &parent,
                                                   int index,
                                                   std::vector<std::shared_ptr<Node>> children)
         : VectorAction(type, parent, index), _children(std::move(children)) {

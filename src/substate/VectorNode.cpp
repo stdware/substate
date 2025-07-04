@@ -47,8 +47,9 @@ namespace ss {
         }
 #endif
 
-        auto action = std::make_unique<VectorInsDelAction>(Action::VectorInsert, shared_from_this(),
-                                                           index, std::move(nodes));
+        auto action = std::make_unique<VectorInsDelAction>(
+            Action::VectorInsert, std::static_pointer_cast<VectorNode>(shared_from_this()), index,
+            std::move(nodes));
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }
@@ -58,7 +59,8 @@ namespace ss {
         assert(NodePrivate::validateArrayRemoveArguments(index, count, _vec.size()) &&
                !(dest >= index && dest < index + count));
 
-        auto action = std::make_unique<VectorMoveAction>(shared_from_this(), index, count, dest);
+        auto action = std::make_unique<VectorMoveAction>(
+            std::static_pointer_cast<VectorNode>(shared_from_this()), index, count, dest);
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }
@@ -71,8 +73,9 @@ namespace ss {
         nodes.resize(count);
         std::copy(_vec.begin() + index, _vec.begin() + index + count, nodes.begin());
 
-        auto action = std::make_unique<VectorInsDelAction>(Action::VectorRemove, shared_from_this(),
-                                                           index, std::move(nodes));
+        auto action = std::make_unique<VectorInsDelAction>(
+            Action::VectorRemove, std::static_pointer_cast<VectorNode>(shared_from_this()), index,
+            std::move(nodes));
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }

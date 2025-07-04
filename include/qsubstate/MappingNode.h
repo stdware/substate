@@ -64,8 +64,8 @@ namespace ss {
     /// MappingAction - Action for \c MappingNode operations.
     class QSUBSTATE_EXPORT MappingAction : public PropertyAction {
     public:
-        inline MappingAction(const std::shared_ptr<Node> &parent, QString key, Property oldValue,
-                             Property value);
+        inline MappingAction(const std::shared_ptr<MappingNode> &parent, QString key,
+                             Property oldValue, Property value);
         ~MappingAction();
 
     public:
@@ -78,7 +78,7 @@ namespace ss {
         QString _key;
     };
 
-    inline MappingAction::MappingAction(const std::shared_ptr<Node> &parent, QString key,
+    inline MappingAction::MappingAction(const std::shared_ptr<MappingNode> &parent, QString key,
                                         Property oldValue, Property value)
         : PropertyAction(MappingAssign, parent, std::move(oldValue), std::move(value)),
           _key(std::move(key)) {

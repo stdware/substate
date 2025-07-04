@@ -48,7 +48,8 @@ namespace ss {
 
         beginAction();
 
-        auto a = std::make_unique<MappingAction>(shared_from_this(), key, oldProp, value);
+        auto a = std::make_unique<MappingAction>(
+            std::static_pointer_cast<MappingNode>(shared_from_this()), key, oldProp, value);
 
         // Pre-Propagate signal
         {
@@ -123,7 +124,8 @@ namespace ss {
             oldProp = it->second;
         }
 
-        MappingAction a(parent->shared_from_this(), key, oldProp, value);
+        MappingAction a(std::static_pointer_cast<MappingNode>(parent->shared_from_this()), key,
+                        oldProp, value);
 
         // Pre-Propagate signal
         {

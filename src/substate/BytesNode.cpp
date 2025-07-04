@@ -2,7 +2,6 @@
 #include "BytesNode_p.h"
 
 #include "Model_p.h"
-#include "Node_p.h"
 
 namespace ss {
 
@@ -20,8 +19,9 @@ namespace ss {
         assert(isWritable());
         assert(NodePrivate::validateArrayQueryArguments(index, _data.size()) && !data.empty());
 
-        auto action = std::make_unique<BytesAction>(Action::BytesInsert, shared_from_this(), index,
-                                                    std::move(data));
+        auto action = std::make_unique<BytesAction>(
+            Action::BytesInsert, std::static_pointer_cast<BytesNode>(shared_from_this()), index,
+            std::move(data));
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }
@@ -31,8 +31,9 @@ namespace ss {
         assert(NodePrivate::validateArrayRemoveArguments(index, size, _data.size()));
 
         auto begin = _data.begin() + index;
-        auto action = std::make_unique<BytesAction>(Action::BytesRemove, shared_from_this(), index,
-                                                    std::vector<char>(begin, begin + size));
+        auto action = std::make_unique<BytesAction>(
+            Action::BytesRemove, std::static_pointer_cast<BytesNode>(shared_from_this()), index,
+            std::vector<char>(begin, begin + size));
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }
@@ -42,14 +43,16 @@ namespace ss {
         auto begin = _data.begin() + index;
         auto end = begin + data.size();
         if (auto off = end - _data.end(); off > 0) {
-            auto action = std::make_unique<BytesAction>(Action::BytesInsert, shared_from_this(),
-                                                        int(data.size()), std::vector<char>(off, 0));
+            auto action = std::make_unique<BytesAction>(
+                Action::BytesInsert, std::static_pointer_cast<BytesNode>(shared_from_this()),
+                int(data.size()), std::vector<char>(off, 0));
             action->execute(false);
             ModelPrivate::pushAction(_model, std::move(action));
         }
 
         auto action = std::make_unique<BytesReplaceAction>(
-            shared_from_this(), index, std::move(data), std::vector<char>(begin, end));
+            std::static_pointer_cast<BytesNode>(shared_from_this()), index, std::move(data),
+            std::vector<char>(begin, end));
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }

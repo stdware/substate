@@ -68,7 +68,7 @@ namespace ss {
     /// SheetAction - Action for \c SheetNode operations.
     class SUBSTATE_EXPORT SheetAction : public NodeAction {
     public:
-        inline SheetAction(Type type, const std::shared_ptr<Node> &parent, int id,
+        inline SheetAction(Type type, const std::shared_ptr<SheetNode> &parent, int id,
                            const std::shared_ptr<Node> &child);
         ~SheetAction() = default;
 
@@ -86,7 +86,7 @@ namespace ss {
         std::shared_ptr<Node> _child;
     };
 
-    inline SheetAction::SheetAction(Type type, const std::shared_ptr<Node> &parent, int id,
+    inline SheetAction::SheetAction(Type type, const std::shared_ptr<SheetNode> &parent, int id,
                                     const std::shared_ptr<Node> &child)
         : NodeAction(type, parent), _id(id), _child(child) {
     }
