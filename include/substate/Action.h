@@ -13,8 +13,6 @@
 
 namespace ss {
 
-    class ActionReader;
-
     class Action {
     public:
         enum Type {
@@ -135,48 +133,17 @@ namespace ss {
     }
 
 
-    /// ActionReader - Action deserialize interface.
-    class ActionReader {
+    /// ActionIOInterface - Interface for reading and writing actions and nodes.
+    class ActionIOInterface {
     public:
-        inline ActionReader(std::istream &is);
-        virtual ~ActionReader() = default;
+        virtual ~ActionIOInterface() = default;
 
-        inline std::istream &in() const;
+        virtual std::shared_ptr<Node> readNode(std::istream &is) = 0;
+        virtual void writeNode(const Node &node, std::ostream &os) = 0;
 
-        virtual std::shared_ptr<Action> readOne() const;
-
-    protected:
-        std::istream &_in;
+        virtual std::unique_ptr<Action> readAction(std::istream &is) = 0;
+        virtual void writeAction(const Action &action, std::ostream &os) = 0;
     };
-
-    inline ActionReader::ActionReader(std::istream &in) : _in(in) {
-    }
-
-    inline std::istream &ActionReader::in() const {
-        return _in;
-    }
-
-
-    /// ActionWriter - Node serialize interface.
-    class ActionWriter {
-    public:
-        inline ActionWriter(std::ostream &os);
-        virtual ~ActionWriter() = default;
-
-        inline std::ostream &out() const;
-
-        virtual void writeOne(const std::shared_ptr<Action> &action) const = 0;
-
-    protected:
-        std::ostream &_out;
-    };
-
-    inline ActionWriter::ActionWriter(std::ostream &os) : _out(os) {
-    }
-
-    inline std::ostream &ActionWriter::out() const {
-        return _out;
-    }
 
 }
 

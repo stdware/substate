@@ -124,50 +124,6 @@ namespace ss {
         propagateChildren(func);
     }
 
-
-    /// NodeReader - Node deserialize interface.
-    class NodeReader {
-    public:
-        inline NodeReader(std::istream &is);
-        virtual ~NodeReader() = default;
-
-        inline std::istream &in() const;
-
-        virtual std::shared_ptr<Node> readOne() const = 0;
-
-    protected:
-        std::istream &_in;
-    };
-
-    inline NodeReader::NodeReader(std::istream &in) : _in(in) {
-    }
-
-    inline std::istream &NodeReader::in() const {
-        return _in;
-    }
-
-
-    /// NodeWriter - Node serialize interface.
-    class NodeWriter {
-    public:
-        inline NodeWriter(std::ostream &os);
-        virtual ~NodeWriter() = default;
-
-        inline std::ostream &out() const;
-
-        virtual void writeOne(const std::shared_ptr<Node> &node) const = 0;
-
-    protected:
-        std::ostream &_out;
-    };
-
-    inline NodeWriter::NodeWriter(std::ostream &os) : _out(os) {
-    }
-
-    inline std::ostream &NodeWriter::out() const {
-        return _out;
-    }
-
 }
 
 #endif // SUBSTATE_NODE_H

@@ -146,7 +146,6 @@ namespace ss {
         return _oldBytes;
     }
 
-
 }
 
 #endif // SUBSTATE_BYTESNODE_H

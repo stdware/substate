@@ -2,11 +2,9 @@
 
 namespace ss {
 
-    FilesystemStorageEngine::FilesystemStorageEngine(std::unique_ptr<NodeReader> nr,
-                                                     std::unique_ptr<NodeWriter> nw,
-                                                     std::unique_ptr<ActionReader> ar,
-                                                     std::unique_ptr<ActionWriter> aw)
-        : _nr(std::move(nr)), _nw(std::move(nw)), _ar(std::move(ar)), _aw(std::move(aw)) {
+    FilesystemStorageEngine::FilesystemStorageEngine(
+        std::unique_ptr<ActionIOInterface> io)
+        : _io(std::move(io)) {
     }
 
     FilesystemStorageEngine::~FilesystemStorageEngine() = default;

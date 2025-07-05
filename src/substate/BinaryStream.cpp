@@ -134,7 +134,7 @@ namespace ss {
             return 0;
         }
 
-        static const constexpr std::size_t blockSize = 8;
+        static const constexpr std::size_t blockSize = 1024;
         char buffer[blockSize];
 
         std::size_t fullBlocks = len / blockSize;
