@@ -12,13 +12,13 @@ namespace ss {
 
     class SUBSTATE_EXPORT ModelPrivate {
     public:
-        static void setRoot_TX(Model *model, const std::shared_ptr<Node> &node);
+        static void setRoot_TX(Model *model, NodePtr &node, RootChangeAction *a);
 
         /// Sets the root node of the model silently, without creating any actions.
-        static inline void setRoot(Model *model, const std::shared_ptr<Node> &node) {
+        static inline void setInitialRoot(Model *model, NodePtr node) {
             node->propagate([model](Node *n) { n->_model = model; });
-            model->_root = node;
-            node->_state = Node::Created;
+            model->_root = std::move(node);
+            node->_state = Node::Active;
         }
 
         static inline void pushAction(Model *model, std::unique_ptr<Action> action) {

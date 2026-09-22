@@ -9,36 +9,6 @@
 
 namespace ss {
 
-    void ModelPrivate::setRoot_TX(Model *model, const std::shared_ptr<Node> &node) {
-        auto &root = model->_root;
-        model->_lockedNode = root ? root.get() : node.get();
-
-        RootChangeAction a(node, root);
-
-        // Pre-Propagate
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            model->notify(&n);
-        }
-
-        // Do change
-        if (root) {
-            root->_state = Node::Detached;
-        }
-        if (node) {
-            node->_state = Node::Active;
-        }
-        root = node;
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, &a);
-            model->notify(&n);
-        }
-
-        model->_lockedNode = nullptr;
-    }
-
     Model::Model(std::unique_ptr<StorageEngine> storageEngine)
         : _storageEngine(std::move(storageEngine)) {
         _storageEngine->setup(this);
@@ -52,14 +22,17 @@ namespace ss {
         return _state == Transaction && !_lockedNode;
     }
 
-    std::shared_ptr<Node> Model::indexOf(size_t id) const {
+    Node *Model::indexOf(size_t id) const {
         return _storageEngine->indexOf(id);
     }
 
-    void Model::setRoot(const std::shared_ptr<Node> &node) {
+    void Model::setRoot(NodePtr node) {
         assert(isWritable());
         assert(!node || node->isFree());
-        ModelPrivate::setRoot_TX(this, node);
+
+        auto root = _root ? _root.makeRef() : nullptr;
+        RootChangeAction a(std::move(root), std::move(node));
+        a.execute(false);
     }
 
     void Model::reset() {
@@ -99,10 +72,10 @@ namespace ss {
         }
 
         // Associate nodes with model
-        std::vector<std::shared_ptr<Node>> nodes;
+        std::vector<Node *> nodes;
         for (auto &a : std::as_const(_txActions)) {
-            a->queryNodes(true, [&nodes](const std::shared_ptr<Node> &node) {
-                nodes.push_back(node); //
+            a->queryNodes(true, [&nodes](const NodePtr &node) {
+                nodes.push_back(node.get()); //
             });
         }
         for (const auto &node : std::as_const(nodes)) {

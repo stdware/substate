@@ -57,10 +57,10 @@ namespace ss {
         bool isWritable() const;
 
         /// Return the node of \a id.
-        std::shared_ptr<Node> indexOf(size_t id) const;
+        Node *indexOf(size_t id) const;
 
-        inline std::shared_ptr<Node> root() const;
-        void setRoot(const std::shared_ptr<Node> &root);
+        inline Node *root() const;
+        void setRoot(Node *root);
 
         /// Reset the model to empty state.
         void reset();
@@ -86,7 +86,7 @@ namespace ss {
         void notify(Notification *n) override;
 
         Node *_lockedNode;
-        std::shared_ptr<Node> _root;
+        Node *_root;
         State _state = Idle;
         std::vector<std::unique_ptr<Action>> _txActions;
         std::unique_ptr<StorageEngine> _storageEngine;
@@ -115,7 +115,7 @@ namespace ss {
         return state() & UndoRedoFlag;
     }
 
-    inline std::shared_ptr<Node> Model::root() const {
+    inline Node *Model::root() const {
         return _root;
     }
 

@@ -4,23 +4,24 @@
 
 #include "Node_p.h"
 #include "Model.h"
-#include "StorageEngine.h"
+#include "StorageEngine_p.h"
 
 namespace ss {
 
-    void NodePrivate::propagate(Node *node, Model *model) {
+    void NodePrivate::propagate(NodePtr &node, Model *model) {
         auto engine = model->storageEngine();
-        node->propagate([model, engine](Node *node) {
+        propagate(node, [model, engine](NodePtr &node) {
             node->_model = model;
-            node->_id = engine->addId(node, node->_id);
+            node->_id = StorageEnginePrivate::addNode(engine, node.transferred(), node->_id);
         });
     }
 
     Node::~Node() {
         if (_id > 0) {
             assert(_model);
-            if (!_model->_clearing)
-                _model->_storageEngine->removeId(_id);
+            if (!_model->_clearing) {
+                StorageEnginePrivate::removeNode(_model->_storageEngine.get(), _id);
+            }
         }
     }
 
@@ -72,7 +73,7 @@ namespace ss {
             _model->_lockedNode = nullptr;
     }
 
-    void Node::propagateChildren(const std::function<void(Node *)> &func) {
+    void Node::propagateChildren(const std::function<void(NodePtr &)> &func) {
         (void) func;
     }
 

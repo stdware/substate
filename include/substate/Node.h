@@ -9,6 +9,7 @@
 #include <iostream>
 
 #include <substate/Notification.h>
+#include <substate/SmartPtr.h>
 
 namespace ss {
 
@@ -18,11 +19,12 @@ namespace ss {
 
     class NodePrivate;
 
+    class Node;
+
     /// Node - Document information storage unit.
-    /// \note The node should be created by \c std::make_shared instead of created by direct
+    /// \note TODO The node should be created by \c std::make_shared instead of created by direct
     /// construction.
-    class SUBSTATE_EXPORT Node : public NotificationSubject,
-                                 public std::enable_shared_from_this<Node> {
+    class SUBSTATE_EXPORT Node : public NotificationSubject {
     public:
         inline Node(int type);
         ~Node();
@@ -47,7 +49,7 @@ namespace ss {
         inline int type() const;
         inline State state() const;
         inline size_t id() const;
-        inline std::shared_ptr<Node> parent() const;
+        inline Node *parent() const;
         inline Model *model() const;
 
         inline bool isFree() const;
@@ -55,10 +57,10 @@ namespace ss {
         bool isWritable() const;
 
         /// Clone the node without copying its id.
-        inline std::shared_ptr<Node> clone() const;
+        inline Node *clone() const;
 
-        /// Execute \a func on this node and all its children.
-        inline void propagate(const std::function<void(Node *)> &func);
+        /// Execute \a func on all children.
+        virtual void propagateChildren(const std::function<void(NodePtr &)> &func);
 
     protected:
         void beginAction();
@@ -66,13 +68,6 @@ namespace ss {
 
         void addChild(Node *child);
         void removeChild(Node *child);
-
-        /// Clone the node with option(s).
-        /// \param copyId The id of the cloned node = \a copyId ? 0 : this->id().
-        virtual std::shared_ptr<Node> clone(bool copyId) const = 0;
-
-        /// Execute \a func on all children.
-        virtual void propagateChildren(const std::function<void(Node *)> &func);
 
         void notify(Notification *n) override;
 
@@ -103,8 +98,8 @@ namespace ss {
         return _id;
     }
 
-    inline std::shared_ptr<Node> Node::parent() const {
-        return _parent ? _parent->shared_from_this() : nullptr;
+    inline Node *Node::parent() const {
+        return _parent;
     }
 
     inline Model *Node::model() const {
@@ -113,15 +108,6 @@ namespace ss {
 
     inline bool Node::isFree() const {
         return _state == Created;
-    }
-
-    inline std::shared_ptr<Node> Node::clone() const {
-        return clone(false);
-    }
-
-    inline void Node::propagate(const std::function<void(Node *)> &func) {
-        func(this);
-        propagateChildren(func);
     }
 
 }

@@ -39,8 +39,7 @@ namespace ss {
         inline void setState(int state);
 
         /// Query the nodes associated with the action.
-        virtual void queryNodes( //
-            bool inserted, const std::function<void(const std::shared_ptr<Node> &)> &add) = 0;
+        virtual void queryNodes(bool inserted, const std::function<void(const NodePtr &)> &add) = 0;
 
         /// Undo or redo the action.
         virtual void execute(bool undo) = 0;
@@ -60,7 +59,7 @@ namespace ss {
     /// NodeAction - Base action for node change.
     class NodeAction : public Action {
     public:
-        inline NodeAction(int type, const std::shared_ptr<Node> &parent);
+        inline NodeAction(int type, Node *parent);
         ~NodeAction() = default;
 
         inline std::shared_ptr<Node> parent() const;
@@ -69,8 +68,7 @@ namespace ss {
         std::shared_ptr<Node> _parent;
     };
 
-    inline NodeAction::NodeAction(int type, const std::shared_ptr<Node> &parent)
-        : Action(type), _parent(parent) {
+    inline NodeAction::NodeAction(int type, Node *parent) : Action(type), _parent(parent) {
     }
 
     inline std::shared_ptr<Node> NodeAction::parent() const {
@@ -81,34 +79,31 @@ namespace ss {
     /// RootChangeAction - Action for model root change.
     class SUBSTATE_EXPORT RootChangeAction : public Action {
     public:
-        inline RootChangeAction(const std::shared_ptr<Node> &oldRoot,
-                                const std::shared_ptr<Node> &newRoot);
+        inline RootChangeAction(NodePtr oldRoot, NodePtr newRoot);
         ~RootChangeAction() = default;
 
-        void queryNodes(bool inserted,
-                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
+        void queryNodes(bool inserted, const std::function<void(const NodePtr &)> &add) override;
         void execute(bool undo) override;
 
     public:
-        inline std::shared_ptr<Node> root() const;
-        inline std::shared_ptr<Node> oldRoot() const;
+        inline Node *root() const;
+        inline Node *oldRoot() const;
 
     protected:
-        std::shared_ptr<Node> _oldRoot;
-        std::shared_ptr<Node> _newRoot;
+        NodePtr _oldRoot;
+        NodePtr _newRoot;
     };
 
-    inline RootChangeAction::RootChangeAction(const std::shared_ptr<Node> &oldRoot,
-                                              const std::shared_ptr<Node> &newRoot)
-        : Action(Action::RootChange), _oldRoot(oldRoot), _newRoot(newRoot) {
+    inline RootChangeAction::RootChangeAction(NodePtr oldRoot, NodePtr newRoot)
+        : Action(Action::RootChange), _oldRoot(std::move(oldRoot)), _newRoot(std::move(newRoot)) {
     }
 
-    inline std::shared_ptr<Node> RootChangeAction::root() const {
-        return _newRoot;
+    inline Node *RootChangeAction::root() const {
+        return _newRoot.get();
     }
 
-    inline std::shared_ptr<Node> RootChangeAction::oldRoot() const {
-        return _oldRoot;
+    inline Node *RootChangeAction::oldRoot() const {
+        return _oldRoot.get();
     }
 
 

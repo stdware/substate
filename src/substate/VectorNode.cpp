@@ -36,7 +36,7 @@ namespace ss {
 
     VectorNode::~VectorNode() = default;
 
-    void VectorNode::insert(int index, std::vector<std::shared_ptr<Node>> nodes) {
+    void VectorNode::insert(int index, std::vector<NodePtr> nodes) {
         assert(isWritable());
         assert(NodePrivate::validateArrayQueryArguments(index, _vec.size()));
         assert(!nodes.empty());
@@ -47,9 +47,8 @@ namespace ss {
         }
 #endif
 
-        auto action = std::make_unique<VectorInsDelAction>(
-            Action::VectorInsert, std::static_pointer_cast<VectorNode>(shared_from_this()), index,
-            std::move(nodes));
+        auto action = std::make_unique<VectorInsDelAction>(Action::VectorInsert, this, index,
+                                                           std::move(nodes));
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }
@@ -59,8 +58,7 @@ namespace ss {
         assert(NodePrivate::validateArrayRemoveArguments(index, count, _vec.size()) &&
                !(dest >= index && dest < index + count));
 
-        auto action = std::make_unique<VectorMoveAction>(
-            std::static_pointer_cast<VectorNode>(shared_from_this()), index, count, dest);
+        auto action = std::make_unique<VectorMoveAction>(this, index, count, dest);
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }
@@ -69,19 +67,19 @@ namespace ss {
         assert(isWritable());
         assert(NodePrivate::validateArrayRemoveArguments(index, count, _vec.size()));
 
-        std::vector<std::shared_ptr<Node>> nodes;
+        std::vector<NodePtr> nodes;
         nodes.resize(count);
-        std::copy(_vec.begin() + index, _vec.begin() + index + count, nodes.begin());
-
-        auto action = std::make_unique<VectorInsDelAction>(
-            Action::VectorRemove, std::static_pointer_cast<VectorNode>(shared_from_this()), index,
-            std::move(nodes));
+        for (size_t i = 0; i < count; ++i) {
+            nodes[i] = _vec[index + i].makeRef();
+        }
+        auto action = std::make_unique<VectorInsDelAction>(Action::VectorRemove, this, index,
+                                                           std::move(nodes));
         action->execute(false);
         ModelPrivate::pushAction(_model, std::move(action));
     }
 
-    std::shared_ptr<Node> VectorNode::clone(bool copyId) const {
-        auto node = std::make_shared<VectorNode>(_type);
+    NodePtr VectorNode::clone(bool copyId) const {
+        auto node = makeSmart<VectorNode>(_type);
         VectorNodePrivate::copy(node.get(), this, copyId);
         return node;
     }
@@ -92,8 +90,8 @@ namespace ss {
         }
     }
 
-    void VectorMoveAction::queryNodes(
-        bool inserted, const std::function<void(const std::shared_ptr<Node> &)> &add) {
+    void VectorMoveAction::queryNodes(bool inserted,
+                                      const std::function<void(const NodePtr &)> &add) {
         (void) inserted;
         (void) add;
     }
@@ -105,6 +103,10 @@ namespace ss {
         parent->beginAction();
         // Pre-Propagate signal
         {
+            if (undo) {
+                // TODO
+            }
+
             ActionNotification n(Notification::ActionAboutToTrigger, this);
             parent->notify(&n);
         }
@@ -128,15 +130,19 @@ namespace ss {
 
         // Propagate signal
         {
+            if (undo) {
+                // TODO
+            }
+
             ActionNotification n(Notification::ActionTriggered, this);
             parent->notify(&n);
         }
         parent->endAction();
     }
 
-    void VectorInsDelAction::queryNodes(
-        bool inserted, const std::function<void(const std::shared_ptr<Node> &)> &add) {
-        if (inserted == (_type == Action::VectorInsert)) {
+    void VectorInsDelAction::queryNodes(bool inserted,
+                                        const std::function<void(const NodePtr &)> &add) {
+        if (inserted == (_type == VectorInsert)) {
             for (const auto &node : std::as_const(_children)) {
                 add(node);
             }
@@ -150,29 +156,49 @@ namespace ss {
         parent->beginAction();
         // Pre-Propagate signal
         {
+            auto orgType = _type;
+            if (undo) {
+                _type = _type == VectorInsert ? VectorRemove : VectorInsert;
+            }
+
             ActionNotification n(Notification::ActionAboutToTrigger, this);
             parent->notify(&n);
+
+            _type = orgType;
         }
 
         // Do change
         if (((_type == VectorRemove) ^ undo)) {
-            auto begin = vec.begin() + _index;
-            auto end = vec.begin() + _index + _children.size();
-            for (auto it = begin; it != end; ++it) {
-                parent->removeChild(it->get());
+            for (size_t i = 0; i < _children.size(); ++i) {
+                auto &orgNode = vec[_index + i];
+                _children[i].swap(orgNode);
+                parent->removeChild(orgNode.get());
             }
-            vec.erase(begin, end);
+            vec.erase(vec.begin() + _index, vec.begin() + _index + _children.size());
         } else {
             for (const auto &node : std::as_const(_children)) {
                 parent->addChild(node.get());
             }
-            vec.insert(vec.begin() + _index, _children.begin(), _children.end());
+            vec.insert(vec.begin() + _index, _children.size(), NodePtr());
+            for (size_t i = 0; i < _children.size(); ++i) {
+                auto &node = _children[i];
+                auto &newNode = vec[_index + i];
+                newNode = node.makeRef();
+                newNode.swap(node);
+            }
         }
 
         // Post-propagate signal
         {
+            auto orgType = _type;
+            if (undo) {
+                _type = _type == VectorInsert ? VectorRemove : VectorInsert;
+            }
+
             ActionNotification n(Notification::ActionTriggered, this);
             parent->notify(&n);
+
+            _type = orgType;
         }
         parent->endAction();
     }

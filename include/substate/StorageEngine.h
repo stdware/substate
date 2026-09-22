@@ -17,6 +17,8 @@ namespace ss {
 
     class Model;
 
+    class StorageEnginePrivate;
+
     /// StorageEngine - Node and Action storage backend, could be memory, filesystem, database, etc.
     class SUBSTATE_EXPORT StorageEngine {
     public:
@@ -32,7 +34,7 @@ namespace ss {
     public:
         inline Model *model() const;
 
-        inline std::shared_ptr<Node> indexOf(size_t id) const;
+        inline Node *indexOf(size_t id) const;
 
         /// Sets up the engine with a model, must set \c this->_model to \c model after this call.
         virtual void setup(Model *model);
@@ -61,32 +63,26 @@ namespace ss {
         virtual std::map<std::string, std::string> stepMessage(int step) const = 0;
 
     protected:
-        size_t addId(Node *node, size_t idx = 0);
-        inline void removeId(size_t idx);
-
-        std::unordered_map<size_t, Node *> _idMap;
+        std::unordered_map<size_t, SmartPtr<Node>> _nodeMap;
         size_t _maxId = 0;
         Model *_model = nullptr;
 
         friend class Model;
         friend class Node;
         friend class NodePrivate;
+        friend class StorageEnginePrivate;
     };
 
     inline Model *StorageEngine::model() const {
         return _model;
     }
 
-    inline std::shared_ptr<Node> StorageEngine::indexOf(size_t id) const {
-        auto it = _idMap.find(id);
-        if (it == _idMap.end()) {
+    inline Node *StorageEngine::indexOf(size_t id) const {
+        auto it = _nodeMap.find(id);
+        if (it == _nodeMap.end()) {
             return nullptr;
         }
-        return it->second->shared_from_this();
-    }
-
-    inline void StorageEngine::removeId(size_t idx) {
-        _idMap.erase(idx);
+        return it->second.get();
     }
 
 }
