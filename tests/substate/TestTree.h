@@ -8,8 +8,8 @@
 #include <substate/SheetNode.h>
 #include <substate/VectorNode.h>
 
-/// The number of live objects of the counting node types below. The count is compared with the
-/// identifier index of the model, which verifies that no node outlives its owner and that no
+/// The number of live objects of the counting node types of the tests. The count is compared with
+/// the identifier index of the model, which verifies that no node outlives its owner and that no
 /// owner is missing, without a leak detector.
 class LiveNodes {
 public:
@@ -17,23 +17,27 @@ public:
         return s_count;
     }
 
+    static inline void created() {
+        ++s_count;
+    }
+
+    static inline void destroyed() {
+        --s_count;
+    }
+
 private:
     static inline int s_count = 0;
-
-    friend class CountingNode;
-    friend class CountingSheet;
-    friend class CountingBytes;
 };
 
 /// A VectorNode that counts its live instances in LiveNodes.
 class CountingNode : public ss::VectorNode {
 public:
     inline CountingNode() : VectorNode(User) {
-        ++LiveNodes::s_count;
+        LiveNodes::created();
     }
 
     inline ~CountingNode() {
-        --LiveNodes::s_count;
+        LiveNodes::destroyed();
     }
 
     inline std::unique_ptr<ss::Node> clone() const override {
@@ -56,11 +60,11 @@ public:
 class CountingSheet : public ss::SheetNode {
 public:
     inline CountingSheet() : SheetNode(User + 1) {
-        ++LiveNodes::s_count;
+        LiveNodes::created();
     }
 
     inline ~CountingSheet() {
-        --LiveNodes::s_count;
+        LiveNodes::destroyed();
     }
 
     inline std::unique_ptr<ss::Node> clone() const override {
@@ -74,11 +78,11 @@ public:
 class CountingBytes : public ss::BytesNode {
 public:
     inline CountingBytes() : BytesNode(User + 2) {
-        ++LiveNodes::s_count;
+        LiveNodes::created();
     }
 
     inline ~CountingBytes() {
-        --LiveNodes::s_count;
+        LiveNodes::destroyed();
     }
 
     inline std::unique_ptr<ss::Node> clone() const override {
