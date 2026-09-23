@@ -26,8 +26,8 @@ namespace ss {
         void setStepLimit(int stepLimit);
 
         void commit(Transaction transaction) override;
-        Transaction *stepBackward() override;
-        Transaction *stepForward() override;
+        Transaction *previousTransaction() override;
+        Transaction *nextTransaction() override;
         void reset() override;
 
         int minimumStep() const override;

@@ -30,7 +30,7 @@ namespace ss {
         }
     }
 
-    Transaction *MemoryStorageEngine::stepBackward() {
+    Transaction *MemoryStorageEngine::previousTransaction() {
         if (m_executed == 0) {
             return nullptr;
         }
@@ -38,7 +38,7 @@ namespace ss {
         return &m_transactions[size_t(m_executed)];
     }
 
-    Transaction *MemoryStorageEngine::stepForward() {
+    Transaction *MemoryStorageEngine::nextTransaction() {
         if (m_executed == int(m_transactions.size())) {
             return nullptr;
         }

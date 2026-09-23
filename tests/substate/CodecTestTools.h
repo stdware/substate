@@ -119,11 +119,11 @@ public:
         }
     }
 
-    inline ss::Transaction *stepBackward() override {
+    inline ss::Transaction *previousTransaction() override {
         return m_executed == 0 ? nullptr : &m_transactions[size_t(--m_executed)];
     }
 
-    inline ss::Transaction *stepForward() override {
+    inline ss::Transaction *nextTransaction() override {
         return m_executed == int(m_transactions.size()) ? nullptr
                                                         : &m_transactions[size_t(m_executed++)];
     }

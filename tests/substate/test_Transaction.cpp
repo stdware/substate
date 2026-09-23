@@ -30,11 +30,11 @@ namespace {
             ++executed;
         }
 
-        Transaction *stepBackward() override {
+        Transaction *previousTransaction() override {
             return executed == 0 ? nullptr : &transactions[size_t(--executed)];
         }
 
-        Transaction *stepForward() override {
+        Transaction *nextTransaction() override {
             return executed == int(transactions.size()) ? nullptr
                                                         : &transactions[size_t(executed++)];
         }

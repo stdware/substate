@@ -18,6 +18,10 @@ namespace ss {
     /// model: step \c n is the state after the <tt>n</tt>-th committed transaction that is still
     /// reachable.
     ///
+    /// The current step is a cursor between two transactions. previousTransaction() and
+    /// nextTransaction() return the transaction before or after the cursor and move the cursor
+    /// over it, like the functions of the same names of a list iterator.
+    ///
     /// An engine discards transactions only in two ways, as required by constraint 3 of
     /// docs/Design.md. Eviction discards the oldest executed transactions. Truncation discards
     /// all undone transactions, and occurs when a new transaction is committed. The nodes owned
@@ -34,15 +38,15 @@ namespace ss {
         /// are truncated first.
         virtual void commit(Transaction transaction) = 0;
 
-        /// Returns the transaction of the current step and makes the previous step current, or
-        /// returns \c nullptr if the current step is the minimum step. The transaction remains
-        /// valid until the next commit or reset.
-        virtual Transaction *stepBackward() = 0;
+        /// Returns the transaction before the cursor, which leads to the current step and is
+        /// undone next, and makes the previous step current. Returns \c nullptr if the current
+        /// step is the minimum step. The transaction remains valid until the next commit or reset.
+        virtual Transaction *previousTransaction() = 0;
 
-        /// Returns the transaction of the next step and makes it current, or returns \c nullptr
-        /// if the current step is the maximum step. The transaction remains valid until the next
-        /// commit or reset.
-        virtual Transaction *stepForward() = 0;
+        /// Returns the transaction after the cursor, which leads to the next step and is redone
+        /// next, and makes that step current. Returns \c nullptr if the current step is the
+        /// maximum step. The transaction remains valid until the next commit or reset.
+        virtual Transaction *nextTransaction() = 0;
 
         /// Discards all transactions and restarts the step numbers at 0.
         virtual void reset() = 0;

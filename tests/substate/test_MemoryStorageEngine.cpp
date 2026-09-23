@@ -37,8 +37,8 @@ namespace {
 BOOST_AUTO_TEST_CASE(test_an_empty_history_has_no_step) {
     MemoryStorageEngine engine;
     checkSteps(engine, 0, 0, 0);
-    BOOST_CHECK(!engine.stepBackward());
-    BOOST_CHECK(!engine.stepForward());
+    BOOST_CHECK(!engine.previousTransaction());
+    BOOST_CHECK(!engine.nextTransaction());
     BOOST_CHECK(engine.stepMessage(0).empty());
 }
 
@@ -60,15 +60,15 @@ BOOST_AUTO_TEST_CASE(test_stepping_returns_the_transaction_of_the_step_left_or_e
         engine.commit(transaction(n));
     }
 
-    BOOST_CHECK_EQUAL(messageOf(engine.stepBackward()), "3");
-    BOOST_CHECK_EQUAL(messageOf(engine.stepBackward()), "2");
+    BOOST_CHECK_EQUAL(messageOf(engine.previousTransaction()), "3");
+    BOOST_CHECK_EQUAL(messageOf(engine.previousTransaction()), "2");
     checkSteps(engine, 0, 1, 3);
 
-    BOOST_CHECK_EQUAL(messageOf(engine.stepForward()), "2");
+    BOOST_CHECK_EQUAL(messageOf(engine.nextTransaction()), "2");
     checkSteps(engine, 0, 2, 3);
 
-    BOOST_CHECK_EQUAL(messageOf(engine.stepForward()), "3");
-    BOOST_CHECK(!engine.stepForward());
+    BOOST_CHECK_EQUAL(messageOf(engine.nextTransaction()), "3");
+    BOOST_CHECK(!engine.nextTransaction());
     checkSteps(engine, 0, 3, 3);
 }
 
@@ -77,14 +77,14 @@ BOOST_AUTO_TEST_CASE(test_a_commit_truncates_the_undone_steps) {
     for (int n = 1; n <= 3; ++n) {
         engine.commit(transaction(n));
     }
-    engine.stepBackward();
-    engine.stepBackward();
+    engine.previousTransaction();
+    engine.previousTransaction();
 
     engine.commit(transaction(4));
     checkSteps(engine, 0, 2, 2);
     BOOST_CHECK_EQUAL(messageOf(engine, 1), "1");
     BOOST_CHECK_EQUAL(messageOf(engine, 2), "4");
-    BOOST_CHECK(!engine.stepForward());
+    BOOST_CHECK(!engine.nextTransaction());
 }
 
 BOOST_AUTO_TEST_CASE(test_the_oldest_steps_are_evicted_beyond_the_limit) {
@@ -99,9 +99,9 @@ BOOST_AUTO_TEST_CASE(test_the_oldest_steps_are_evicted_beyond_the_limit) {
 
     // Exactly the limit remains reachable by undo.
     for (int n = 5; n >= 3; --n) {
-        BOOST_CHECK_EQUAL(messageOf(engine.stepBackward()), std::to_string(n));
+        BOOST_CHECK_EQUAL(messageOf(engine.previousTransaction()), std::to_string(n));
     }
-    BOOST_CHECK(!engine.stepBackward());
+    BOOST_CHECK(!engine.previousTransaction());
     checkSteps(engine, 2, 2, 5);
 }
 
@@ -111,8 +111,8 @@ BOOST_AUTO_TEST_CASE(test_a_limit_of_one_step_is_accepted) {
     engine.commit(transaction(1));
     engine.commit(transaction(2));
     checkSteps(engine, 1, 2, 2);
-    BOOST_CHECK_EQUAL(messageOf(engine.stepBackward()), "2");
-    BOOST_CHECK(!engine.stepBackward());
+    BOOST_CHECK_EQUAL(messageOf(engine.previousTransaction()), "2");
+    BOOST_CHECK(!engine.previousTransaction());
 }
 
 BOOST_AUTO_TEST_CASE(test_a_new_limit_applies_at_the_next_commit) {
@@ -135,8 +135,8 @@ BOOST_AUTO_TEST_CASE(test_eviction_after_truncation_counts_only_executed_steps) 
     for (int n = 1; n <= 3; ++n) {
         engine.commit(transaction(n));
     }
-    engine.stepBackward();
-    engine.stepBackward();
+    engine.previousTransaction();
+    engine.previousTransaction();
 
     engine.commit(transaction(4));
     checkSteps(engine, 0, 2, 2);
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(test_reset_restarts_the_step_numbers) {
     }
     engine.reset();
     checkSteps(engine, 0, 0, 0);
-    BOOST_CHECK(!engine.stepBackward());
+    BOOST_CHECK(!engine.previousTransaction());
 }
 
 BOOST_AUTO_TEST_SUITE_END()

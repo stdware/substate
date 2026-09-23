@@ -124,7 +124,7 @@ namespace ss {
     void Model::undo() {
         assert(m_state == State::Idle && !m_notifying);
 
-        auto transaction = m_storageEngine->stepBackward();
+        auto transaction = m_storageEngine->previousTransaction();
         assert(transaction);
         if (!transaction) {
             return;
@@ -144,7 +144,7 @@ namespace ss {
     void Model::redo() {
         assert(m_state == State::Idle && !m_notifying);
 
-        auto transaction = m_storageEngine->stepForward();
+        auto transaction = m_storageEngine->nextTransaction();
         assert(transaction);
         if (!transaction) {
             return;

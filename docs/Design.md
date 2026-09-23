@@ -278,8 +278,8 @@ public:
     virtual ~StorageEngine();
 
     virtual void commit(Transaction transaction) = 0;
-    virtual Transaction *stepBackward() = 0;
-    virtual Transaction *stepForward() = 0;
+    virtual Transaction *previousTransaction() = 0;
+    virtual Transaction *nextTransaction() = 0;
     virtual void reset() = 0;
 
     virtual int minimumStep() const = 0;
@@ -290,7 +290,7 @@ public:
 ```
 
 - `commit()` 接收事务的全部所有权，包括动作持有的节点。截断重做分支与淘汰最早步骤由引擎决定，被丢弃的事务在引擎中析构，其持有的节点随之析构。
-- `stepBackward()` 与 `stepForward()` 返回待执行的事务，由模型按相应方向执行并发出通知。无法撤销或重做时返回空指针。
+- 当前步数是位于两个事务之间的游标。`previousTransaction()` 返回游标前面的事务，即撤销时要执行的事务，并使游标后退一步。`nextTransaction()` 返回游标后面的事务，即重做时要执行的事务，并使游标前进一步。二者与列表迭代器的同名函数语义相同。模型按相应方向执行返回的事务并发出通知。无法撤销或重做时返回空指针。
 - 第一阶段只实现 `MemoryStorageEngine`，即现在的 `StandardStorageEngine`，并修正其最大步数的处理。
 
 ## 持久化接口
@@ -312,7 +312,7 @@ public:
 
    `Property` 只以 `QVariant` 表示标量，不另设一个封闭的标量类型。两种表示并存时，同一个值有两种存法，相等判断与「值未改变时不产生动作」的规则都须另作规定，而 `Property` 仍依赖 Qt，封闭类型的主要收益无法取得。
 4. **反序列化能够按指定 ID 创建节点**，并将模型的 ID 计数器恢复到日志中的最大值。解码的节点带着记录的 ID 进入模型，但不进入树。ID 为 0、重复或已存在于模型中时解码失败。
-5. **历史记录的位置由引擎决定。** 模型只通过 `stepBackward()` 与 `stepForward()` 取得事务，不假定全部历史都在内存中。WAL 引擎可以将早期步骤换出到磁盘，需要时再读入。
+5. **历史记录的位置由引擎决定。** 模型只通过 `previousTransaction()` 与 `nextTransaction()` 取得事务，不假定全部历史都在内存中。WAL 引擎可以将早期步骤换出到磁盘，需要时再读入。
 6. **恢复由引擎发起**：引擎读取检查点与日志，构造根节点与历史记录，再交给模型。入口为 `Model::restore(root, lastId)`：模型须没有树，例如在 `reset()` 之后。它安装解码的根，不产生动作，保留引擎已恢复的历史记录，并把 ID 计数器提高到引擎记录的最大值，使已析构节点的 ID 不被复用。
 7. **事务能够枚举其持有的节点。** 删除类动作在日志中只写出节点 ID，被删除节点的内容由引擎写入检查点，与 AceTreeModel 相同。引擎据此收集一段历史中被删除的节点。
 
