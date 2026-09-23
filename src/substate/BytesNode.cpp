@@ -1,130 +1,116 @@
 #include "BytesNode.h"
-#include "BytesNode_p.h"
 
-#include "Model_p.h"
+#include <algorithm>
+#include <cassert>
+
+#include "Node_p.h"
 
 namespace ss {
 
-    void BytesNodePrivate::copy(BytesNode *dest, const BytesNode *src, bool copyId) {
-        if (!copyId) {
-            dest->_id = src->_id;
-        }
-        // Copy data
-        dest->_data = src->_data;
-    }
-
     BytesNode::~BytesNode() = default;
 
-    void BytesNode::insert(int index, std::vector<char> data) {
+    void BytesNode::insert(int index, ArrayView<char> bytes) {
         assert(isWritable());
-        assert(NodePrivate::validateArrayQueryArguments(index, _data.size()) && !data.empty());
+        assert(NodePrivate::isValidInsertion(index, size()));
 
-        auto action = std::make_unique<BytesAction>(
-            Action::BytesInsert, std::static_pointer_cast<BytesNode>(shared_from_this()), index,
-            std::move(data));
-        action->execute(false);
-        ModelPrivate::pushAction(_model, std::move(action));
-    }
-
-    void BytesNode::remove(int index, int size) {
-        assert(isWritable());
-        assert(NodePrivate::validateArrayRemoveArguments(index, size, _data.size()));
-
-        auto begin = _data.begin() + index;
-        auto action = std::make_unique<BytesAction>(
-            Action::BytesRemove, std::static_pointer_cast<BytesNode>(shared_from_this()), index,
-            std::vector<char>(begin, begin + size));
-        action->execute(false);
-        ModelPrivate::pushAction(_model, std::move(action));
-    }
-
-    void BytesNode::replace(int index, std::vector<char> data) {
-        assert(isWritable());
-        auto begin = _data.begin() + index;
-        auto end = begin + data.size();
-        if (auto off = end - _data.end(); off > 0) {
-            auto action = std::make_unique<BytesAction>(
-                Action::BytesInsert, std::static_pointer_cast<BytesNode>(shared_from_this()),
-                int(data.size()), std::vector<char>(off, 0));
-            action->execute(false);
-            ModelPrivate::pushAction(_model, std::move(action));
+        if (bytes.empty()) {
+            return;
+        }
+        if (isFree()) {
+            m_data.insert(m_data.begin() + index, bytes.begin(), bytes.end());
+            return;
         }
 
-        auto action = std::make_unique<BytesReplaceAction>(
-            std::static_pointer_cast<BytesNode>(shared_from_this()), index, std::move(data),
-            std::vector<char>(begin, end));
-        action->execute(false);
-        ModelPrivate::pushAction(_model, std::move(action));
+        std::unique_ptr<BytesInsDelAction> action(new BytesInsDelAction(
+            Action::BytesInsert, this, index, std::vector<char>(bytes.begin(), bytes.end())));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
     }
 
-    std::shared_ptr<Node> BytesNode::clone(bool copyId) const {
-        auto node = std::make_shared<BytesNode>(Bytes);
-        BytesNodePrivate::copy(node.get(), this, copyId);
+    void BytesNode::remove(int index, int count) {
+        assert(isWritable());
+        assert(NodePrivate::isValidRemoval(index, count, size()));
+
+        auto first = m_data.begin() + index;
+        auto last = first + count;
+        if (isFree()) {
+            m_data.erase(first, last);
+            return;
+        }
+
+        std::unique_ptr<BytesInsDelAction> action(new BytesInsDelAction(
+            Action::BytesRemove, this, index, std::vector<char>(first, last)));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
+    }
+
+    void BytesNode::replace(int index, ArrayView<char> bytes) {
+        assert(isWritable());
+        assert(index >= 0 && index <= size());
+
+        const int overlap = std::min(int(bytes.size()), size() - index);
+        const auto within = bytes.take_front(size_t(overlap));
+        const auto beyond = bytes.drop_front(size_t(overlap));
+
+        if (isFree()) {
+            std::copy(within.begin(), within.end(), m_data.begin() + index);
+            m_data.insert(m_data.end(), beyond.begin(), beyond.end());
+            return;
+        }
+
+        if (!within.empty()) {
+            auto first = m_data.begin() + index;
+            std::unique_ptr<BytesReplaceAction> action(
+                new BytesReplaceAction(this, index, std::vector<char>(within.begin(), within.end()),
+                                       std::vector<char>(first, first + overlap)));
+            action->execute(Action::Execute);
+            NodePrivate::pushAction(model(), std::move(action));
+        }
+        if (!beyond.empty()) {
+            insert(size(), beyond);
+        }
+    }
+
+    std::unique_ptr<Node> BytesNode::clone() const {
+        std::unique_ptr<BytesNode> node(new BytesNode());
+        node->cloneDataFrom(*this);
         return node;
     }
 
-    BytesAction::~BytesAction() = default;
-
-    void BytesAction::queryNodes(bool inserted,
-                                 const std::function<void(const std::shared_ptr<Node> &)> &add) {
-        (void) inserted;
-        (void) add;
+    void BytesNode::cloneDataFrom(const BytesNode &source) {
+        assert(isFree() && m_data.empty());
+        m_data = source.m_data;
     }
 
-    void BytesAction::execute(bool undo) {
-        auto parent = static_cast<BytesNode *>(_parent.get());
-        parent->beginAction();
+    BytesInsDelAction::BytesInsDelAction(int type, BytesNode *parent, int index,
+                                         std::vector<char> bytes)
+        : Action(type), m_parent(parent), m_index(index), m_bytes(std::move(bytes)) {
+    }
 
-        auto &data = parent->_data;
-        // Pre-Propagate signal
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, this);
-            parent->notify(&n);
-        }
+    BytesInsDelAction::~BytesInsDelAction() = default;
 
-        // Do change
-        if (((_type == BytesRemove) ^ undo)) {
-            auto begin = data.begin() + _index;
-            data.erase(begin, begin + _bytes.size());
+    void BytesInsDelAction::execute(Operation operation) {
+        auto &data = m_parent->m_data;
+        if ((type() == BytesInsert) == isForward(operation)) {
+            data.insert(data.begin() + m_index, m_bytes.begin(), m_bytes.end());
         } else {
-            data.insert(data.begin() + _index, _bytes.begin(), _bytes.end());
+            auto first = data.begin() + m_index;
+            data.erase(first, first + std::ptrdiff_t(m_bytes.size()));
         }
-
-        // Post-propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, this);
-            parent->notify(&n);
-        }
-        parent->endAction();
     }
 
-    void BytesReplaceAction::queryNodes(
-        bool inserted, const std::function<void(const std::shared_ptr<Node> &)> &add) {
-        (void) inserted;
-        (void) add;
+    BytesReplaceAction::BytesReplaceAction(BytesNode *parent, int index, std::vector<char> bytes,
+                                           std::vector<char> oldBytes)
+        : Action(BytesReplace), m_parent(parent), m_index(index), m_bytes(std::move(bytes)),
+          m_oldBytes(std::move(oldBytes)) {
+        assert(m_bytes.size() == m_oldBytes.size());
     }
 
-    void BytesReplaceAction::execute(bool undo) {
-        auto parent = static_cast<BytesNode *>(_parent.get());
-        parent->beginAction();
+    BytesReplaceAction::~BytesReplaceAction() = default;
 
-        auto &data = parent->_data;
-        // Pre-Propagate signal
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, this);
-            parent->notify(&n);
-        }
-
-        // Do change
-        const auto &bytes = undo ? _oldBytes : _bytes;
-        std::copy(bytes.begin(), bytes.end(), data.begin() + _index);
-
-        // Post-propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, this);
-            parent->notify(&n);
-        }
-        parent->endAction();
+    void BytesReplaceAction::execute(Operation operation) {
+        const auto &bytes = isForward(operation) ? m_bytes : m_oldBytes;
+        std::copy(bytes.begin(), bytes.end(), m_parent->m_data.begin() + m_index);
     }
 
 }

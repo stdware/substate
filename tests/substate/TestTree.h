@@ -4,6 +4,7 @@
 #include <memory>
 #include <string>
 
+#include <substate/BytesNode.h>
 #include <substate/SheetNode.h>
 #include <substate/VectorNode.h>
 
@@ -21,6 +22,7 @@ private:
 
     friend class CountingNode;
     friend class CountingSheet;
+    friend class CountingBytes;
 };
 
 /// A VectorNode that counts its live instances in LiveNodes.
@@ -68,6 +70,24 @@ public:
     }
 };
 
+/// A BytesNode that counts its live instances in LiveNodes.
+class CountingBytes : public ss::BytesNode {
+public:
+    inline CountingBytes() : BytesNode(User + 2) {
+        ++LiveNodes::s_count;
+    }
+
+    inline ~CountingBytes() {
+        --LiveNodes::s_count;
+    }
+
+    inline std::unique_ptr<ss::Node> clone() const override {
+        auto node = std::make_unique<CountingBytes>();
+        node->cloneDataFrom(*this);
+        return node;
+    }
+};
+
 /// Returns a free node with \a children free leaves.
 inline std::unique_ptr<CountingNode> makeNode(int children = 0) {
     auto node = std::make_unique<CountingNode>();
@@ -78,8 +98,10 @@ inline std::unique_ptr<CountingNode> makeNode(int children = 0) {
 }
 
 /// The structure of the tree under \a node as text. Each node is written as its identifier,
-/// followed by the children of a VectorNode in parentheses, or by the children of a SheetNode in
-/// braces, each preceded by <tt>#key=</tt>. An empty string represents an empty tree.
+/// followed by the children of a VectorNode in parentheses, by the children of a SheetNode in
+/// braces, each preceded by <tt>#key=</tt>, or by the bytes of a BytesNode in brackets. A byte is
+/// written as two letters from \c a to \c p, one per half, so that the text contains no digits
+/// other than identifiers and keys. An empty string represents an empty tree.
 inline std::string dump(const ss::Node *node) {
     if (!node) {
         return {};
@@ -109,6 +131,14 @@ inline std::string dump(const ss::Node *node) {
             }
             out += '}';
         }
+    } else if (auto bytes = dynamic_cast<const ss::BytesNode *>(node)) {
+        out += '[';
+        for (char c : bytes->data()) {
+            const auto value = static_cast<unsigned char>(c);
+            out += char('a' + (value >> 4));
+            out += char('a' + (value & 15));
+        }
+        out += ']';
     }
     return out;
 }

@@ -150,9 +150,14 @@ namespace {
             return std::uniform_int_distribution<int>(low, high)(m_random);
         }
 
-        /// A random free subtree of VectorNode and SheetNode objects.
+        /// A random free subtree of VectorNode, SheetNode and BytesNode objects.
         std::unique_ptr<Node> subtree(int depth) {
             const int children = depth > 0 ? uniform(0, 2) : 0;
+            if (uniform(0, 4) == 0) {
+                auto bytes = std::make_unique<CountingBytes>();
+                bytes->append(randomBytes());
+                return bytes;
+            }
             if (uniform(0, 3) == 0) {
                 auto sheet = std::make_unique<CountingSheet>();
                 for (int i = 0; i < children; ++i) {
@@ -186,6 +191,12 @@ namespace {
                 return;
             }
 
+            // The root is a BytesNode, and the tree has no node that can have children.
+            if (all.size() == 0) {
+                editBytes(pick(all.bytes));
+                return;
+            }
+
             if (kind < 9 && all.size() < 40) {
                 insert(all);
                 return;
@@ -212,6 +223,11 @@ namespace {
                 return;
             }
 
+            if (kind < 18 && !all.bytes.empty()) {
+                editBytes(pick(all.bytes));
+                return;
+            }
+
             if (!movable.empty()) {
                 auto parent = pick(movable);
                 const int size = parent->size();
@@ -233,11 +249,36 @@ namespace {
         struct Containers {
             std::vector<VectorNode *> vectors;
             std::vector<SheetNode *> sheets;
+            std::vector<BytesNode *> bytes;
 
+            /// The number of nodes that can have children.
             size_t size() const {
                 return vectors.size() + sheets.size();
             }
         };
+
+        std::vector<char> randomBytes() {
+            std::vector<char> result(size_t(uniform(1, 4)));
+            for (auto &byte : result) {
+                byte = char(uniform(0, 255));
+            }
+            return result;
+        }
+
+        /// Inserts, removes or replaces bytes. A replacement may extend the array, which creates
+        /// a replacement and an insertion.
+        void editBytes(BytesNode *node) {
+            const int size = node->size();
+            const int kind = uniform(0, 2);
+            if (kind == 0 || size == 0) {
+                node->insert(uniform(0, size), randomBytes());
+            } else if (kind == 1) {
+                const int index = uniform(0, size - 1);
+                node->remove(index, uniform(1, size - index));
+            } else {
+                node->replace(uniform(0, size), randomBytes());
+            }
+        }
 
         static void collect(Node *node, Containers &out) {
             if (auto vector = dynamic_cast<VectorNode *>(node)) {
@@ -250,6 +291,8 @@ namespace {
                 for (int key : sheet->keys()) {
                     collect(sheet->at(key), out);
                 }
+            } else if (auto bytes = dynamic_cast<BytesNode *>(node)) {
+                out.bytes.push_back(bytes);
             }
         }
 
