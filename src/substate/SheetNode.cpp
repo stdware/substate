@@ -1,7 +1,9 @@
 #include "SheetNode.h"
 
+#include <algorithm>
 #include <cassert>
 
+#include "Codec.h"
 #include "Node_p.h"
 
 namespace ss {
@@ -37,7 +39,13 @@ namespace ss {
             if (m_key == 0) {
                 m_key = ++m_node->m_lastKey;
             }
+            // A decoded endpoint carries a key that the counter of a restored node may not cover.
+            m_node->m_lastKey = std::max(m_node->m_lastKey, m_key);
             m_node->m_children.emplace(m_key, std::move(nodes.front()));
+        }
+
+        void write(Encoder &encoder) const override {
+            encoder.stream() << int32_t(m_key);
         }
 
     private:
@@ -46,6 +54,47 @@ namespace ss {
     };
 
     SheetNode::~SheetNode() = default;
+
+    std::unique_ptr<TransferEndpoint> SheetNode::readEndpoint(Decoder &decoder) {
+        int32_t key = -1;
+        decoder.stream() >> key;
+        if (decoder.fail() || key < 0) {
+            return nullptr;
+        }
+        return std::make_unique<SheetNodeEndpoint>(this, key);
+    }
+
+    void SheetNode::writeContent(Encoder &encoder) const {
+        encoder.stream() << int32_t(m_lastKey) << int32_t(m_children.size());
+        for (const auto &child : m_children) {
+            encoder.stream() << int32_t(child.first);
+            encoder.writeNode(child.second.get());
+        }
+    }
+
+    bool SheetNode::readContent(Decoder &decoder) {
+        int32_t lastKey = -1;
+        int32_t count = -1;
+        decoder.stream() >> lastKey >> count;
+        if (decoder.fail() || lastKey < 0 || count < 0) {
+            return false;
+        }
+        m_lastKey = lastKey;
+        for (int32_t i = 0; i < count; ++i) {
+            int32_t key = 0;
+            decoder.stream() >> key;
+            if (decoder.fail() || key < 1 || key > lastKey || m_children.count(key) > 0) {
+                return false;
+            }
+            auto child = decoder.readNode();
+            if (!child) {
+                return false;
+            }
+            NodePrivate::setFreeParent(child.get(), this);
+            m_children.emplace(key, std::move(child));
+        }
+        return true;
+    }
 
     int SheetNode::transferIn(Node *node) {
         assert(isWritable() && !isFree());
@@ -96,7 +145,7 @@ namespace ss {
         }
 
         std::unique_ptr<SheetInsDelAction> action(
-            new SheetInsDelAction(Action::SheetInsert, this, key, std::move(node)));
+            new SheetInsDelAction(Action::SheetInsert, this, key, std::move(node), nullptr));
         NodePrivate::execute(model(), std::move(action));
         return key;
     }
@@ -115,7 +164,7 @@ namespace ss {
         }
 
         std::unique_ptr<SheetInsDelAction> action(
-            new SheetInsDelAction(Action::SheetRemove, this, key, nullptr));
+            new SheetInsDelAction(Action::SheetRemove, this, key, nullptr, it->second.get()));
         NodePrivate::execute(model(), std::move(action));
         return true;
     }
@@ -156,12 +205,46 @@ namespace ss {
     }
 
     SheetInsDelAction::SheetInsDelAction(int type, SheetNode *parent, int key,
-                                         std::unique_ptr<Node> held)
-        : Action(type), m_parent(parent), m_key(key),
-          m_child(type == SheetInsert ? held.get() : parent->at(key)), m_held(std::move(held)) {
+                                         std::unique_ptr<Node> held, Node *child)
+        : Action(type), m_parent(parent), m_key(key), m_child(held ? held.get() : child),
+          m_held(std::move(held)) {
+        assert(m_child && (type == SheetInsert) == bool(m_held));
     }
 
     SheetInsDelAction::~SheetInsDelAction() = default;
+
+    void SheetInsDelAction::write(Encoder &encoder) const {
+        encoder.writeReference(m_parent);
+        encoder.stream() << int32_t(m_key);
+        if (type() == SheetInsert) {
+            encoder.writeNode(m_child);
+        } else {
+            encoder.writeReference(m_child);
+        }
+    }
+
+    std::unique_ptr<Action> SheetInsDelAction::read(Decoder &decoder, int type) {
+        auto parent = dynamic_cast<SheetNode *>(decoder.readReference());
+        int32_t key = 0;
+        decoder.stream() >> key;
+        if (decoder.fail() || !parent || key < 1) {
+            decoder.setFailed();
+            return nullptr;
+        }
+        std::unique_ptr<Node> held;
+        Node *child = nullptr;
+        if (type == SheetInsert) {
+            held = decoder.readNode();
+        } else {
+            child = decoder.readReference();
+        }
+        if (!held && !child) {
+            decoder.setFailed();
+            return nullptr;
+        }
+        return std::unique_ptr<Action>(
+            new SheetInsDelAction(type, parent, key, std::move(held), child));
+    }
 
     void SheetInsDelAction::forEachHeldNode(const std::function<void(Node *)> &func) const {
         if (m_held) {
@@ -175,6 +258,9 @@ namespace ss {
             assert(m_held && children.find(m_key) == children.end());
             NodePrivate::attach(m_held.get(), m_parent, m_parent->model());
             children.emplace(m_key, std::move(m_held));
+            // A decoded insertion carries a key that the counter of a restored node may not
+            // cover.
+            m_parent->m_lastKey = std::max(m_parent->m_lastKey, m_key);
         } else {
             auto it = children.find(m_key);
             assert(!m_held && it != children.end() && it->second.get() == m_child);

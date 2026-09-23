@@ -59,6 +59,9 @@ namespace ss {
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
         std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
+        std::unique_ptr<TransferEndpoint> readEndpoint(Decoder &decoder) override;
+        void writeContent(Encoder &encoder) const override;
+        bool readContent(Decoder &decoder) override;
 
         /// Stores copies of the entries of \a source, for the clone() of a subclass. This node
         /// must be free and empty.
@@ -99,13 +102,19 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
         MappingAssignAction(MappingNode *parent, QString key, Property value);
+        MappingAssignAction(MappingNode *parent, QString key, QVariant oldVariant, Node *oldChild,
+                            Property value);
+
+        static std::unique_ptr<Action> read(Decoder &decoder);
 
         QString m_key;
 
         friend class MappingNode;
+        friend class QCodec;
     };
 
     inline const QString &MappingAssignAction::key() const {

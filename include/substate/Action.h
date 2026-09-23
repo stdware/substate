@@ -12,6 +12,12 @@
 
 namespace ss {
 
+    class Codec;
+
+    class Decoder;
+
+    class Encoder;
+
     class Model;
 
     class Node;
@@ -76,9 +82,15 @@ namespace ss {
         /// Applies the action to the tree for \a operation.
         virtual void execute(Operation operation) = 0;
 
+        /// Writes the action, excluding its type, for Encoder::writeAction(). An action type that
+        /// can be persisted overrides this function and registers a reader with the Codec. The
+        /// default records a failure in \a encoder.
+        virtual void write(Encoder &encoder) const;
+
     private:
         int m_type;
 
+        friend class Encoder;
         friend class Model;
     };
 
@@ -113,15 +125,19 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
-        RootChangeAction(Model *model, std::unique_ptr<Node> newRoot);
+        RootChangeAction(Model *model, std::unique_ptr<Node> newRoot, Node *oldRoot);
+
+        static std::unique_ptr<Action> read(Decoder &decoder);
 
         Model *m_model;
         Node *m_newRoot;
         Node *m_oldRoot;
         std::unique_ptr<Node> m_held;
 
+        friend class Codec;
         friend class Model;
     };
 
@@ -160,15 +176,19 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
         TransferAction(std::unique_ptr<TransferEndpoint> source,
                        std::unique_ptr<TransferEndpoint> target, std::vector<Node *> nodes);
 
+        static std::unique_ptr<Action> read(Decoder &decoder);
+
         std::unique_ptr<TransferEndpoint> m_source;
         std::unique_ptr<TransferEndpoint> m_target;
         std::vector<Node *> m_nodes;
 
+        friend class Codec;
         friend class NodePrivate;
     };
 

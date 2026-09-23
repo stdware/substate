@@ -4,6 +4,7 @@
 #include <cassert>
 #include <iterator>
 
+#include "Codec.h"
 #include "Node_p.h"
 
 namespace ss {
@@ -50,12 +51,49 @@ namespace ss {
                             std::make_move_iterator(nodes.end()));
         }
 
+        void write(Encoder &encoder) const override {
+            encoder.stream() << int32_t(m_index);
+        }
+
     private:
         VectorNode *m_node;
         int m_index;
     };
 
     VectorNode::~VectorNode() = default;
+
+    std::unique_ptr<TransferEndpoint> VectorNode::readEndpoint(Decoder &decoder) {
+        int32_t index = -1;
+        decoder.stream() >> index;
+        if (decoder.fail() || index < 0) {
+            return nullptr;
+        }
+        return std::make_unique<VectorNodeEndpoint>(this, index);
+    }
+
+    void VectorNode::writeContent(Encoder &encoder) const {
+        encoder.stream() << int32_t(m_children.size());
+        for (const auto &child : m_children) {
+            encoder.writeNode(child.get());
+        }
+    }
+
+    bool VectorNode::readContent(Decoder &decoder) {
+        int32_t count = -1;
+        decoder.stream() >> count;
+        if (decoder.fail() || count < 0) {
+            return false;
+        }
+        for (int32_t i = 0; i < count; ++i) {
+            auto child = decoder.readNode();
+            if (!child) {
+                return false;
+            }
+            NodePrivate::setFreeParent(child.get(), this);
+            m_children.push_back(std::move(child));
+        }
+        return true;
+    }
 
     bool VectorNode::transferIn(int index, const std::vector<Node *> &nodes) {
         assert(isWritable() && !isFree());
@@ -186,7 +224,58 @@ namespace ss {
         }
     }
 
+    VectorInsDelAction::VectorInsDelAction(VectorNode *parent, int index,
+                                           std::vector<Node *> removed)
+        : Action(VectorRemove), m_parent(parent), m_index(index), m_children(std::move(removed)) {
+    }
+
     VectorInsDelAction::~VectorInsDelAction() = default;
+
+    void VectorInsDelAction::write(Encoder &encoder) const {
+        encoder.writeReference(m_parent);
+        encoder.stream() << int32_t(m_index) << int32_t(m_children.size());
+        for (auto child : m_children) {
+            if (type() == VectorInsert) {
+                encoder.writeNode(child);
+            } else {
+                encoder.writeReference(child);
+            }
+        }
+    }
+
+    std::unique_ptr<Action> VectorInsDelAction::read(Decoder &decoder, int type) {
+        auto parent = dynamic_cast<VectorNode *>(decoder.readReference());
+        int32_t index = -1;
+        int32_t count = 0;
+        decoder.stream() >> index >> count;
+        if (decoder.fail() || !parent || index < 0 || count < 1) {
+            decoder.setFailed();
+            return nullptr;
+        }
+        if (type == VectorInsert) {
+            std::vector<std::unique_ptr<Node>> held;
+            for (int32_t i = 0; i < count; ++i) {
+                auto node = decoder.readNode();
+                if (!node) {
+                    decoder.setFailed();
+                    return nullptr;
+                }
+                held.push_back(std::move(node));
+            }
+            return std::unique_ptr<Action>(
+                new VectorInsDelAction(type, parent, index, count, std::move(held)));
+        }
+        std::vector<Node *> removed;
+        for (int32_t i = 0; i < count; ++i) {
+            auto node = decoder.readReference();
+            if (!node) {
+                decoder.setFailed();
+                return nullptr;
+            }
+            removed.push_back(node);
+        }
+        return std::unique_ptr<Action>(new VectorInsDelAction(parent, index, std::move(removed)));
+    }
 
     void VectorInsDelAction::forEachHeldNode(const std::function<void(Node *)> &func) const {
         for (const auto &node : m_held) {
@@ -208,6 +297,8 @@ namespace ss {
             assert(m_held.empty());
             auto first = children.begin() + m_index;
             auto last = first + std::ptrdiff_t(m_children.size());
+            assert(std::equal(first, last, m_children.begin(),
+                              [](const auto &child, Node *node) { return child.get() == node; }));
             m_held.assign(std::make_move_iterator(first), std::make_move_iterator(last));
             children.erase(first, last);
             for (const auto &node : m_held) {
@@ -225,6 +316,25 @@ namespace ss {
 
     void VectorMoveAction::execute(Operation operation) {
         moveRange(m_parent->m_children, index(operation), m_count, destination(operation));
+    }
+
+    void VectorMoveAction::write(Encoder &encoder) const {
+        encoder.writeReference(m_parent);
+        encoder.stream() << int32_t(m_index) << int32_t(m_count) << int32_t(m_destination);
+    }
+
+    std::unique_ptr<Action> VectorMoveAction::read(Decoder &decoder) {
+        auto parent = dynamic_cast<VectorNode *>(decoder.readReference());
+        int32_t index = -1;
+        int32_t count = 0;
+        int32_t destination = -1;
+        decoder.stream() >> index >> count >> destination;
+        if (decoder.fail() || !parent || index < 0 || count < 1 || destination < 0 ||
+            destination == index) {
+            decoder.setFailed();
+            return nullptr;
+        }
+        return std::unique_ptr<Action>(new VectorMoveAction(parent, index, count, destination));
     }
 
 }

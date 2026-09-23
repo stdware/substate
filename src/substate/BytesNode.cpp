@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cassert>
 
+#include "Codec.h"
 #include "Node_p.h"
 
 namespace ss {
@@ -79,12 +80,40 @@ namespace ss {
         m_data = source.m_data;
     }
 
+    void BytesNode::writeContent(Encoder &encoder) const {
+        encoder.writeBytes(m_data);
+    }
+
+    bool BytesNode::readContent(Decoder &decoder) {
+        m_data = decoder.readBytes();
+        return !decoder.fail();
+    }
+
     BytesInsDelAction::BytesInsDelAction(int type, BytesNode *parent, int index,
                                          std::vector<char> bytes)
         : Action(type), m_parent(parent), m_index(index), m_bytes(std::move(bytes)) {
     }
 
     BytesInsDelAction::~BytesInsDelAction() = default;
+
+    void BytesInsDelAction::write(Encoder &encoder) const {
+        encoder.writeReference(m_parent);
+        encoder.stream() << int32_t(m_index);
+        encoder.writeBytes(m_bytes);
+    }
+
+    std::unique_ptr<Action> BytesInsDelAction::read(Decoder &decoder, int type) {
+        auto parent = dynamic_cast<BytesNode *>(decoder.readReference());
+        int32_t index = -1;
+        decoder.stream() >> index;
+        auto bytes = decoder.readBytes();
+        if (decoder.fail() || !parent || index < 0 || bytes.empty()) {
+            decoder.setFailed();
+            return nullptr;
+        }
+        return std::unique_ptr<Action>(
+            new BytesInsDelAction(type, parent, index, std::move(bytes)));
+    }
 
     void BytesInsDelAction::execute(Operation operation) {
         auto &data = m_parent->m_data;
@@ -108,6 +137,28 @@ namespace ss {
     void BytesReplaceAction::execute(Operation operation) {
         const auto replacement = bytes(operation);
         std::copy(replacement.begin(), replacement.end(), m_parent->m_data.begin() + m_index);
+    }
+
+    void BytesReplaceAction::write(Encoder &encoder) const {
+        encoder.writeReference(m_parent);
+        encoder.stream() << int32_t(m_index);
+        encoder.writeBytes(m_bytes);
+        encoder.writeBytes(m_oldBytes);
+    }
+
+    std::unique_ptr<Action> BytesReplaceAction::read(Decoder &decoder) {
+        auto parent = dynamic_cast<BytesNode *>(decoder.readReference());
+        int32_t index = -1;
+        decoder.stream() >> index;
+        auto bytes = decoder.readBytes();
+        auto oldBytes = decoder.readBytes();
+        if (decoder.fail() || !parent || index < 0 || bytes.empty() ||
+            bytes.size() != oldBytes.size()) {
+            decoder.setFailed();
+            return nullptr;
+        }
+        return std::unique_ptr<Action>(
+            new BytesReplaceAction(parent, index, std::move(bytes), std::move(oldBytes)));
     }
 
 }

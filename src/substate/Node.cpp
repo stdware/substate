@@ -1,7 +1,9 @@
 #include "Node.h"
 #include "Node_p.h"
 
+#include <algorithm>
 #include <cassert>
+#include <unordered_set>
 
 #include "Model.h"
 
@@ -74,6 +76,26 @@ namespace ss {
         (void) erased;
     }
 
+    bool NodePrivate::adopt(Model *model,
+                            const std::vector<std::pair<Node *, std::uint64_t>> &nodes) {
+        std::unordered_set<std::uint64_t> ids;
+        for (const auto &entry : nodes) {
+            if (entry.second == 0 || model->m_index.count(entry.second) > 0 ||
+                !ids.insert(entry.second).second) {
+                return false;
+            }
+        }
+        for (const auto &entry : nodes) {
+            auto node = entry.first;
+            assert(node->isFree() && !node->m_attached);
+            node->m_model = model;
+            node->m_id = entry.second;
+            model->m_index.emplace(entry.second, node);
+            model->m_lastId = std::max(model->m_lastId, entry.second);
+        }
+        return true;
+    }
+
     Node::~Node() {
         if (m_model) {
             NodePrivate::removeFromIndex(this);
@@ -87,6 +109,20 @@ namespace ss {
     std::unique_ptr<TransferEndpoint> Node::endpointOf(const std::vector<Node *> &children) {
         (void) children;
         return nullptr;
+    }
+
+    std::unique_ptr<TransferEndpoint> Node::readEndpoint(Decoder &decoder) {
+        (void) decoder;
+        return nullptr;
+    }
+
+    void Node::writeContent(Encoder &encoder) const {
+        (void) encoder;
+    }
+
+    bool Node::readContent(Decoder &decoder) {
+        (void) decoder;
+        return true;
     }
 
     bool Node::isWritable() const {

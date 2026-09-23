@@ -61,6 +61,12 @@ namespace ss {
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
         std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
+        std::unique_ptr<TransferEndpoint> readEndpoint(Decoder &decoder) override;
+
+        /// Writes the key counter and the children with their keys.
+        void writeContent(Encoder &encoder) const override;
+
+        bool readContent(Decoder &decoder) override;
 
         /// Copies the children of \a source with their keys, and the key counter, for the clone()
         /// of a subclass. This node must be free and empty.
@@ -104,17 +110,22 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
-        // For an insertion, held is the inserted node. For a removal, held is null and the
-        // removed child is read from parent.
-        SheetInsDelAction(int type, SheetNode *parent, int key, std::unique_ptr<Node> held);
+        // For an insertion, held is the inserted node and child is null. For a removal, held is
+        // null and child is the removed child.
+        SheetInsDelAction(int type, SheetNode *parent, int key, std::unique_ptr<Node> held,
+                          Node *child);
+
+        static std::unique_ptr<Action> read(Decoder &decoder, int type);
 
         SheetNode *m_parent;
         int m_key;
         Node *m_child;
         std::unique_ptr<Node> m_held;
 
+        friend class Codec;
         friend class SheetNode;
     };
 

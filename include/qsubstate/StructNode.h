@@ -50,6 +50,13 @@ namespace ss {
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
         std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
+        std::unique_ptr<TransferEndpoint> readEndpoint(Decoder &decoder) override;
+
+        /// Writes the number of slots and their values. Reading fails if the number differs from
+        /// size().
+        void writeContent(Encoder &encoder) const override;
+
+        bool readContent(Decoder &decoder) override;
 
         /// Stores copies of the values of \a source, for the clone() of a subclass. This node must
         /// be free, empty and of the same size.
@@ -119,12 +126,18 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
         StructAssignAction(StructNodeBase *parent, int index, Property value);
+        StructAssignAction(StructNodeBase *parent, int index, QVariant oldVariant, Node *oldChild,
+                           Property value);
+
+        static std::unique_ptr<Action> read(Decoder &decoder);
 
         int m_index;
 
+        friend class QCodec;
         friend class StructNodeBase;
     };
 

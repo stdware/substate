@@ -1,10 +1,13 @@
 #include "MappingNode.h"
 
 #include <cassert>
+#include <cstdint>
 
+#include <substate/Codec.h>
 #include <substate/private/Node_p.h>
 
 #include "Property_p.h"
+#include "QCodec.h"
 
 namespace ss {
 
@@ -34,12 +37,50 @@ namespace ss {
             m_node->m_entries.emplace(m_key, Property(std::move(nodes.front())));
         }
 
+        void write(Encoder &encoder) const override {
+            QCodec::writeString(encoder, m_key);
+        }
+
     private:
         MappingNode *m_node;
         QString m_key;
     };
 
     MappingNode::~MappingNode() = default;
+
+    std::unique_ptr<TransferEndpoint> MappingNode::readEndpoint(Decoder &decoder) {
+        auto key = QCodec::readString(decoder);
+        if (decoder.fail()) {
+            return nullptr;
+        }
+        return std::make_unique<MappingNodeEndpoint>(this, std::move(key));
+    }
+
+    void MappingNode::writeContent(Encoder &encoder) const {
+        encoder.stream() << int32_t(m_entries.size());
+        for (const auto &entry : m_entries) {
+            QCodec::writeString(encoder, entry.first);
+            PropertyPrivate::write(encoder, entry.second);
+        }
+    }
+
+    bool MappingNode::readContent(Decoder &decoder) {
+        int32_t count = -1;
+        decoder.stream() >> count;
+        if (decoder.fail() || count < 0) {
+            return false;
+        }
+        for (int32_t i = 0; i < count; ++i) {
+            auto key = QCodec::readString(decoder);
+            auto value = PropertyPrivate::read(decoder);
+            // An entry never holds an empty value, and keys are unique.
+            if (decoder.fail() || value.isEmpty() || contains(key)) {
+                return false;
+            }
+            PropertyPrivate::assignFree(this, m_entries[key], std::move(value));
+        }
+        return true;
+    }
 
     bool MappingNode::transferIn(const QString &key, Node *node) {
         assert(isWritable() && !isFree());
@@ -141,7 +182,35 @@ namespace ss {
           m_key(std::move(key)) {
     }
 
+    MappingAssignAction::MappingAssignAction(MappingNode *parent, QString key, QVariant oldVariant,
+                                             Node *oldChild, Property value)
+        : PropertyAction(MappingAssign, parent, std::move(oldVariant), oldChild, std::move(value)),
+          m_key(std::move(key)) {
+    }
+
     MappingAssignAction::~MappingAssignAction() = default;
+
+    void MappingAssignAction::write(Encoder &encoder) const {
+        encoder.writeReference(parent());
+        QCodec::writeString(encoder, m_key);
+        writeValues(encoder);
+    }
+
+    std::unique_ptr<Action> MappingAssignAction::read(Decoder &decoder) {
+        auto parent = dynamic_cast<MappingNode *>(decoder.readReference());
+        auto key = QCodec::readString(decoder);
+        if (decoder.fail() || !parent) {
+            decoder.setFailed();
+            return nullptr;
+        }
+        auto value = PropertyPrivate::read(decoder);
+        auto old = PropertyPrivate::readReference(decoder);
+        if (decoder.fail()) {
+            return nullptr;
+        }
+        return std::unique_ptr<Action>(new MappingAssignAction(
+            parent, std::move(key), std::move(old.first), old.second, std::move(value)));
+    }
 
     void MappingAssignAction::execute(Operation operation) {
         (void) operation;

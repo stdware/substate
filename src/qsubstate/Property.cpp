@@ -2,9 +2,12 @@
 #include "Property_p.h"
 
 #include <cassert>
+#include <cstdint>
 #include <utility>
 
 #include <substate/private/Node_p.h>
+
+#include "QCodec.h"
 
 namespace ss {
 
@@ -82,14 +85,116 @@ namespace ss {
         return node;
     }
 
+    namespace {
+
+        // The encodings of a Property.
+        enum PropertyTag : uint8_t {
+            EmptyTag,
+            VariantTag,
+            ChildTag,
+        };
+
+        // Writes a value given by its parts, with the child written with its content or as a
+        // reference.
+        void writeParts(Encoder &encoder, const QVariant &variant, const Node *child,
+                        bool reference) {
+            if (child) {
+                encoder.stream() << uint8_t(ChildTag);
+                if (reference) {
+                    encoder.writeReference(child);
+                } else {
+                    encoder.writeNode(child);
+                }
+            } else if (variant.isValid()) {
+                encoder.stream() << uint8_t(VariantTag);
+                QCodec::writeVariant(encoder, variant);
+            } else {
+                encoder.stream() << uint8_t(EmptyTag);
+            }
+        }
+
+    }
+
+    void PropertyPrivate::write(Encoder &encoder, const Property &value) {
+        writeParts(encoder, value.variant(), value.child(), false);
+    }
+
+    Property PropertyPrivate::read(Decoder &decoder) {
+        uint8_t tag = 0;
+        decoder.stream() >> tag;
+        Property value;
+        if (decoder.fail()) {
+            return value;
+        }
+        switch (tag) {
+            case EmptyTag:
+                break;
+            case VariantTag:
+                value = QCodec::readVariant(decoder);
+                break;
+            case ChildTag:
+                value = decoder.readNode();
+                break;
+            default:
+                break;
+        }
+        if (decoder.fail() || (tag != EmptyTag && value.isEmpty())) {
+            decoder.setFailed();
+            return {};
+        }
+        return value;
+    }
+
+    void PropertyPrivate::writeReference(Encoder &encoder, const QVariant &variant,
+                                         const Node *child) {
+        writeParts(encoder, variant, child, true);
+    }
+
+    std::pair<QVariant, Node *> PropertyPrivate::readReference(Decoder &decoder) {
+        uint8_t tag = 0;
+        decoder.stream() >> tag;
+        std::pair<QVariant, Node *> value{QVariant(), nullptr};
+        if (decoder.fail()) {
+            return value;
+        }
+        switch (tag) {
+            case EmptyTag:
+                break;
+            case VariantTag:
+                value.first = QCodec::readVariant(decoder);
+                break;
+            case ChildTag:
+                value.second = decoder.readReference();
+                break;
+            default:
+                break;
+        }
+        if (decoder.fail() || (tag != EmptyTag && !value.first.isValid() && !value.second)) {
+            decoder.setFailed();
+            return {QVariant(), nullptr};
+        }
+        return value;
+    }
+
     PropertyAction::PropertyAction(int type, Node *parent, const Property &oldValue,
                                    Property newValue)
+        : PropertyAction(type, parent, oldValue.variant(), oldValue.child(), std::move(newValue)) {
+    }
+
+    PropertyAction::PropertyAction(int type, Node *parent, QVariant oldVariant, Node *oldChild,
+                                   Property newValue)
         : Action(type), m_parent(parent), m_newVariant(newValue.variant()),
-          m_newChild(newValue.child()), m_oldVariant(oldValue.variant()),
-          m_oldChild(oldValue.child()), m_held(std::move(newValue)) {
+          m_newChild(newValue.child()), m_oldVariant(std::move(oldVariant)), m_oldChild(oldChild),
+          m_held(std::move(newValue)) {
     }
 
     PropertyAction::~PropertyAction() = default;
+
+    void PropertyAction::writeValues(Encoder &encoder) const {
+        // The new value is owned by the action before its first execution, the old value is not.
+        writeParts(encoder, m_newVariant, m_newChild, false);
+        writeParts(encoder, m_oldVariant, m_oldChild, true);
+    }
 
     void PropertyAction::forEachHeldNode(const std::function<void(Node *)> &func) const {
         if (auto child = m_held.child()) {

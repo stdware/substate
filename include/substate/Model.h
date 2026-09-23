@@ -59,6 +59,15 @@ namespace ss {
         /// creating an action. Identifiers are not reused after a reset.
         void reset(std::unique_ptr<Node> root = {});
 
+        /// Installs \a root, which a Decoder decoded into this model, as the tree without creating
+        /// an action, and raises the identifier counter to at least \a lastId. The model must have
+        /// no tree, as after reset(). The history of the storage engine is kept, because the
+        /// storage engine restores it before this call.
+        ///
+        /// \a lastId is the largest identifier ever assigned, as recorded by the storage engine,
+        /// so that the identifiers of destroyed nodes are not reused.
+        void restore(std::unique_ptr<Node> root, std::uint64_t lastId = 0);
+
         void beginTransaction();
 
         /// Reverts every action of the current transaction in reverse order and discards them.

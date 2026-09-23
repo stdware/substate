@@ -148,9 +148,18 @@ namespace ss {
     protected:
         PropertyAction(int type, Node *parent, const Property &oldValue, Property newValue);
 
+        /// Creates an action with an old value given by its parts, for a decoded action.
+        PropertyAction(int type, Node *parent, QVariant oldVariant, Node *oldChild,
+                       Property newValue);
+
         /// Exchanges \a slot, the value in the node, with the value that this action owns, and
         /// updates the parent of the children involved.
         void exchange(Property &slot);
+
+        /// Writes the new value with its child, and the old value with a reference to its child.
+        /// The subclass reads them with PropertyPrivate::read() and
+        /// PropertyPrivate::readReference().
+        void writeValues(Encoder &encoder) const;
 
     private:
         Node *m_parent;

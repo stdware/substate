@@ -13,6 +13,10 @@
 
 namespace ss {
 
+    class Decoder;
+
+    class Encoder;
+
     class Model;
 
     class NodePrivate;
@@ -79,6 +83,22 @@ namespace ss {
         /// a transfer, or \c nullptr if they cannot be transferred together. A container that
         /// supports transfer overrides this function. The default returns \c nullptr.
         virtual std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children);
+
+        /// Returns a position of this node read from \a decoder, as written by an endpoint of this
+        /// node, or \c nullptr if the position is invalid. A container that supports transfer
+        /// overrides this function. The default returns \c nullptr.
+        virtual std::unique_ptr<TransferEndpoint> readEndpoint(Decoder &decoder);
+
+        /// Writes the content of the node, excluding its type and identifier. Children are
+        /// written by Encoder::writeNode(). A subclass with additional content overrides this
+        /// function and readContent(), and calls the implementation of its base class first. The
+        /// default writes nothing.
+        virtual void writeContent(Encoder &encoder) const;
+
+        /// Reads the content written by writeContent() into this node, which is free and empty.
+        ///
+        /// \return whether the content is valid. The default returns \c true.
+        virtual bool readContent(Decoder &decoder);
 
         /// Returns whether the node can be modified: it is free, or it is in the tree and the
         /// model is in a transaction.

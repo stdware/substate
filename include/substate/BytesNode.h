@@ -52,6 +52,9 @@ namespace ss {
         /// and empty.
         void cloneDataFrom(const BytesNode &source);
 
+        void writeContent(Encoder &encoder) const override;
+        bool readContent(Decoder &decoder) override;
+
     private:
         std::vector<char> m_data;
 
@@ -104,15 +107,19 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
         BytesInsDelAction(int type, BytesNode *parent, int index, std::vector<char> bytes);
+
+        static std::unique_ptr<Action> read(Decoder &decoder, int type);
 
         BytesNode *m_parent;
         int m_index;
         std::vector<char> m_bytes;
 
         friend class BytesNode;
+        friend class Codec;
     };
 
     inline BytesNode *BytesInsDelAction::parent() const {
@@ -147,10 +154,13 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
         BytesReplaceAction(BytesNode *parent, int index, std::vector<char> bytes,
                            std::vector<char> oldBytes);
+
+        static std::unique_ptr<Action> read(Decoder &decoder);
 
         BytesNode *m_parent;
         int m_index;
@@ -158,6 +168,7 @@ namespace ss {
         std::vector<char> m_oldBytes;
 
         friend class BytesNode;
+        friend class Codec;
     };
 
     inline BytesNode *BytesReplaceAction::parent() const {

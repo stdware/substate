@@ -4,7 +4,9 @@
 #ifndef SUBSTATE_NODE_P_H
 #define SUBSTATE_NODE_P_H
 
+#include <cstdint>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include <substate/Action.h>
@@ -65,6 +67,17 @@ namespace ss {
         /// Removes \a node from the identifier index of its model. Called by the destructor.
         static void removeFromIndex(Node *node);
 
+        /// Makes the free nodes of \a nodes enter \a model with the paired identifiers, without
+        /// entering its tree, and raises the identifier counter of the model above them.
+        ///
+        /// \return whether the nodes entered the model. They do not if an identifier is 0,
+        ///         occurs twice, or exists in the model, and then no node enters.
+        static bool adopt(Model *model, const std::vector<std::pair<Node *, std::uint64_t>> &nodes);
+
+        static inline void writeContent(const Node *node, Encoder &encoder);
+        static inline bool readContent(Node *node, Decoder &decoder);
+        static inline std::unique_ptr<TransferEndpoint> readEndpoint(Node *node, Decoder &decoder);
+
         /// Returns whether the arguments of an insertion into a sequence of \a size elements are
         /// valid.
         static inline bool isValidInsertion(int index, int size);
@@ -93,6 +106,19 @@ namespace ss {
 
     inline void NodePrivate::reparent(Node *node, Node *parent) {
         node->m_parent = parent;
+    }
+
+    inline void NodePrivate::writeContent(const Node *node, Encoder &encoder) {
+        node->writeContent(encoder);
+    }
+
+    inline bool NodePrivate::readContent(Node *node, Decoder &decoder) {
+        return node->readContent(decoder);
+    }
+
+    inline std::unique_ptr<TransferEndpoint> NodePrivate::readEndpoint(Node *node,
+                                                                       Decoder &decoder) {
+        return node->readEndpoint(decoder);
     }
 
     inline bool NodePrivate::isValidInsertion(int index, int size) {

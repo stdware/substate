@@ -7,6 +7,7 @@
 #include <memory>
 #include <vector>
 
+#include <substate/Codec.h>
 #include <substate/Node.h>
 
 namespace ss {
@@ -26,6 +27,9 @@ namespace ss {
 
         /// Places \a nodes at the position in the container. Their parent is already updated.
         virtual void put(std::vector<std::unique_ptr<Node>> nodes) = 0;
+
+        /// Writes the position, which Node::readEndpoint() of the container reads back.
+        virtual void write(Encoder &encoder) const = 0;
     };
 
 }

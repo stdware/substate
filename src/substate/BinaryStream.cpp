@@ -2,6 +2,12 @@
 
 #include <cstdint>
 
+// Numbers are written in the byte order of the platform, which the persistent format requires to
+// be little-endian. MSVC targets only little-endian platforms.
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ != __ORDER_LITTLE_ENDIAN__
+#  error "substate requires a little-endian platform"
+#endif
+
 namespace ss {
 
     static constexpr const int DATA_ALIGN = 4;
@@ -105,8 +111,16 @@ namespace ss {
 
         // Read size
         (*this) >> size;
-        if (_in.fail() || size == 0)
+        if (_in.fail())
             return *this;
+        if (size < 0) {
+            _in.setstate(std::ios::failbit);
+            return *this;
+        }
+        if (size == 0) {
+            s.clear();
+            return *this;
+        }
 
         // Read string
         std::string str;
@@ -135,7 +149,8 @@ namespace ss {
         }
 
         static const constexpr std::size_t blockSize = 1024;
-        char buffer[blockSize];
+        // Zero bytes, so that the output depends only on the written values.
+        char buffer[blockSize] = {};
 
         std::size_t fullBlocks = len / blockSize;
         std::size_t lastBlockSize = len % blockSize;
@@ -156,6 +171,10 @@ namespace ss {
         if (rem == 0)
             return 0;
         return skipRawData(size - rem);
+    }
+
+    OBinaryStream &OBinaryStream::operator<<(bool b) {
+        return (*this) << int8_t(b ? 1 : 0);
     }
 
     OBinaryStream &OBinaryStream::operator<<(int8_t c) {

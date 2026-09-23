@@ -94,9 +94,13 @@ namespace ss {
         inline bool fail() const;
 
         int writeRawData(const char *data, int len);
+
+        /// Writes \a len zero bytes.
         int skipRawData(int len);
+
         int align(int size);
 
+        OBinaryStream &operator<<(bool b);
         OBinaryStream &operator<<(int8_t c);
         OBinaryStream &operator<<(uint8_t uc);
         OBinaryStream &operator<<(int16_t s);

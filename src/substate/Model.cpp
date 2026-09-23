@@ -42,8 +42,8 @@ namespace ss {
         assert(inTransaction());
         assert(!root || NodePrivate::isInsertable(root.get()));
 
-        NodePrivate::execute(
-            this, std::unique_ptr<RootChangeAction>(new RootChangeAction(this, std::move(root))));
+        NodePrivate::execute(this, std::unique_ptr<RootChangeAction>(
+                                       new RootChangeAction(this, std::move(root), m_root.get())));
     }
 
     void Model::reset(std::unique_ptr<Node> root) {
@@ -57,6 +57,20 @@ namespace ss {
         assert(m_index.empty());
         m_state = State::Idle;
 
+        if (root) {
+            m_root = std::move(root);
+            NodePrivate::attach(m_root.get(), nullptr, this);
+        }
+        notify([](ModelObserver *observer) { observer->resetFinished(); });
+    }
+
+    void Model::restore(std::unique_ptr<Node> root, std::uint64_t lastId) {
+        assert(m_state == State::Idle && !m_notifying);
+        assert(!m_root);
+        assert(!root || (root->model() == this && !root->parent() && !root->isAttached()));
+
+        notify([](ModelObserver *observer) { observer->aboutToReset(); });
+        m_lastId = std::max(m_lastId, lastId);
         if (root) {
             m_root = std::move(root);
             NodePrivate::attach(m_root.get(), nullptr, this);

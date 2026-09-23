@@ -58,6 +58,9 @@ namespace ss {
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
         std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
+        std::unique_ptr<TransferEndpoint> readEndpoint(Decoder &decoder) override;
+        void writeContent(Encoder &encoder) const override;
+        bool readContent(Decoder &decoder) override;
 
         /// Appends copies of the children of \a source, for the clone() of a subclass. This node
         /// must be free and empty.
@@ -125,6 +128,7 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
         // For an insertion, held contains the inserted nodes. For a removal, held is empty and
@@ -132,11 +136,17 @@ namespace ss {
         VectorInsDelAction(int type, VectorNode *parent, int index, int count,
                            std::vector<std::unique_ptr<Node>> held);
 
+        // A removal of the given children, which are read by the decoder.
+        VectorInsDelAction(VectorNode *parent, int index, std::vector<Node *> removed);
+
+        static std::unique_ptr<Action> read(Decoder &decoder, int type);
+
         VectorNode *m_parent;
         int m_index;
         std::vector<Node *> m_children;
         std::vector<std::unique_ptr<Node>> m_held;
 
+        friend class Codec;
         friend class VectorNode;
     };
 
@@ -173,15 +183,19 @@ namespace ss {
 
     protected:
         void execute(Operation operation) override;
+        void write(Encoder &encoder) const override;
 
     private:
         VectorMoveAction(VectorNode *parent, int index, int count, int destination);
+
+        static std::unique_ptr<Action> read(Decoder &decoder);
 
         VectorNode *m_parent;
         int m_index;
         int m_count;
         int m_destination;
 
+        friend class Codec;
         friend class VectorNode;
     };
 
