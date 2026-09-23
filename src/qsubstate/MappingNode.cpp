@@ -100,8 +100,7 @@ namespace ss {
 
         std::unique_ptr<MappingAssignAction> action(
             new MappingAssignAction(this, key, std::move(value)));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
         return true;
     }
 

@@ -15,6 +15,9 @@ namespace ss {
 
     /// The actions of one committed transaction, in execution order, together with its message.
     /// A transaction is one undo step.
+    ///
+    /// Destroying a transaction, or replacing it by move assignment, destroys the nodes that its
+    /// actions own, and reports each of them to ModelObserver::nodeAboutToBeDestroyed() first.
     class SUBSTATE_EXPORT Transaction {
     public:
         Transaction(std::vector<std::unique_ptr<Action>> actions,

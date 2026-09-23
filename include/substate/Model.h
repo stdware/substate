@@ -6,6 +6,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <functional>
 #include <map>
 #include <memory>
 #include <string>
@@ -18,12 +19,15 @@
 
 namespace ss {
 
+    class ModelObserver;
+
     class NodePrivate;
 
     /// A document tree with transactions and undo history.
     ///
     /// Every modification of a node in the tree occurs within a transaction and is recorded as an
-    /// action. A committed transaction is one undo step, stored by the storage engine.
+    /// action. A committed transaction is one undo step, stored by the storage engine. Every
+    /// application of an action is reported to the observers, see ModelObserver.
     class SUBSTATE_EXPORT Model {
     public:
         /// Creates a model with a MemoryStorageEngine.
@@ -77,13 +81,31 @@ namespace ss {
         int currentStep() const;
         std::map<std::string, std::string> stepMessage(int step) const;
 
+        /// Registers \a observer, which must remain valid until it is removed or the model is
+        /// destroyed. Observers are notified in the order of registration.
+        void addObserver(ModelObserver *observer);
+
+        void removeObserver(ModelObserver *observer);
+
     private:
         enum class State {
             Idle,
             Transaction,
             Undo,
             Redo,
+
+            // The tree and the history are being discarded by reset() or the destructor. No
+            // notification of destroyed nodes is emitted.
+            Reset,
         };
+
+        // Applies action for operation between the two notifications of the observers.
+        void apply(Action &action, Action::Operation operation);
+
+        // Emits nodeAboutToBeDestroyed() for node and its descendants.
+        void aboutToDestroy(Node *node);
+
+        void notify(const std::function<void(ModelObserver *)> &func);
 
         // The declaration order determines the destruction order required by docs/Design.md:
         // the history first, then the tree, and the index last, because every node removes
@@ -94,6 +116,10 @@ namespace ss {
         std::unique_ptr<StorageEngine> m_storageEngine;
         std::vector<std::unique_ptr<Action>> m_actions;
         State m_state = State::Idle;
+        std::vector<ModelObserver *> m_observers;
+
+        // Whether an observer is being notified, during which the model must not be modified.
+        bool m_notifying = false;
 
         friend class NodePrivate;
         friend class RootChangeAction;

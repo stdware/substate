@@ -54,8 +54,13 @@ namespace ss {
         static bool transfer(Node *target, std::unique_ptr<TransferEndpoint> targetEnd,
                              const std::vector<Node *> &nodes);
 
-        /// Appends \a action, which has been executed, to the transaction in progress.
-        static void pushAction(Model *model, std::unique_ptr<Action> action);
+        /// Applies \a action for Action::Execute with the notifications of the observers of
+        /// \a model, and appends it to the transaction in progress.
+        static void execute(Model *model, std::unique_ptr<Action> action);
+
+        /// Emits the notifications of the destruction of the nodes that \a action owns, which is
+        /// about to be destroyed. Called by the owner of an action before destroying it.
+        static void aboutToDiscard(const Action &action);
 
         /// Removes \a node from the identifier index of its model. Called by the destructor.
         static void removeFromIndex(Node *node);

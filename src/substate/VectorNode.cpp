@@ -102,8 +102,7 @@ namespace ss {
 
         std::unique_ptr<VectorInsDelAction> action(new VectorInsDelAction(
             Action::VectorInsert, this, index, int(nodes.size()), std::move(nodes)));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
     }
 
     void VectorNode::remove(int index, int count) {
@@ -117,8 +116,7 @@ namespace ss {
 
         std::unique_ptr<VectorInsDelAction> action(
             new VectorInsDelAction(Action::VectorRemove, this, index, count, {}));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
     }
 
     void VectorNode::move(int index, int count, int destination) {
@@ -133,8 +131,7 @@ namespace ss {
 
         std::unique_ptr<VectorMoveAction> action(
             new VectorMoveAction(this, index, count, destination));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
     }
 
     std::vector<std::unique_ptr<Node>> VectorNode::take(int index, int count) {
@@ -199,9 +196,7 @@ namespace ss {
 
     void VectorInsDelAction::execute(Operation operation) {
         auto &children = m_parent->m_children;
-        const bool intoTree = (type() == VectorInsert) == isForward(operation);
-
-        if (intoTree) {
+        if (isInsertion(operation)) {
             assert(m_held.size() == m_children.size());
             for (const auto &node : m_held) {
                 NodePrivate::attach(node.get(), m_parent, m_parent->model());
@@ -229,11 +224,7 @@ namespace ss {
     VectorMoveAction::~VectorMoveAction() = default;
 
     void VectorMoveAction::execute(Operation operation) {
-        if (isForward(operation)) {
-            moveRange(m_parent->m_children, m_index, m_count, m_destination);
-        } else {
-            moveRange(m_parent->m_children, m_destination, m_count, m_index);
-        }
+        moveRange(m_parent->m_children, index(operation), m_count, destination(operation));
     }
 
 }

@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <random>
 #include <string>
 #include <vector>
@@ -11,6 +12,7 @@
 
 #include "HistoryReference.h"
 #include "TestTree.h"
+#include "TreeMirror.h"
 
 using namespace ss;
 
@@ -304,8 +306,13 @@ namespace {
         std::mt19937 m_random;
     };
 
-    void verify(const Model &model, const Reference &reference, bool inTransaction) {
+    void verify(const Model &model, const Reference &reference, const TreeMirror &mirror,
+                bool inTransaction) {
         const auto ids = reference.liveIds();
+        // The notifications reproduce the tree and report every destroyed node.
+        BOOST_REQUIRE_EQUAL(mirror.error(), "");
+        BOOST_REQUIRE_EQUAL(mirror.dump(), dump(model.root()));
+        BOOST_REQUIRE(mirror.liveIds() == ids);
         std::set<std::uint64_t> attached;
         collectIds(reference.latest(), attached);
         BOOST_REQUIRE_EQUAL(model.nodeCount(), ids.size());
@@ -324,6 +331,7 @@ namespace {
         if (!inTransaction) {
             BOOST_REQUIRE_EQUAL(dump(model.root()), reference.current());
             BOOST_REQUIRE_EQUAL(model.currentStep() - model.minimumStep(), reference.executed());
+            BOOST_REQUIRE_EQUAL(mirror.step(), model.currentStep());
             BOOST_REQUIRE_EQUAL(model.maximumStep() - model.minimumStep(), reference.retained());
         }
     }
@@ -570,15 +578,20 @@ BOOST_AUTO_TEST_CASE(test_identifiers_are_not_reused_after_reset) {
 
 // The executable check of theorems 1 to 4 in docs/Design.md: after every action, undo and redo,
 // the live nodes equal the nodes of the retained configurations, and the tree equals the recorded
-// configuration of the current step.
+// configuration of the current step. A TreeMirror checks that the notifications reproduce every
+// change and report every destroyed node.
 BOOST_AUTO_TEST_CASE(test_random_history_matches_the_reference) {
     const int before = CountingNode::live();
     {
         constexpr int stepLimit = 8;
         RandomEditor editor(20260923);
+        // Declared before the model, which notifies it when destroyed, also if a check throws.
+        std::unique_ptr<TreeMirror> mirror;
         auto model = makeModel(stepLimit, editor.subtree(3));
         Reference reference(stepLimit, dump(model->root()));
-        verify(*model, reference, false);
+        mirror = std::make_unique<TreeMirror>(*model);
+        model->addObserver(mirror.get());
+        verify(*model, reference, *mirror, false);
 
         for (int round = 0; round < 3000; ++round) {
             const int choice = editor.uniform(0, 9);
@@ -588,7 +601,7 @@ BOOST_AUTO_TEST_CASE(test_random_history_matches_the_reference) {
                 for (int i = 0; i < count; ++i) {
                     editor.modify(*model);
                     reference.record(dump(model->root()));
-                    verify(*model, reference, true);
+                    verify(*model, reference, *mirror, true);
                 }
                 if (editor.uniform(0, 9) == 0) {
                     model->abortTransaction();
@@ -604,7 +617,7 @@ BOOST_AUTO_TEST_CASE(test_random_history_matches_the_reference) {
                 model->redo();
                 reference.redo();
             }
-            verify(*model, reference, false);
+            verify(*model, reference, *mirror, false);
         }
     }
     BOOST_CHECK_EQUAL(CountingNode::live(), before);

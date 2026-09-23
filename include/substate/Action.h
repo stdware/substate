@@ -45,6 +45,10 @@ namespace ss {
         };
 
         /// The occasion on which an action is applied.
+        ///
+        /// The accessors of the action types that take an Operation describe the change that
+        /// applying the action for that operation makes. Applying a removal for Undo inserts, for
+        /// example. The default Execute describes the change as recorded.
         enum Operation {
             /// The first application, within the transaction that creates the action.
             Execute,
@@ -99,11 +103,11 @@ namespace ss {
 
         inline Model *model() const;
 
-        /// The root after the action is executed.
-        inline Node *newRoot() const;
+        /// The root after the action is applied for \a operation.
+        inline Node *newRoot(Operation operation = Execute) const;
 
-        /// The root before the action is executed.
-        inline Node *oldRoot() const;
+        /// The root before the action is applied for \a operation.
+        inline Node *oldRoot(Operation operation = Execute) const;
 
         void forEachHeldNode(const std::function<void(Node *)> &func) const override;
 
@@ -125,27 +129,31 @@ namespace ss {
         return m_model;
     }
 
-    inline Node *RootChangeAction::newRoot() const {
-        return m_newRoot;
+    inline Node *RootChangeAction::newRoot(Operation operation) const {
+        return isForward(operation) ? m_newRoot : m_oldRoot;
     }
 
-    inline Node *RootChangeAction::oldRoot() const {
-        return m_oldRoot;
+    inline Node *RootChangeAction::oldRoot(Operation operation) const {
+        return isForward(operation) ? m_oldRoot : m_newRoot;
     }
 
     /// Transfer of nodes from one parent to another within the same model, which keeps their
     /// addresses and identifiers. Owns no node, because the nodes remain in the tree.
     ///
     /// Created by the \c transferIn() functions of the container node types.
+    ///
+    /// The positions of the nodes are read from the containers: the nodes are at their source
+    /// positions in ModelObserver::actionAboutToApply(), and at their target positions in
+    /// ModelObserver::actionApplied().
     class SUBSTATE_EXPORT TransferAction : public Action {
     public:
         ~TransferAction();
 
-        /// The parent of the nodes before execution.
-        Node *source() const;
+        /// The parent of the nodes before the action is applied for \a operation.
+        Node *source(Operation operation = Execute) const;
 
-        /// The parent of the nodes after execution.
-        Node *target() const;
+        /// The parent of the nodes after the action is applied for \a operation.
+        Node *target(Operation operation = Execute) const;
 
         /// The transferred nodes in order.
         inline const std::vector<Node *> &nodes() const;

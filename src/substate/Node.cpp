@@ -53,16 +53,19 @@ namespace ss {
             return false;
         }
 
-        std::unique_ptr<TransferAction> action(
-            new TransferAction(std::move(sourceEnd), std::move(targetEnd), nodes));
-        action->execute(Action::Execute);
-        pushAction(target->model(), std::move(action));
+        execute(target->model(), std::unique_ptr<TransferAction>(new TransferAction(
+                                     std::move(sourceEnd), std::move(targetEnd), nodes)));
         return true;
     }
 
-    void NodePrivate::pushAction(Model *model, std::unique_ptr<Action> action) {
+    void NodePrivate::execute(Model *model, std::unique_ptr<Action> action) {
         assert(model->inTransaction());
+        model->apply(*action, Action::Execute);
         model->m_actions.push_back(std::move(action));
+    }
+
+    void NodePrivate::aboutToDiscard(const Action &action) {
+        action.forEachHeldNode([](Node *node) { node->m_model->aboutToDestroy(node); });
     }
 
     void NodePrivate::removeFromIndex(Node *node) {

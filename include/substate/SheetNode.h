@@ -96,6 +96,10 @@ namespace ss {
         inline int key() const;
         inline Node *child() const;
 
+        /// Returns whether applying the action for \a operation inserts the child rather than
+        /// removing it.
+        inline bool isInsertion(Operation operation = Execute) const;
+
         void forEachHeldNode(const std::function<void(Node *)> &func) const override;
 
     protected:
@@ -124,6 +128,10 @@ namespace ss {
 
     inline Node *SheetInsDelAction::child() const {
         return m_child;
+    }
+
+    inline bool SheetInsDelAction::isInsertion(Operation operation) const {
+        return (type() == SheetInsert) == isForward(operation);
     }
 
 }

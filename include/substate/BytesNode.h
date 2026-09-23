@@ -98,6 +98,10 @@ namespace ss {
         /// The inserted or removed bytes.
         inline ArrayView<char> bytes() const;
 
+        /// Returns whether applying the action for \a operation inserts the bytes rather than
+        /// removing them.
+        inline bool isInsertion(Operation operation = Execute) const;
+
     protected:
         void execute(Operation operation) override;
 
@@ -123,6 +127,10 @@ namespace ss {
         return m_bytes;
     }
 
+    inline bool BytesInsDelAction::isInsertion(Operation operation) const {
+        return (type() == BytesInsert) == isForward(operation);
+    }
+
     /// Replacement of bytes in a BytesNode with bytes of the same length. Owns no node.
     class SUBSTATE_EXPORT BytesReplaceAction : public Action {
     public:
@@ -131,11 +139,11 @@ namespace ss {
         inline BytesNode *parent() const;
         inline int index() const;
 
-        /// The bytes after the replacement.
-        inline ArrayView<char> bytes() const;
+        /// The bytes after the action is applied for \a operation.
+        inline ArrayView<char> bytes(Operation operation = Execute) const;
 
-        /// The bytes before the replacement.
-        inline ArrayView<char> oldBytes() const;
+        /// The bytes before the action is applied for \a operation.
+        inline ArrayView<char> oldBytes(Operation operation = Execute) const;
 
     protected:
         void execute(Operation operation) override;
@@ -160,12 +168,12 @@ namespace ss {
         return m_index;
     }
 
-    inline ArrayView<char> BytesReplaceAction::bytes() const {
-        return m_bytes;
+    inline ArrayView<char> BytesReplaceAction::bytes(Operation operation) const {
+        return isForward(operation) ? m_bytes : m_oldBytes;
     }
 
-    inline ArrayView<char> BytesReplaceAction::oldBytes() const {
-        return m_oldBytes;
+    inline ArrayView<char> BytesReplaceAction::oldBytes(Operation operation) const {
+        return isForward(operation) ? m_oldBytes : m_bytes;
     }
 
 }

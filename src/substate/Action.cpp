@@ -51,12 +51,12 @@ namespace ss {
 
     TransferAction::~TransferAction() = default;
 
-    Node *TransferAction::source() const {
-        return m_source->container();
+    Node *TransferAction::source(Operation operation) const {
+        return (isForward(operation) ? m_source : m_target)->container();
     }
 
-    Node *TransferAction::target() const {
-        return m_target->container();
+    Node *TransferAction::target(Operation operation) const {
+        return (isForward(operation) ? m_target : m_source)->container();
     }
 
     void TransferAction::execute(Operation operation) {

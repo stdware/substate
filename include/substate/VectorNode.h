@@ -117,6 +117,10 @@ namespace ss {
         /// The inserted or removed children in order.
         inline const std::vector<Node *> &children() const;
 
+        /// Returns whether applying the action for \a operation inserts the children rather than
+        /// removing them.
+        inline bool isInsertion(Operation operation = Execute) const;
+
         void forEachHeldNode(const std::function<void(Node *)> &func) const override;
 
     protected:
@@ -148,17 +152,24 @@ namespace ss {
         return m_children;
     }
 
+    inline bool VectorInsDelAction::isInsertion(Operation operation) const {
+        return (type() == VectorInsert) == isForward(operation);
+    }
+
     /// Reordering of children within a VectorNode. Owns no node.
     class SUBSTATE_EXPORT VectorMoveAction : public Action {
     public:
         ~VectorMoveAction();
 
         inline VectorNode *parent() const;
-        inline int index() const;
+
+        /// The index of the first moved child before the action is applied for \a operation.
+        inline int index(Operation operation = Execute) const;
+
         inline int count() const;
 
-        /// The index of the first moved child after the move.
-        inline int destination() const;
+        /// The index of the first moved child after the action is applied for \a operation.
+        inline int destination(Operation operation = Execute) const;
 
     protected:
         void execute(Operation operation) override;
@@ -178,16 +189,16 @@ namespace ss {
         return m_parent;
     }
 
-    inline int VectorMoveAction::index() const {
-        return m_index;
+    inline int VectorMoveAction::index(Operation operation) const {
+        return isForward(operation) ? m_index : m_destination;
     }
 
     inline int VectorMoveAction::count() const {
         return m_count;
     }
 
-    inline int VectorMoveAction::destination() const {
-        return m_destination;
+    inline int VectorMoveAction::destination(Operation operation) const {
+        return isForward(operation) ? m_destination : m_index;
     }
 
 }

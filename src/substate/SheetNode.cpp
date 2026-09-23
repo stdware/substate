@@ -97,8 +97,7 @@ namespace ss {
 
         std::unique_ptr<SheetInsDelAction> action(
             new SheetInsDelAction(Action::SheetInsert, this, key, std::move(node)));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
         return key;
     }
 
@@ -117,8 +116,7 @@ namespace ss {
 
         std::unique_ptr<SheetInsDelAction> action(
             new SheetInsDelAction(Action::SheetRemove, this, key, nullptr));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
         return true;
     }
 
@@ -173,9 +171,7 @@ namespace ss {
 
     void SheetInsDelAction::execute(Operation operation) {
         auto &children = m_parent->m_children;
-        const bool intoTree = (type() == SheetInsert) == isForward(operation);
-
-        if (intoTree) {
+        if (isInsertion(operation)) {
             assert(m_held && children.find(m_key) == children.end());
             NodePrivate::attach(m_held.get(), m_parent, m_parent->model());
             children.emplace(m_key, std::move(m_held));

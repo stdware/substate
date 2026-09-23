@@ -150,6 +150,7 @@
 - 长历史测试：提交的事务数为淘汰阈值的数倍，其中包含插入、删除、替换、根节点替换与转移，随后撤销到底、重做到顶。AceTreeModel 的两个问题都需要 200 次以上的提交才会出现。
 - [`References.md`](References.md) 中 AceTreeModel 的两个探针改写为测试，分别为在长历史中插入、删除、淘汰后撤销，以及删除初始树中的节点后淘汰。另加一项：把节点转移到另一个父节点，删除原父节点，淘汰删除之前的全部步骤后撤销，被转移的节点与原父节点都须存活且正确还原。
 - 转移的环检查：把节点转移到其自身或其后代之下须被拒绝。
+- 通知的检验：随机测试中注册一个只凭通知重建树的观察者，每一步比较重建的树与模型的树，并比较其记录的存活节点集合与参照实现给出的集合。二者相等，即检验了通知的完整性、方向，以及每个析构的节点都被通知。
 - 全部测试在 AddressSanitizer 下运行。
 
 ### 析构顺序
@@ -243,13 +244,18 @@ public:
     virtual void stepChanged(int step);
     virtual void nodeAboutToBeDestroyed(Node *node);
     virtual void aboutToReset();
+    virtual void resetFinished();
 };
 ```
 
-- **通知给出实际发生的变化。** 撤销一次插入，观察者看到的是删除。每个动作类型提供按方向解释的访问函数，观察者不必自行取反。
-- 事务中的每个动作在执行时即发出通知，界面随之更新。中止事务时，撤销产生的通知同样发出。
-- **通知回调中修改模型是编程错误**，以断言检查，取代现在的 `_lockedNode`。
-- qsubstate 提供一个 `QObject` 适配器，将上述回调转换为 Qt 信号。
+- 观察者由 `Model::addObserver()` 注册，按注册顺序通知。观察者的生存期由调用方负责，在被移除或模型析构之前须保持有效。
+- **通知给出实际发生的变化。** 撤销一次插入，观察者看到的是删除。每个动作类型提供按方向解释的访问函数，参数为 `Action::Operation`，默认值 `Execute` 给出动作记录时的含义，例如 `VectorInsDelAction::isInsertion(operation)`、`VectorMoveAction::index(operation)` 与 `destination(operation)`、`PropertyAction::newVariant(operation)`、`TransferAction::source(operation)` 与 `target(operation)`。观察者不必自行取反。
+- 事务中的每个动作在执行时即发出通知，界面随之更新。中止事务时，撤销产生的通知同样发出。随动作首次进入模型的节点在动作执行时才获得 ID，因此 `actionAboutToApply` 中这些节点的 ID 为 0。
+- 转移的位置从容器中读取：在 `actionAboutToApply` 中，被转移节点位于源位置，在 `actionApplied` 中位于目标位置。
+- `stepChanged` 在产生步骤的提交、撤销与重做之后发出。空事务与中止的事务不改变步骤，不发出该通知。
+- `nodeAboutToBeDestroyed` 在事务被截断、淘汰或中止，其动作持有的节点即将析构时发出。被析构子树中的每个节点各通知一次，父节点先于子节点，通知期间整棵子树完好。存储引擎析构 `Transaction` 时由其析构函数发出，因此自定义的引擎无需另行处理。模型重置与析构时只发出 `aboutToReset`，不逐个通知节点，见「析构顺序」。
+- **通知回调中修改模型是编程错误**，以断言检查，取代现在的 `_lockedNode`。回调中可以读取模型，也可以修改自由节点。
+- qsubstate 提供 `QObject` 适配器 `ModelNotifier`，将上述回调转换为同名的 Qt 信号。信号参数中的指针只在发出期间有效，因此只支持直接连接。
 
 ## ID
 
@@ -321,6 +327,15 @@ qsubstate 目前只支持 Qt 6，Qt 5 的支持在之后添加。两者 `QVarian
 - 每种动作均测试：执行、撤销、重做后树与预期相同，节点地址与 ID 不变，通知的内容与方向正确。
 - 所有权的检验见「所有权的正确性」中的「可执行的检验」：存活节点集合与参照实现逐步比较、ID 索引的条目数、长历史测试、AceTreeModel 探针的回归测试，以及 AddressSanitizer。
 - 一个随机测试：随机生成一串事务并随机撤销重做，与一个简单的参照实现（每步保存整棵树的深拷贝）逐步比较。
+
+## 公开接口与扩展接口
+
+只使用 `Model` 与现有节点类型的调用方只需要公开头文件：修改树、转移节点、撤销重做与订阅通知都通过公开接口完成。`include/*/private/` 中的头文件只供扩展者使用，即实现新的节点类型或动作类型：
+
+- 支持转移的新容器类型覆盖 `Node::endpointOf()`，并实现 `Transfer_p.h` 中的 `TransferEndpoint`。
+- 新的动作类型经 `NodePrivate::execute()` 交给模型执行，由模型发出通知并加入当前事务。
+
+公开头文件不引用私有头文件。继承现有节点类型而不改变其存储的类型，例如测试中的计数节点，同样不需要私有头文件。
 
 ## 代码规范
 

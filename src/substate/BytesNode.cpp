@@ -23,8 +23,7 @@ namespace ss {
 
         std::unique_ptr<BytesInsDelAction> action(new BytesInsDelAction(
             Action::BytesInsert, this, index, std::vector<char>(bytes.begin(), bytes.end())));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
     }
 
     void BytesNode::remove(int index, int count) {
@@ -40,8 +39,7 @@ namespace ss {
 
         std::unique_ptr<BytesInsDelAction> action(new BytesInsDelAction(
             Action::BytesRemove, this, index, std::vector<char>(first, last)));
-        action->execute(Action::Execute);
-        NodePrivate::pushAction(model(), std::move(action));
+        NodePrivate::execute(model(), std::move(action));
     }
 
     void BytesNode::replace(int index, ArrayView<char> bytes) {
@@ -63,8 +61,7 @@ namespace ss {
             std::unique_ptr<BytesReplaceAction> action(
                 new BytesReplaceAction(this, index, std::vector<char>(within.begin(), within.end()),
                                        std::vector<char>(first, first + overlap)));
-            action->execute(Action::Execute);
-            NodePrivate::pushAction(model(), std::move(action));
+            NodePrivate::execute(model(), std::move(action));
         }
         if (!beyond.empty()) {
             insert(size(), beyond);
@@ -91,7 +88,7 @@ namespace ss {
 
     void BytesInsDelAction::execute(Operation operation) {
         auto &data = m_parent->m_data;
-        if ((type() == BytesInsert) == isForward(operation)) {
+        if (isInsertion(operation)) {
             data.insert(data.begin() + m_index, m_bytes.begin(), m_bytes.end());
         } else {
             auto first = data.begin() + m_index;
@@ -109,8 +106,8 @@ namespace ss {
     BytesReplaceAction::~BytesReplaceAction() = default;
 
     void BytesReplaceAction::execute(Operation operation) {
-        const auto &bytes = isForward(operation) ? m_bytes : m_oldBytes;
-        std::copy(bytes.begin(), bytes.end(), m_parent->m_data.begin() + m_index);
+        const auto replacement = bytes(operation);
+        std::copy(replacement.begin(), replacement.end(), m_parent->m_data.begin() + m_index);
     }
 
 }

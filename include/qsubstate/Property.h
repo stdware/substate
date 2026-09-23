@@ -127,17 +127,21 @@ namespace ss {
 
         inline Node *parent() const;
 
-        /// The scalar value after execution, or an invalid QVariant if it is not a scalar value.
-        inline QVariant newVariant() const;
+        /// The scalar value after the action is applied for \a operation, or an invalid QVariant
+        /// if the value is not a scalar value.
+        inline QVariant newVariant(Operation operation = Execute) const;
 
-        /// The child after execution, or \c nullptr if it is not a child.
-        inline Node *newChild() const;
+        /// The child after the action is applied for \a operation, or \c nullptr if the value is
+        /// not a child.
+        inline Node *newChild(Operation operation = Execute) const;
 
-        /// The scalar value before execution, or an invalid QVariant if it is not a scalar value.
-        inline QVariant oldVariant() const;
+        /// The scalar value before the action is applied for \a operation, or an invalid QVariant
+        /// if the value is not a scalar value.
+        inline QVariant oldVariant(Operation operation = Execute) const;
 
-        /// The child before execution, or \c nullptr if it is not a child.
-        inline Node *oldChild() const;
+        /// The child before the action is applied for \a operation, or \c nullptr if the value is
+        /// not a child.
+        inline Node *oldChild(Operation operation = Execute) const;
 
         void forEachHeldNode(const std::function<void(Node *)> &func) const override;
 
@@ -161,20 +165,20 @@ namespace ss {
         return m_parent;
     }
 
-    inline QVariant PropertyAction::newVariant() const {
-        return m_newVariant;
+    inline QVariant PropertyAction::newVariant(Operation operation) const {
+        return isForward(operation) ? m_newVariant : m_oldVariant;
     }
 
-    inline Node *PropertyAction::newChild() const {
-        return m_newChild;
+    inline Node *PropertyAction::newChild(Operation operation) const {
+        return isForward(operation) ? m_newChild : m_oldChild;
     }
 
-    inline QVariant PropertyAction::oldVariant() const {
-        return m_oldVariant;
+    inline QVariant PropertyAction::oldVariant(Operation operation) const {
+        return isForward(operation) ? m_oldVariant : m_newVariant;
     }
 
-    inline Node *PropertyAction::oldChild() const {
-        return m_oldChild;
+    inline Node *PropertyAction::oldChild(Operation operation) const {
+        return isForward(operation) ? m_oldChild : m_newChild;
     }
 
 }

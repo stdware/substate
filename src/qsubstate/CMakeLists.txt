@@ -5,8 +5,12 @@ find_package(Qt6 COMPONENTS Core REQUIRED)
 
 substate_add_library(${PROJECT_NAME})
 
+# The public headers are listed as sources, because AUTOMOC processes only the sources and
+# ModelNotifier.h declares a QObject.
 file(GLOB_RECURSE _src *.h *.cpp)
-target_sources(${PROJECT_NAME} PRIVATE ${_src})
+file(GLOB_RECURSE _hdr ${SUBSTATE_SOURCE_DIR}/include/${PROJECT_NAME}/*.h)
+target_sources(${PROJECT_NAME} PRIVATE ${_src} ${_hdr})
+set_target_properties(${PROJECT_NAME} PROPERTIES AUTOMOC ON)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
     ${SUBSTATE_SOURCE_DIR}/include/${PROJECT_NAME}/private
