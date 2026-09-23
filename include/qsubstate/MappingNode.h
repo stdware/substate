@@ -1,93 +1,107 @@
 // Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef SUBSTATE_MAPPINGNODE_H
-#define SUBSTATE_MAPPINGNODE_H
+#ifndef QSUBSTATE_MAPPINGNODE_H
+#define QSUBSTATE_MAPPINGNODE_H
 
 #include <map>
+
+#include <QtCore/QString>
+#include <QtCore/QStringList>
 
 #include <qsubstate/Property.h>
 
 namespace ss {
 
-    class MappingAction;
-
-    class MappingNodePrivate;
-
-    /// MappingNode - Vector data structure node.
+    /// A node with entries addressed by string keys, each holding a non-empty Property.
     class QSUBSTATE_EXPORT MappingNode : public Node {
     public:
-        inline explicit MappingNode(int type = Mapping);
+        inline MappingNode();
         ~MappingNode();
 
-    public:
-        inline Property property(const QString &key) const;
-        bool setProperty(const QString &key, const Property &value);
-        inline const std::map<QString, Property> &data() const;
-        inline int count() const;
         inline int size() const;
+        bool contains(const QString &key) const;
+
+        /// The value of \a key, or an empty Property if the entry does not exist.
+        const Property &at(const QString &key) const;
+
+        inline QVariant variant(const QString &key) const;
+        inline Node *child(const QString &key) const;
+
+        /// The keys in ascending order.
+        QStringList keys() const;
+
+        /// Stores \a value under \a key. An empty \a value removes the entry. A child in \a value
+        /// must be free and without a parent.
+        ///
+        /// In a model, the previous value is owned by the action and returns if the assignment is
+        /// undone. In a free node, it is destroyed. Use take() to keep it.
+        ///
+        /// \return whether the entry changed. A value equal to the current one creates no action.
+        bool setProperty(const QString &key, Property value);
+
+        /// Removes the entry of \a key and returns its value, or returns an empty Property if the
+        /// entry does not exist. The node must be free.
+        Property take(const QString &key);
+
+        std::unique_ptr<Node> clone() const override;
 
     protected:
-        std::shared_ptr<Node> clone(bool copyId) const override;
-        void propagateChildren(const std::function<void(Node *)> &func) override;
+        inline explicit MappingNode(int type);
 
-        std::map<QString, Property> _map;
+        void forEachChild(const std::function<void(Node *)> &func) const override;
 
-        friend class MappingNodePrivate;
-        friend class MappingAction;
+        /// Stores copies of the entries of \a source, for the clone() of a subclass. This node
+        /// must be free and empty.
+        void cloneEntriesFrom(const MappingNode &source);
+
+    private:
+        std::map<QString, Property> m_entries;
+
+        friend class MappingAssignAction;
     };
+
+    inline MappingNode::MappingNode() : MappingNode(Mapping) {
+    }
 
     inline MappingNode::MappingNode(int type) : Node(type) {
     }
 
-    inline Property MappingNode::property(const QString &key) const {
-        auto it = _map.find(key);
-        if (it == _map.end()) {
-            return {};
-        }
-        return it->second;
-    }
-
-    inline const std::map<QString, Property> &MappingNode::data() const {
-        return _map;
-    }
-
-    inline int MappingNode::count() const {
-        return int(_map.size());
-    }
-
     inline int MappingNode::size() const {
-        return int(_map.size());
+        return int(m_entries.size());
     }
 
+    inline QVariant MappingNode::variant(const QString &key) const {
+        return at(key).variant();
+    }
 
-    /// MappingAction - Action for \c MappingNode operations.
-    class QSUBSTATE_EXPORT MappingAction : public PropertyAction {
-    public:
-        inline MappingAction(const std::shared_ptr<MappingNode> &parent, QString key,
-                             Property oldValue, Property value);
-        ~MappingAction();
+    inline Node *MappingNode::child(const QString &key) const {
+        return at(key).child();
+    }
 
+    /// Assignment to an entry of a MappingNode, including its creation and removal. See
+    /// PropertyAction for the ownership.
+    class QSUBSTATE_EXPORT MappingAssignAction : public PropertyAction {
     public:
-        void execute(bool undo) override;
+        ~MappingAssignAction();
 
-    public:
-        inline QString key() const;
+        inline const QString &key() const;
 
-    public:
-        QString _key;
+    protected:
+        void execute(Operation operation) override;
+
+    private:
+        MappingAssignAction(MappingNode *parent, QString key, Property value);
+
+        QString m_key;
+
+        friend class MappingNode;
     };
 
-    inline MappingAction::MappingAction(const std::shared_ptr<MappingNode> &parent, QString key,
-                                        Property oldValue, Property value)
-        : PropertyAction(MappingAssign, parent, std::move(oldValue), std::move(value)),
-          _key(std::move(key)) {
-    }
-
-    inline QString MappingAction::key() const {
-        return _key;
+    inline const QString &MappingAssignAction::key() const {
+        return m_key;
     }
 
 }
 
-#endif // SUBSTATE_MAPPINGNODE_H
+#endif // QSUBSTATE_MAPPINGNODE_H

@@ -33,6 +33,7 @@ namespace ss {
             Vector,
             Sheet,
             Mapping,
+            Struct,
             User = 1024,
         };
 

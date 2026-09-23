@@ -1,120 +1,127 @@
 // Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef SUBSTATE_STRUCTNODE_H
-#define SUBSTATE_STRUCTNODE_H
+#ifndef QSUBSTATE_STRUCTNODE_H
+#define QSUBSTATE_STRUCTNODE_H
 
-#include <substate/ArrayView.h>
+#include <array>
+#include <cstddef>
 
 #include <qsubstate/Property.h>
 
 namespace ss {
 
-    class StructAction;
-
-    class StructNodeBasePrivate;
-
-    /// StructNode - MappingNode - Base struct data structure node base.
+    /// A node with a fixed number of slots addressed by index, each holding a Property. The
+    /// storage of the slots is provided by StructNode.
     class QSUBSTATE_EXPORT StructNodeBase : public Node {
     public:
-        inline StructNodeBase(int type, Property *storage, size_t size);
         ~StructNodeBase();
 
-    public:
+        inline int size() const;
         inline const Property &at(int index) const;
+        inline QVariant variant(int index) const;
+        inline Node *child(int index) const;
+
+        /// Stores \a value in the slot \a index. A child in \a value must be free and without a
+        /// parent. Assigning a value equal to the current one creates no action.
+        ///
+        /// In a model, the previous value is owned by the action and returns if the assignment is
+        /// undone. In a free node, it is destroyed. Use take() to keep it.
         void setAt(int index, Property value);
 
-        inline ArrayView<Property> data() const;
-        inline int count() const;
-        inline int size() const;
+        /// Moves the value out of the slot \a index and returns it, leaving the slot empty. The
+        /// node must be free.
+        Property take(int index);
 
     protected:
-        void propagateChildren(const std::function<void(Node *)> &func) override;
+        inline StructNodeBase(int type, int size);
 
-    protected:
-        Property *_storage;
-        size_t _size;
+        /// Sets the storage of the slots, which must hold size() values. Called by the constructor
+        /// of StructNode after its storage is constructed.
+        inline void setStorage(Property *storage);
 
-        static void copy(StructNodeBase *dest, const StructNodeBase *src, bool copyId);
+        void forEachChild(const std::function<void(Node *)> &func) const override;
 
-        friend class StructNodeBasePrivate;
-        friend class StructAction;
+        /// Stores copies of the values of \a source, for the clone() of a subclass. This node must
+        /// be free, empty and of the same size.
+        void cloneSlotsFrom(const StructNodeBase &source);
+
+    private:
+        Property *m_slots = nullptr;
+        int m_size;
+
+        friend class StructAssignAction;
     };
 
-    inline StructNodeBase::StructNodeBase(int type, Property *storage, size_t size)
-        : Node(type), _storage(storage), _size(size) {
+    inline StructNodeBase::StructNodeBase(int type, int size) : Node(type), m_size(size) {
     }
 
-    inline const Property &StructNodeBase::at(int index) const {
-        return _storage[index];
-    }
-
-    inline ArrayView<Property> StructNodeBase::data() const {
-        return {_storage, _size};
-    }
-
-    inline int StructNodeBase::count() const {
-        return size();
+    inline void StructNodeBase::setStorage(Property *storage) {
+        m_slots = storage;
     }
 
     inline int StructNodeBase::size() const {
-        return int(_size);
+        return m_size;
     }
 
+    inline const Property &StructNodeBase::at(int index) const {
+        return m_slots[index];
+    }
 
-    /// StructNode - Struct data structure node.
-    template <size_t N>
+    inline QVariant StructNodeBase::variant(int index) const {
+        return m_slots[index].variant();
+    }
+
+    inline Node *StructNodeBase::child(int index) const {
+        return m_slots[index].child();
+    }
+
+    /// A StructNodeBase with \a N slots stored within the node, without a separate allocation.
+    template <std::size_t N>
     class StructNode : public StructNodeBase {
     public:
-        inline StructNode(int type);
-        ~StructNode() = default;
+        inline explicit StructNode(int type = Struct);
 
-    protected:
-        std::shared_ptr<Node> clone(bool copyId) const override;
+        inline std::unique_ptr<Node> clone() const override;
 
-    protected:
-        Property _buf[N];
+    private:
+        std::array<Property, N> m_storage;
     };
 
-    template <size_t N>
-    inline StructNode<N>::StructNode(int type) : StructNodeBase(type, _buf, N) {
+    template <std::size_t N>
+    inline StructNode<N>::StructNode(int type) : StructNodeBase(type, int(N)) {
+        setStorage(m_storage.data());
     }
 
-    template <size_t N>
-    inline std::shared_ptr<Node> StructNode<N>::clone(bool copyId) const {
-        auto node = std::make_shared<StructNode<N>>(_type);
-        StructNodeBase::copy(node.get(), this, copyId);
+    template <std::size_t N>
+    inline std::unique_ptr<Node> StructNode<N>::clone() const {
+        auto node = std::make_unique<StructNode<N>>(type());
+        node->cloneSlotsFrom(*this);
         return node;
     }
 
-
-    /// StructAction - Action for \c StructNode operations.
-    class QSUBSTATE_EXPORT StructAction : public PropertyAction {
+    /// Assignment to a slot of a StructNodeBase. See PropertyAction for the ownership.
+    class QSUBSTATE_EXPORT StructAssignAction : public PropertyAction {
     public:
-        inline StructAction(const std::shared_ptr<StructNodeBase> &parent, int index,
-                            Property oldValue, Property value);
-        ~StructAction();
+        ~StructAssignAction();
 
-    public:
-        void execute(bool undo) override;
-
-    public:
         inline int index() const;
 
-    public:
-        int _index;
+    protected:
+        void execute(Operation operation) override;
+
+    private:
+        StructAssignAction(StructNodeBase *parent, int index, Property value);
+
+        int m_index;
+
+        friend class StructNodeBase;
     };
 
-    inline StructAction::StructAction(const std::shared_ptr<StructNodeBase> &parent, int index,
-                                      Property oldValue, Property value)
-        : PropertyAction(StructAssign, parent, std::move(oldValue), std::move(value)),
-          _index(index) {
-    }
-
-    inline int StructAction::index() const {
-        return _index;
+    inline int StructAssignAction::index() const {
+        return m_index;
     }
 
 }
 
-#endif // SUBSTATE_STRUCTNODE_H
+#endif // QSUBSTATE_STRUCTNODE_H

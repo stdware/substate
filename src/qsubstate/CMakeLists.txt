@@ -1,7 +1,7 @@
 project(qsubstate VERSION ${SUBSTATE_VERSION})
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS Core REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core REQUIRED)
+# Qt 6 only for now. Support for Qt 5 is added later, see docs/Design.md.
+find_package(Qt6 COMPONENTS Core REQUIRED)
 
 substate_add_library(${PROJECT_NAME})
 
@@ -13,6 +13,6 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 )
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
-    Qt${QT_VERSION_MAJOR}::Core
+    Qt6::Core
     substate
 )

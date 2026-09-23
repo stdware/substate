@@ -1,165 +1,106 @@
 #include "MappingNode.h"
-#include "MappingNode_p.h"
 
 #include <cassert>
 
-#include <substate/private/Model_p.h>
 #include <substate/private/Node_p.h>
+
+#include "Property_p.h"
 
 namespace ss {
 
-    void MappingNodePrivate::copy(MappingNode *dest, const MappingNode *src, bool copyId) {
-        if (copyId) {
-            dest->_id = src->_id;
-        }
-        // Clone children
-        for (auto &pair : src->_map) {
-            const auto &key = pair.first;
-            const auto &prop = pair.second;
-
-            if (prop.isVariant()) {
-                dest->_map.insert(std::make_pair(key, prop.variant()));
-                continue;
-            }
-
-            auto newChild = NodePrivate::clone(prop.node().get(), copyId);
-            dest->addChild(newChild.get());
-            dest->_map.insert(std::make_pair(key, newChild));
-        }
-    }
-
     MappingNode::~MappingNode() = default;
 
-    bool MappingNode::setProperty(const QString &key, const Property &value) {
+    bool MappingNode::contains(const QString &key) const {
+        return m_entries.find(key) != m_entries.end();
+    }
+
+    const Property &MappingNode::at(const QString &key) const {
+        static const Property empty;
+        auto it = m_entries.find(key);
+        return it == m_entries.end() ? empty : it->second;
+    }
+
+    QStringList MappingNode::keys() const {
+        QStringList result;
+        result.reserve(qsizetype(m_entries.size()));
+        for (const auto &entry : m_entries) {
+            result.append(entry.first);
+        }
+        return result;
+    }
+
+    bool MappingNode::setProperty(const QString &key, Property value) {
         assert(isWritable());
+        assert(PropertyPrivate::isAssignable(value, this));
 
-        Property oldProp;
-        auto it = _map.find(key);
-        if (it == _map.end()) {
-            // Nothing changes
-            if (!value.isValid())
-                return false;
-        } else {
-            // Nothing changes
-            if (value == it->second)
-                return false;
-            oldProp = it->second;
+        if (at(key) == value) {
+            return false;
         }
 
-        beginAction();
-
-        auto a = std::make_unique<MappingAction>(
-            std::static_pointer_cast<MappingNode>(shared_from_this()), key, oldProp, value);
-
-        // Pre-Propagate signal
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, a.get());
-            notify(&n);
-        }
-
-        // Do change
-        if (it == _map.end()) {
-            _map.insert(std::make_pair(key, value));
-        } else {
-            if (value.isValid()) {
-                it->second = value;
+        if (isFree()) {
+            if (value.isEmpty()) {
+                m_entries.erase(key);
             } else {
-                _map.erase(it);
+                PropertyPrivate::assignFree(this, m_entries[key], std::move(value));
             }
+            return true;
         }
 
-        if (oldProp.isNode()) {
-            auto oldNode = oldProp.node();
-            removeChild(oldNode.get());
-        }
-        if (value.node()) {
-            auto node = value.node();
-            addChild(node.get());
-        }
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, a.get());
-            notify(&n);
-        }
-
-        // Push
-        endAction();
-        ModelPrivate::pushAction(_model, std::move(a));
+        std::unique_ptr<MappingAssignAction> action(
+            new MappingAssignAction(this, key, std::move(value)));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
         return true;
     }
 
-    std::shared_ptr<Node> MappingNode::clone(bool copyId) const {
-        auto node = std::make_shared<MappingNode>(_type);
-        MappingNodePrivate::copy(node.get(), this, copyId);
+    Property MappingNode::take(const QString &key) {
+        assert(isFree());
+        auto it = m_entries.find(key);
+        if (it == m_entries.end()) {
+            return {};
+        }
+        Property value = PropertyPrivate::take(it->second);
+        m_entries.erase(it);
+        return value;
+    }
+
+    std::unique_ptr<Node> MappingNode::clone() const {
+        std::unique_ptr<MappingNode> node(new MappingNode());
+        node->cloneEntriesFrom(*this);
         return node;
     }
 
-    void MappingNode::propagateChildren(const std::function<void(Node *)> &func) {
-        for (const auto &pair : std::as_const(_map)) {
-            const auto &prop = pair.second;
-            if (prop.isNode()) {
-                NodePrivate::propagate(prop.node().get(), func);
+    void MappingNode::forEachChild(const std::function<void(Node *)> &func) const {
+        for (const auto &entry : m_entries) {
+            if (auto child = entry.second.child()) {
+                func(child);
             }
         }
     }
 
-    MappingAction::~MappingAction() = default;
-
-    void MappingAction::execute(bool undo) {
-        auto parent = static_cast<MappingNode *>(_parent.get());
-
-        auto &key = _key;
-        auto &value = undo ? _oldValue : _value;
-        auto &map = parent->_map;
-        Property oldProp;
-
-        parent->beginAction();
-
-        auto it = map.find(key);
-        if (it == map.end()) {
-            assert(value.isValid());
-        } else {
-            assert(value != it->second);
-            oldProp = it->second;
+    void MappingNode::cloneEntriesFrom(const MappingNode &source) {
+        assert(isFree() && m_entries.empty());
+        for (const auto &entry : source.m_entries) {
+            PropertyPrivate::assignFree(this, m_entries[entry.first], entry.second.clone());
         }
+    }
 
-        MappingAction a(std::static_pointer_cast<MappingNode>(parent->shared_from_this()), key,
-                        oldProp, value);
+    MappingAssignAction::MappingAssignAction(MappingNode *parent, QString key, Property value)
+        : PropertyAction(MappingAssign, parent, parent->at(key), std::move(value)),
+          m_key(std::move(key)) {
+    }
 
-        // Pre-Propagate signal
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, &a);
-            parent->notify(&n);
+    MappingAssignAction::~MappingAssignAction() = default;
+
+    void MappingAssignAction::execute(Operation operation) {
+        (void) operation;
+        auto &entries = static_cast<MappingNode *>(parent())->m_entries;
+        auto it = entries.try_emplace(m_key).first;
+        exchange(it->second);
+        // An entry never holds an empty value.
+        if (it->second.isEmpty()) {
+            entries.erase(it);
         }
-
-        // Do change
-        if (it == map.end()) {
-            map.insert(std::make_pair(key, value));
-        } else {
-            if (value.isValid()) {
-                it->second = value;
-            } else {
-                map.erase(it);
-            }
-        }
-
-        if (oldProp.isNode()) {
-            auto oldNode = oldProp.node();
-            parent->removeChild(oldNode.get());
-        }
-        if (value.node()) {
-            auto node = value.node();
-            parent->addChild(node.get());
-        }
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, &a);
-            parent->notify(&n);
-        }
-
-        parent->endAction();
     }
 
 }

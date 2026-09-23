@@ -1,136 +1,182 @@
 // Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
 // SPDX-License-Identifier: Apache-2.0
 
-#ifndef SUBSTATE_PROPERTY_H
-#define SUBSTATE_PROPERTY_H
+#ifndef QSUBSTATE_PROPERTY_H
+#define QSUBSTATE_PROPERTY_H
+
+#include <memory>
+#include <type_traits>
+#include <variant>
 
 #include <QtCore/QVariant>
 
-#include <substate/Node.h>
 #include <substate/Action.h>
+#include <substate/Node.h>
 
 #include <qsubstate/qsubstate_global.h>
 
 namespace ss {
 
-    /// Property - Container of \c Node or \c Variant instance.
+    class PropertyPrivate;
+
+    /// The content of a slot of a StructNode or of an entry of a MappingNode: empty, a scalar
+    /// value, or a child node.
+    ///
+    /// A Property that holds a child owns it, and can therefore only be moved. clone() copies the
+    /// child. An invalid QVariant is stored as an empty Property.
     class QSUBSTATE_EXPORT Property {
     public:
         enum Type {
-            Invalid,
-            Node,
+            Empty,
             Variant,
+            Child,
         };
 
         inline Property();
-        inline Property(const std::shared_ptr<class Node> &node);
-        inline Property(const QVariant &variant);
+        inline Property(QVariant variant);
+        inline Property(std::unique_ptr<Node> child);
+
+        template <class T, class = std::enable_if_t<std::is_base_of_v<Node, T>>>
+        inline Property(std::unique_ptr<T> child);
+
         ~Property();
 
-        Property(const Property &RHS);
-        Property(Property &&RHS);
-        Property &operator=(const Property &RHS);
-        Property &operator=(Property &&RHS);
+        Property(Property &&RHS) noexcept;
+        Property &operator=(Property &&RHS) noexcept;
 
         inline Type type() const;
-        inline bool isValid() const;
+        inline bool isEmpty() const;
         inline bool isVariant() const;
-        inline bool isNode() const;
+        inline bool isChild() const;
 
+        /// The scalar value, or an invalid QVariant if the Property does not hold one.
         inline QVariant variant() const;
-        inline std::shared_ptr<class Node> node() const;
 
-    public:
-        bool operator==(const Property &other) const;
-        inline bool operator!=(const Property &other) const;
+        /// The child, or \c nullptr if the Property does not hold one.
+        inline Node *child() const;
 
-    protected:
-        union Storage {
-            std::shared_ptr<class Node> node;
-            QVariant var;
+        /// Returns a copy, with a copy of the child as a free node without identifiers.
+        Property clone() const;
 
-            Storage(){};
-            ~Storage(){};
-        };
-        Storage _storage;
-        Type _type;
+        /// Returns whether both are empty, hold equal scalar values, or hold the same child.
+        bool operator==(const Property &RHS) const;
+        inline bool operator!=(const Property &RHS) const;
 
-        friend class NodeHelper;
+    private:
+        std::variant<std::monostate, QVariant, std::unique_ptr<Node>> m_value;
+
+        friend class PropertyPrivate;
     };
 
-    inline Property::Property() : _type(Invalid) {
+    inline Property::Property() = default;
+
+    inline Property::Property(QVariant variant) {
+        if (variant.isValid()) {
+            m_value = std::move(variant);
+        }
     }
 
-    inline Property::Property(const std::shared_ptr<class Node> &node) : _type(Node) {
-        new (&_storage.node) std::shared_ptr<class Node>(node);
+    inline Property::Property(std::unique_ptr<Node> child) {
+        if (child) {
+            m_value = std::move(child);
+        }
     }
 
-    inline Property::Property(const QVariant &variant) : _type(Variant) {
-        new (&_storage.var) QVariant(variant);
+    template <class T, class>
+    inline Property::Property(std::unique_ptr<T> child)
+        : Property(std::unique_ptr<Node>(std::move(child))) {
     }
 
     inline Property::Type Property::type() const {
-        return _type;
+        return Type(m_value.index());
     }
 
-    inline bool Property::isValid() const {
-        return _type != Invalid;
+    inline bool Property::isEmpty() const {
+        return type() == Empty;
     }
 
     inline bool Property::isVariant() const {
-        return _type == Variant;
+        return type() == Variant;
     }
 
-    inline bool Property::isNode() const {
-        return _type == Node;
+    inline bool Property::isChild() const {
+        return type() == Child;
     }
 
     inline QVariant Property::variant() const {
-        return _type == Variant ? _storage.var : QVariant();
+        auto value = std::get_if<QVariant>(&m_value);
+        return value ? *value : QVariant();
     }
 
-    inline std::shared_ptr<class Node> Property::node() const {
-        return _type == Node ? _storage.node : std::shared_ptr<class Node>();
+    inline Node *Property::child() const {
+        auto value = std::get_if<std::unique_ptr<Node>>(&m_value);
+        return value ? value->get() : nullptr;
     }
 
-    inline bool Property::operator!=(const Property &other) const {
-        return !(*this == other);
+    inline bool Property::operator!=(const Property &RHS) const {
+        return !(*this == RHS);
     }
 
-
-    /// PropertyAction - Action for property change.
-    class QSUBSTATE_EXPORT PropertyAction : public NodeAction {
+    /// Assignment of a Property, the base of StructAssignAction and MappingAssignAction.
+    ///
+    /// Owns the value that is not in the node: the new value before execution and after undo,
+    /// the old value after execution. Every operation exchanges the two values.
+    class QSUBSTATE_EXPORT PropertyAction : public Action {
     public:
-        inline PropertyAction(Type type, const std::shared_ptr<Node> &parent, Property oldValue,
-                              Property value);
-        ~PropertyAction() = default;
+        ~PropertyAction();
 
-    public:
-        void queryNodes(bool inserted,
-                        const std::function<void(const std::shared_ptr<Node> &)> &add) override;
+        inline Node *parent() const;
 
-    public:
-        inline const Property &oldValue() const;
-        inline const Property &value() const;
+        /// The scalar value after execution, or an invalid QVariant if it is not a scalar value.
+        inline QVariant newVariant() const;
 
-    public:
-        Property _oldValue;
-        Property _value;
+        /// The child after execution, or \c nullptr if it is not a child.
+        inline Node *newChild() const;
+
+        /// The scalar value before execution, or an invalid QVariant if it is not a scalar value.
+        inline QVariant oldVariant() const;
+
+        /// The child before execution, or \c nullptr if it is not a child.
+        inline Node *oldChild() const;
+
+        void forEachHeldNode(const std::function<void(Node *)> &func) const override;
+
+    protected:
+        PropertyAction(int type, Node *parent, const Property &oldValue, Property newValue);
+
+        /// Exchanges \a slot, the value in the node, with the value that this action owns, and
+        /// updates the parent of the children involved.
+        void exchange(Property &slot);
+
+    private:
+        Node *m_parent;
+        QVariant m_newVariant;
+        Node *m_newChild;
+        QVariant m_oldVariant;
+        Node *m_oldChild;
+        Property m_held;
     };
 
-    inline PropertyAction::PropertyAction(Type type, const std::shared_ptr<Node> &parent,
-                                          Property oldValue, Property value)
-        : NodeAction(type, parent), _value(std::move(oldValue)), _oldValue(std::move(value)) {
+    inline Node *PropertyAction::parent() const {
+        return m_parent;
     }
 
-    const Property &PropertyAction::oldValue() const {
-        return _value;
+    inline QVariant PropertyAction::newVariant() const {
+        return m_newVariant;
     }
 
-    const Property &PropertyAction::value() const {
-        return _oldValue;
+    inline Node *PropertyAction::newChild() const {
+        return m_newChild;
+    }
+
+    inline QVariant PropertyAction::oldVariant() const {
+        return m_oldVariant;
+    }
+
+    inline Node *PropertyAction::oldChild() const {
+        return m_oldChild;
     }
 
 }
 
-#endif // SUBSTATE_PROPERTY_H
+#endif // QSUBSTATE_PROPERTY_H
