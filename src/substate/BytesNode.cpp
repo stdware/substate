@@ -102,7 +102,9 @@ namespace ss {
         encoder.writeBytes(m_bytes);
     }
 
-    std::unique_ptr<Action> BytesInsDelAction::read(Decoder &decoder, int type) {
+    std::unique_ptr<Action> BytesInsDelAction::read(Decoder &decoder, int type, State state) {
+        // The action owns no node in either state.
+        (void) state;
         auto parent = dynamic_cast<BytesNode *>(decoder.readReference());
         int32_t index = -1;
         decoder.stream() >> index;
@@ -146,7 +148,9 @@ namespace ss {
         encoder.writeBytes(m_oldBytes);
     }
 
-    std::unique_ptr<Action> BytesReplaceAction::read(Decoder &decoder) {
+    std::unique_ptr<Action> BytesReplaceAction::read(Decoder &decoder, State state) {
+        // The action owns no node in either state.
+        (void) state;
         auto parent = dynamic_cast<BytesNode *>(decoder.readReference());
         int32_t index = -1;
         decoder.stream() >> index;

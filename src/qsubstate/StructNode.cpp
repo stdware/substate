@@ -146,10 +146,8 @@ namespace ss {
           m_index(index) {
     }
 
-    StructAssignAction::StructAssignAction(StructNodeBase *parent, int index, QVariant oldVariant,
-                                           Node *oldChild, Property value)
-        : PropertyAction(StructAssign, parent, std::move(oldVariant), oldChild, std::move(value)),
-          m_index(index) {
+    StructAssignAction::StructAssignAction(StructNodeBase *parent, int index, DecodedValues values)
+        : PropertyAction(StructAssign, parent, std::move(values)), m_index(index) {
     }
 
     StructAssignAction::~StructAssignAction() = default;
@@ -165,7 +163,7 @@ namespace ss {
         writeValues(encoder);
     }
 
-    std::unique_ptr<Action> StructAssignAction::read(Decoder &decoder) {
+    std::unique_ptr<Action> StructAssignAction::read(Decoder &decoder, State state) {
         auto parent = dynamic_cast<StructNodeBase *>(decoder.readReference());
         int32_t index = -1;
         decoder.stream() >> index;
@@ -173,13 +171,11 @@ namespace ss {
             decoder.setFailed();
             return nullptr;
         }
-        auto value = PropertyPrivate::read(decoder);
-        auto old = PropertyPrivate::readReference(decoder);
+        auto values = readValues(decoder, state);
         if (decoder.fail()) {
             return nullptr;
         }
-        return std::unique_ptr<Action>(new StructAssignAction(parent, index, std::move(old.first),
-                                                              old.second, std::move(value)));
+        return std::unique_ptr<Action>(new StructAssignAction(parent, index, std::move(values)));
     }
 
 }

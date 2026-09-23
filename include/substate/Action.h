@@ -62,6 +62,17 @@ namespace ss {
             Redo,
         };
 
+        /// Whether the change of an action is present in the tree, which is the case exactly if
+        /// the action precedes the current position of the history. The state determines the
+        /// nodes that the action owns, see constraint 2 in docs/Design.md.
+        enum State {
+            /// The action precedes the current position. It was executed or redone last.
+            Applied,
+            /// The action follows the current position. It was undone last, or has not been
+            /// executed yet, as an action read from a log for replay.
+            Unapplied,
+        };
+
         /// Returns whether \a operation applies the change of an action rather than reverting it.
         static inline bool isForward(Operation operation);
 
@@ -128,9 +139,11 @@ namespace ss {
         void write(Encoder &encoder) const override;
 
     private:
-        RootChangeAction(Model *model, std::unique_ptr<Node> newRoot, Node *oldRoot);
+        // held is the root that is not in the tree: newRoot while unapplied, oldRoot while
+        // applied.
+        RootChangeAction(Model *model, Node *newRoot, Node *oldRoot, std::unique_ptr<Node> held);
 
-        static std::unique_ptr<Action> read(Decoder &decoder);
+        static std::unique_ptr<Action> read(Decoder &decoder, State state);
 
         Model *m_model;
         Node *m_newRoot;
@@ -182,7 +195,7 @@ namespace ss {
         TransferAction(std::unique_ptr<TransferEndpoint> source,
                        std::unique_ptr<TransferEndpoint> target, std::vector<Node *> nodes);
 
-        static std::unique_ptr<Action> read(Decoder &decoder);
+        static std::unique_ptr<Action> read(Decoder &decoder, State state);
 
         std::unique_ptr<TransferEndpoint> m_source;
         std::unique_ptr<TransferEndpoint> m_target;

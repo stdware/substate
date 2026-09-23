@@ -208,7 +208,7 @@ namespace ss {
                                          std::unique_ptr<Node> held, Node *child)
         : Action(type), m_parent(parent), m_key(key), m_child(held ? held.get() : child),
           m_held(std::move(held)) {
-        assert(m_child && (type == SheetInsert) == bool(m_held));
+        assert(m_child);
     }
 
     SheetInsDelAction::~SheetInsDelAction() = default;
@@ -223,7 +223,7 @@ namespace ss {
         }
     }
 
-    std::unique_ptr<Action> SheetInsDelAction::read(Decoder &decoder, int type) {
+    std::unique_ptr<Action> SheetInsDelAction::read(Decoder &decoder, int type, State state) {
         auto parent = dynamic_cast<SheetNode *>(decoder.readReference());
         int32_t key = 0;
         decoder.stream() >> key;
@@ -231,12 +231,16 @@ namespace ss {
             decoder.setFailed();
             return nullptr;
         }
+
+        // The child is not in the tree, and owned by the action, exactly if the insertion is
+        // unapplied or the removal is applied.
+        const bool insertion = type == SheetInsert;
         std::unique_ptr<Node> held;
         Node *child = nullptr;
-        if (type == SheetInsert) {
-            held = decoder.readNode();
+        if (insertion == (state == Unapplied)) {
+            held = insertion ? decoder.readNode() : decoder.takeReference();
         } else {
-            child = decoder.readReference();
+            child = insertion ? decoder.readExistingNode() : decoder.readReference();
         }
         if (!held && !child) {
             decoder.setFailed();

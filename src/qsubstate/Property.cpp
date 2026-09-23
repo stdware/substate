@@ -113,6 +113,36 @@ namespace ss {
             }
         }
 
+        // Reads a value written by writeParts() into variant, or reads the child with readChild,
+        // which returns whether it read one. Records a failure if the value is invalid.
+        template <class ReadChild>
+        void readParts(Decoder &decoder, QVariant &variant, ReadChild readChild) {
+            uint8_t tag = 0;
+            decoder.stream() >> tag;
+            if (decoder.fail()) {
+                return;
+            }
+            bool valid = true;
+            switch (tag) {
+                case EmptyTag:
+                    break;
+                case VariantTag:
+                    variant = QCodec::readVariant(decoder);
+                    valid = variant.isValid();
+                    break;
+                case ChildTag:
+                    valid = readChild();
+                    break;
+                default:
+                    valid = false;
+                    break;
+            }
+            if (!valid) {
+                decoder.setFailed();
+                variant = QVariant();
+            }
+        }
+
     }
 
     void PropertyPrivate::write(Encoder &encoder, const Property &value) {
@@ -120,80 +150,67 @@ namespace ss {
     }
 
     Property PropertyPrivate::read(Decoder &decoder) {
-        uint8_t tag = 0;
-        decoder.stream() >> tag;
-        Property value;
+        QVariant variant;
+        std::unique_ptr<Node> child;
+        readParts(decoder, variant, [&] {
+            child = decoder.readNode();
+            return bool(child);
+        });
         if (decoder.fail()) {
-            return value;
-        }
-        switch (tag) {
-            case EmptyTag:
-                break;
-            case VariantTag:
-                value = QCodec::readVariant(decoder);
-                break;
-            case ChildTag:
-                value = decoder.readNode();
-                break;
-            default:
-                break;
-        }
-        if (decoder.fail() || (tag != EmptyTag && value.isEmpty())) {
-            decoder.setFailed();
             return {};
         }
-        return value;
-    }
-
-    void PropertyPrivate::writeReference(Encoder &encoder, const QVariant &variant,
-                                         const Node *child) {
-        writeParts(encoder, variant, child, true);
-    }
-
-    std::pair<QVariant, Node *> PropertyPrivate::readReference(Decoder &decoder) {
-        uint8_t tag = 0;
-        decoder.stream() >> tag;
-        std::pair<QVariant, Node *> value{QVariant(), nullptr};
-        if (decoder.fail()) {
-            return value;
-        }
-        switch (tag) {
-            case EmptyTag:
-                break;
-            case VariantTag:
-                value.first = QCodec::readVariant(decoder);
-                break;
-            case ChildTag:
-                value.second = decoder.readReference();
-                break;
-            default:
-                break;
-        }
-        if (decoder.fail() || (tag != EmptyTag && !value.first.isValid() && !value.second)) {
-            decoder.setFailed();
-            return {QVariant(), nullptr};
-        }
-        return value;
+        return child ? Property(std::move(child)) : Property(std::move(variant));
     }
 
     PropertyAction::PropertyAction(int type, Node *parent, const Property &oldValue,
                                    Property newValue)
-        : PropertyAction(type, parent, oldValue.variant(), oldValue.child(), std::move(newValue)) {
+        : Action(type), m_parent(parent), m_newVariant(newValue.variant()),
+          m_newChild(newValue.child()), m_oldVariant(oldValue.variant()),
+          m_oldChild(oldValue.child()), m_held(std::move(newValue)) {
     }
 
-    PropertyAction::PropertyAction(int type, Node *parent, QVariant oldVariant, Node *oldChild,
-                                   Property newValue)
-        : Action(type), m_parent(parent), m_newVariant(newValue.variant()),
-          m_newChild(newValue.child()), m_oldVariant(std::move(oldVariant)), m_oldChild(oldChild),
-          m_held(std::move(newValue)) {
+    PropertyAction::PropertyAction(int type, Node *parent, DecodedValues values)
+        : Action(type), m_parent(parent), m_newVariant(std::move(values.newVariant)),
+          m_newChild(values.newChild), m_oldVariant(std::move(values.oldVariant)),
+          m_oldChild(values.oldChild), m_held(std::move(values.held)) {
     }
 
     PropertyAction::~PropertyAction() = default;
 
     void PropertyAction::writeValues(Encoder &encoder) const {
-        // The new value is owned by the action before its first execution, the old value is not.
+        // The new value is owned by the action while unapplied, the old value while applied.
+        // Only the first is written with its content, see Encoder::writeAction().
         writeParts(encoder, m_newVariant, m_newChild, false);
         writeParts(encoder, m_oldVariant, m_oldChild, true);
+    }
+
+    PropertyAction::DecodedValues PropertyAction::readValues(Decoder &decoder, State state) {
+        DecodedValues values;
+        std::unique_ptr<Node> owned;
+        if (state == Unapplied) {
+            readParts(decoder, values.newVariant, [&] {
+                owned = decoder.readNode();
+                values.newChild = owned.get();
+                return bool(owned);
+            });
+            readParts(decoder, values.oldVariant, [&] {
+                values.oldChild = decoder.readReference();
+                return values.oldChild != nullptr;
+            });
+            values.held = owned ? Property(std::move(owned)) : Property(values.newVariant);
+        } else {
+            readParts(decoder, values.newVariant, [&] {
+                values.newChild = decoder.readExistingNode();
+                return values.newChild != nullptr;
+            });
+            readParts(decoder, values.oldVariant, [&] {
+                owned = decoder.takeReference();
+                values.oldChild = owned.get();
+                return bool(owned);
+            });
+            values.held = owned ? Property(std::move(owned)) : Property(values.oldVariant);
+        }
+        return values;
     }
 
     void PropertyAction::forEachHeldNode(const std::function<void(Node *)> &func) const {

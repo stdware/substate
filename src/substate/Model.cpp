@@ -42,8 +42,9 @@ namespace ss {
         assert(inTransaction());
         assert(!root || NodePrivate::isInsertable(root.get()));
 
-        NodePrivate::execute(this, std::unique_ptr<RootChangeAction>(
-                                       new RootChangeAction(this, std::move(root), m_root.get())));
+        auto newRoot = root.get();
+        NodePrivate::execute(this, std::unique_ptr<RootChangeAction>(new RootChangeAction(
+                                       this, newRoot, m_root.get(), std::move(root))));
     }
 
     void Model::reset(std::unique_ptr<Node> root) {

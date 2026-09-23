@@ -19,9 +19,11 @@ namespace ss {
         encoder.setFailed();
     }
 
-    RootChangeAction::RootChangeAction(Model *model, std::unique_ptr<Node> newRoot, Node *oldRoot)
-        : Action(RootChange), m_model(model), m_newRoot(newRoot.get()), m_oldRoot(oldRoot),
-          m_held(std::move(newRoot)) {
+    RootChangeAction::RootChangeAction(Model *model, Node *newRoot, Node *oldRoot,
+                                       std::unique_ptr<Node> held)
+        : Action(RootChange), m_model(model), m_newRoot(newRoot), m_oldRoot(oldRoot),
+          m_held(std::move(held)) {
+        assert(!m_held || m_held.get() == m_newRoot || m_held.get() == m_oldRoot);
     }
 
     RootChangeAction::~RootChangeAction() = default;
@@ -52,14 +54,27 @@ namespace ss {
         encoder.writeReference(m_oldRoot);
     }
 
-    std::unique_ptr<Action> RootChangeAction::read(Decoder &decoder) {
-        auto newRoot = decoder.readNode();
-        auto oldRoot = decoder.readReference();
+    std::unique_ptr<Action> RootChangeAction::read(Decoder &decoder, State state) {
+        // The root that is not in the tree is owned by the action: the new root while
+        // unapplied, created from its content, and the old root while applied, taken from the
+        // pool.
+        Node *newRoot = nullptr;
+        Node *oldRoot = nullptr;
+        std::unique_ptr<Node> held;
+        if (state == Unapplied) {
+            held = decoder.readNode();
+            newRoot = held.get();
+            oldRoot = decoder.readReference();
+        } else {
+            newRoot = decoder.readExistingNode();
+            held = decoder.takeReference();
+            oldRoot = held.get();
+        }
         if (decoder.fail()) {
             return nullptr;
         }
         return std::unique_ptr<Action>(
-            new RootChangeAction(decoder.model(), std::move(newRoot), oldRoot));
+            new RootChangeAction(decoder.model(), newRoot, oldRoot, std::move(held)));
     }
 
     TransferEndpoint::~TransferEndpoint() = default;
@@ -103,7 +118,9 @@ namespace ss {
         }
     }
 
-    std::unique_ptr<Action> TransferAction::read(Decoder &decoder) {
+    std::unique_ptr<Action> TransferAction::read(Decoder &decoder, State state) {
+        // A transfer owns no node in either state.
+        (void) state;
         // Reads a container and a position within it.
         const auto readEnd = [&decoder]() -> std::unique_ptr<TransferEndpoint> {
             auto container = decoder.readReference();

@@ -182,10 +182,8 @@ namespace ss {
           m_key(std::move(key)) {
     }
 
-    MappingAssignAction::MappingAssignAction(MappingNode *parent, QString key, QVariant oldVariant,
-                                             Node *oldChild, Property value)
-        : PropertyAction(MappingAssign, parent, std::move(oldVariant), oldChild, std::move(value)),
-          m_key(std::move(key)) {
+    MappingAssignAction::MappingAssignAction(MappingNode *parent, QString key, DecodedValues values)
+        : PropertyAction(MappingAssign, parent, std::move(values)), m_key(std::move(key)) {
     }
 
     MappingAssignAction::~MappingAssignAction() = default;
@@ -196,20 +194,19 @@ namespace ss {
         writeValues(encoder);
     }
 
-    std::unique_ptr<Action> MappingAssignAction::read(Decoder &decoder) {
+    std::unique_ptr<Action> MappingAssignAction::read(Decoder &decoder, State state) {
         auto parent = dynamic_cast<MappingNode *>(decoder.readReference());
         auto key = QCodec::readString(decoder);
         if (decoder.fail() || !parent) {
             decoder.setFailed();
             return nullptr;
         }
-        auto value = PropertyPrivate::read(decoder);
-        auto old = PropertyPrivate::readReference(decoder);
+        auto values = readValues(decoder, state);
         if (decoder.fail()) {
             return nullptr;
         }
-        return std::unique_ptr<Action>(new MappingAssignAction(
-            parent, std::move(key), std::move(old.first), old.second, std::move(value)));
+        return std::unique_ptr<Action>(
+            new MappingAssignAction(parent, std::move(key), std::move(values)));
     }
 
     void MappingAssignAction::execute(Operation operation) {

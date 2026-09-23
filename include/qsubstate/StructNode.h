@@ -130,10 +130,9 @@ namespace ss {
 
     private:
         StructAssignAction(StructNodeBase *parent, int index, Property value);
-        StructAssignAction(StructNodeBase *parent, int index, QVariant oldVariant, Node *oldChild,
-                           Property value);
+        StructAssignAction(StructNodeBase *parent, int index, DecodedValues values);
 
-        static std::unique_ptr<Action> read(Decoder &decoder);
+        static std::unique_ptr<Action> read(Decoder &decoder, State state);
 
         int m_index;
 

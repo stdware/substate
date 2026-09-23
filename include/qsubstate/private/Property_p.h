@@ -4,8 +4,6 @@
 #ifndef QSUBSTATE_PROPERTY_P_H
 #define QSUBSTATE_PROPERTY_P_H
 
-#include <utility>
-
 #include <substate/Codec.h>
 
 #include <qsubstate/Property.h>
@@ -41,13 +39,6 @@ namespace ss {
         /// Reads a value written by write(). Returns an empty Property on failure. A decoded child
         /// has no parent.
         static Property read(Decoder &decoder);
-
-        /// Writes a scalar value or a reference to a child, for the value that an action replaces.
-        static void writeReference(Encoder &encoder, const QVariant &variant, const Node *child);
-
-        /// Reads a value written by writeReference(). Returns an invalid QVariant and \c nullptr
-        /// for an empty value and on failure.
-        static std::pair<QVariant, Node *> readReference(Decoder &decoder);
     };
 
 }

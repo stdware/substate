@@ -136,10 +136,12 @@ namespace ss {
         VectorInsDelAction(int type, VectorNode *parent, int index, int count,
                            std::vector<std::unique_ptr<Node>> held);
 
-        // A removal of the given children, which are read by the decoder.
-        VectorInsDelAction(VectorNode *parent, int index, std::vector<Node *> removed);
+        // A decoded action. held contains the children that the action owns in its state, which
+        // are all or none of them.
+        VectorInsDelAction(int type, VectorNode *parent, int index, std::vector<Node *> children,
+                           std::vector<std::unique_ptr<Node>> held);
 
-        static std::unique_ptr<Action> read(Decoder &decoder, int type);
+        static std::unique_ptr<Action> read(Decoder &decoder, int type, State state);
 
         VectorNode *m_parent;
         int m_index;
@@ -188,7 +190,7 @@ namespace ss {
     private:
         VectorMoveAction(VectorNode *parent, int index, int count, int destination);
 
-        static std::unique_ptr<Action> read(Decoder &decoder);
+        static std::unique_ptr<Action> read(Decoder &decoder, State state);
 
         VectorNode *m_parent;
         int m_index;

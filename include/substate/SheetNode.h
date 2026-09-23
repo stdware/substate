@@ -113,12 +113,12 @@ namespace ss {
         void write(Encoder &encoder) const override;
 
     private:
-        // For an insertion, held is the inserted node and child is null. For a removal, held is
-        // null and child is the removed child.
+        // held is the child if the action owns it in its state, and child is the child
+        // otherwise.
         SheetInsDelAction(int type, SheetNode *parent, int key, std::unique_ptr<Node> held,
                           Node *child);
 
-        static std::unique_ptr<Action> read(Decoder &decoder, int type);
+        static std::unique_ptr<Action> read(Decoder &decoder, int type, State state);
 
         SheetNode *m_parent;
         int m_key;

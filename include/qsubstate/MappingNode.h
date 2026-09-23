@@ -106,10 +106,9 @@ namespace ss {
 
     private:
         MappingAssignAction(MappingNode *parent, QString key, Property value);
-        MappingAssignAction(MappingNode *parent, QString key, QVariant oldVariant, Node *oldChild,
-                            Property value);
+        MappingAssignAction(MappingNode *parent, QString key, DecodedValues values);
 
-        static std::unique_ptr<Action> read(Decoder &decoder);
+        static std::unique_ptr<Action> read(Decoder &decoder, State state);
 
         QString m_key;
 

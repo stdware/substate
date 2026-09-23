@@ -224,9 +224,12 @@ namespace ss {
         }
     }
 
-    VectorInsDelAction::VectorInsDelAction(VectorNode *parent, int index,
-                                           std::vector<Node *> removed)
-        : Action(VectorRemove), m_parent(parent), m_index(index), m_children(std::move(removed)) {
+    VectorInsDelAction::VectorInsDelAction(int type, VectorNode *parent, int index,
+                                           std::vector<Node *> children,
+                                           std::vector<std::unique_ptr<Node>> held)
+        : Action(type), m_parent(parent), m_index(index), m_children(std::move(children)),
+          m_held(std::move(held)) {
+        assert(m_held.empty() || m_held.size() == m_children.size());
     }
 
     VectorInsDelAction::~VectorInsDelAction() = default;
@@ -243,7 +246,7 @@ namespace ss {
         }
     }
 
-    std::unique_ptr<Action> VectorInsDelAction::read(Decoder &decoder, int type) {
+    std::unique_ptr<Action> VectorInsDelAction::read(Decoder &decoder, int type, State state) {
         auto parent = dynamic_cast<VectorNode *>(decoder.readReference());
         int32_t index = -1;
         int32_t count = 0;
@@ -252,29 +255,29 @@ namespace ss {
             decoder.setFailed();
             return nullptr;
         }
-        if (type == VectorInsert) {
-            std::vector<std::unique_ptr<Node>> held;
-            for (int32_t i = 0; i < count; ++i) {
-                auto node = decoder.readNode();
-                if (!node) {
-                    decoder.setFailed();
-                    return nullptr;
-                }
-                held.push_back(std::move(node));
-            }
-            return std::unique_ptr<Action>(
-                new VectorInsDelAction(type, parent, index, count, std::move(held)));
-        }
-        std::vector<Node *> removed;
+
+        // The children are not in the tree, and owned by the action, exactly if the insertion is
+        // unapplied or the removal is applied.
+        const bool insertion = type == VectorInsert;
+        const bool owned = insertion == (state == Unapplied);
+        std::vector<Node *> children;
+        std::vector<std::unique_ptr<Node>> held;
         for (int32_t i = 0; i < count; ++i) {
-            auto node = decoder.readReference();
-            if (!node) {
+            Node *child = nullptr;
+            if (owned) {
+                held.push_back(insertion ? decoder.readNode() : decoder.takeReference());
+                child = held.back().get();
+            } else {
+                child = insertion ? decoder.readExistingNode() : decoder.readReference();
+            }
+            if (!child) {
                 decoder.setFailed();
                 return nullptr;
             }
-            removed.push_back(node);
+            children.push_back(child);
         }
-        return std::unique_ptr<Action>(new VectorInsDelAction(parent, index, std::move(removed)));
+        return std::unique_ptr<Action>(
+            new VectorInsDelAction(type, parent, index, std::move(children), std::move(held)));
     }
 
     void VectorInsDelAction::forEachHeldNode(const std::function<void(Node *)> &func) const {
@@ -323,7 +326,9 @@ namespace ss {
         encoder.stream() << int32_t(m_index) << int32_t(m_count) << int32_t(m_destination);
     }
 
-    std::unique_ptr<Action> VectorMoveAction::read(Decoder &decoder) {
+    std::unique_ptr<Action> VectorMoveAction::read(Decoder &decoder, State state) {
+        // A move owns no node in either state.
+        (void) state;
         auto parent = dynamic_cast<VectorNode *>(decoder.readReference());
         int32_t index = -1;
         int32_t count = 0;

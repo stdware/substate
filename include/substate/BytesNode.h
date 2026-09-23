@@ -112,7 +112,7 @@ namespace ss {
     private:
         BytesInsDelAction(int type, BytesNode *parent, int index, std::vector<char> bytes);
 
-        static std::unique_ptr<Action> read(Decoder &decoder, int type);
+        static std::unique_ptr<Action> read(Decoder &decoder, int type, State state);
 
         BytesNode *m_parent;
         int m_index;
@@ -160,7 +160,7 @@ namespace ss {
         BytesReplaceAction(BytesNode *parent, int index, std::vector<char> bytes,
                            std::vector<char> oldBytes);
 
-        static std::unique_ptr<Action> read(Decoder &decoder);
+        static std::unique_ptr<Action> read(Decoder &decoder, State state);
 
         BytesNode *m_parent;
         int m_index;

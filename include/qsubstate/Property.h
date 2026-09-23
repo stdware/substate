@@ -146,20 +146,30 @@ namespace ss {
         void forEachHeldNode(const std::function<void(Node *)> &func) const override;
 
     protected:
-        PropertyAction(int type, Node *parent, const Property &oldValue, Property newValue);
+        /// The values of a decoded action, and the value that the action owns in its state: the
+        /// new value while unapplied, the old value while applied.
+        struct DecodedValues {
+            QVariant newVariant;
+            Node *newChild = nullptr;
+            QVariant oldVariant;
+            Node *oldChild = nullptr;
+            Property held;
+        };
 
-        /// Creates an action with an old value given by its parts, for a decoded action.
-        PropertyAction(int type, Node *parent, QVariant oldVariant, Node *oldChild,
-                       Property newValue);
+        PropertyAction(int type, Node *parent, const Property &oldValue, Property newValue);
+        PropertyAction(int type, Node *parent, DecodedValues values);
 
         /// Exchanges \a slot, the value in the node, with the value that this action owns, and
         /// updates the parent of the children involved.
         void exchange(Property &slot);
 
         /// Writes the new value with its child, and the old value with a reference to its child.
-        /// The subclass reads them with PropertyPrivate::read() and
-        /// PropertyPrivate::readReference().
         void writeValues(Encoder &encoder) const;
+
+        /// Reads the values written by writeValues() for an action in \a state. The child of the
+        /// value that the action owns is created from its content while unapplied, and taken
+        /// from the pool of \a decoder while applied. The other child is found in the model.
+        static DecodedValues readValues(Decoder &decoder, State state);
 
     private:
         Node *m_parent;

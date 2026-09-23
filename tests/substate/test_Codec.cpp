@@ -1,10 +1,12 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <substate/Codec.h>
 #include <substate/MemoryStorageEngine.h>
 #include <substate/Model.h>
+#include <substate/StorageEngine.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -187,10 +189,46 @@ BOOST_AUTO_TEST_CASE(test_keys_continue_after_replayed_actions) {
     BOOST_CHECK_EQUAL(keyAfterReplay(true), 2);
 }
 
-// The executable check of the persistence of actions: every action of a random history is
-// encoded at its first execution, and a second model that starts from the encoded initial tree
-// and replays the decoded actions has the same tree, with the same identifiers and keys, after
-// every step, also through undo and redo.
+// An applied action takes the nodes it owns from the pool, and fails without them.
+BOOST_AUTO_TEST_CASE(test_an_applied_removal_requires_its_nodes_in_the_pool) {
+    const TestCodec codec;
+    auto source = makeModel(10);
+    source->reset(makeNode(1));
+    const auto removedId = static_cast<VectorNode *>(source->root())->at(0)->id();
+    ActionRecorder recorder;
+    source->addObserver(&recorder);
+    source->beginTransaction();
+    static_cast<VectorNode *>(source->root())->remove(0, 1);
+    source->commitTransaction();
+    source->removeObserver(&recorder);
+    const auto removed = encodeNode(source->nodeById(removedId));
+
+    auto target = makeModel(10);
+    target->restore(decodeNode(codec, encodeNode(source->root()), target.get()));
+    NodePool pool;
+    BOOST_CHECK(
+        !decodeAction(codec, recorder.actions.front(), target.get(), &pool, Action::Applied));
+
+    BOOST_REQUIRE(pool.add(decodeNode(codec, removed, target.get())));
+    auto action =
+        decodeAction(codec, recorder.actions.front(), target.get(), &pool, Action::Applied);
+    BOOST_REQUIRE(action);
+    BOOST_CHECK(pool.empty());
+    std::vector<Node *> held;
+    action->forEachHeldNode([&held](Node *node) { held.push_back(node); });
+    BOOST_REQUIRE_EQUAL(held.size(), 1u);
+    BOOST_CHECK_EQUAL(held.front()->id(), removedId);
+}
+
+// The executable check of the persistence of actions, in two forms.
+//
+// Every action of a random history is encoded at its first execution. A second model starts
+// from the encoded initial tree and replays the decoded actions, and has the same tree, with the
+// same identifiers and keys, after every step, also through undo and redo.
+//
+// Periodically, a third model is restored from a checkpoint of the tree and of the nodes that
+// the applied actions own, and from the encoded retained transactions, decoded in their present
+// state. It follows the source model through every retained step.
 BOOST_AUTO_TEST_CASE(test_a_random_history_replays_from_its_encoding) {
     const TestCodec codec;
     const int before = CountingNode::live();
@@ -198,13 +236,15 @@ BOOST_AUTO_TEST_CASE(test_a_random_history_replays_from_its_encoding) {
         constexpr int stepLimit = 8;
         RandomEditor editor(20260924);
         ActionRecorder recorder;
-        auto source = makeModel(stepLimit);
+        auto engine = new LoggingEngine(stepLimit);
+        auto source = std::make_unique<Model>(std::unique_ptr<StorageEngine>(engine));
         auto target = makeModel(stepLimit);
         source->reset(editor.subtree(3));
         target->restore(decodeNode(codec, encodeNode(source->root()), target.get()));
         BOOST_REQUIRE_EQUAL(dump(target->root()), dump(source->root()));
         source->addObserver(&recorder);
 
+        int restores = 0;
         for (int round = 0; round < 3000; ++round) {
             const int choice = editor.uniform(0, 9);
             if (choice < 5 || (!source->canUndo() && !source->canRedo())) {
@@ -217,6 +257,7 @@ BOOST_AUTO_TEST_CASE(test_a_random_history_replays_from_its_encoding) {
                 if (editor.uniform(0, 9) == 0) {
                     source->abortTransaction();
                 } else {
+                    engine->pending = recorder.actions;
                     source->commitTransaction();
                     BOOST_REQUIRE(!recorder.failed);
                     BOOST_REQUIRE(replay(*target, codec, recorder.actions));
@@ -231,7 +272,19 @@ BOOST_AUTO_TEST_CASE(test_a_random_history_replays_from_its_encoding) {
             BOOST_REQUIRE_EQUAL(dump(target->root()), dump(source->root()));
             BOOST_REQUIRE_EQUAL(target->nodeCount(), source->nodeCount());
             BOOST_REQUIRE_EQUAL(target->currentStep(), source->currentStep());
+
+            if (round % 25 == 0) {
+                auto restored = restoreCopy(codec, *source, *engine);
+                BOOST_REQUIRE(restored);
+                ++restores;
+                BOOST_REQUIRE(sweepHistory(*source, *restored, [&] {
+                    return dump(restored->root()) == dump(source->root()) &&
+                           restored->nodeCount() == source->nodeCount() &&
+                           restored->currentStep() == source->currentStep();
+                }));
+            }
         }
+        BOOST_CHECK_EQUAL(restores, 120);
         source->removeObserver(&recorder);
     }
     BOOST_CHECK_EQUAL(CountingNode::live(), before);

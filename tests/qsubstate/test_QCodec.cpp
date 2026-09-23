@@ -119,7 +119,8 @@ private Q_SLOTS:
         QCOMPARE(target->nodeCount(), source->nodeCount());
     }
 
-    // The persistence check of test_Codec for the node types of qsubstate.
+    // The persistence checks of test_Codec for the node types of qsubstate: replay of the
+    // encoded actions, and periodic restoration of the retained history.
     void a_random_history_replays_from_its_encoding() {
         const TestQCodec codec;
         const int before = LiveNodes::count();
@@ -127,13 +128,15 @@ private Q_SLOTS:
             constexpr int stepLimit = 8;
             QRandomEditor editor(20260924);
             ActionRecorder recorder;
-            auto source = makeModel(stepLimit);
+            auto engine = new LoggingEngine(stepLimit);
+            auto source = std::make_unique<Model>(std::unique_ptr<StorageEngine>(engine));
             auto target = makeModel(stepLimit);
             source->reset(editor.subtree(3));
             target->restore(decodeNode(codec, encodeNode(source->root()), target.get()));
             QCOMPARE(qdump(target->root()), qdump(source->root()));
             source->addObserver(&recorder);
 
+            int restores = 0;
             for (int round = 0; round < 3000; ++round) {
                 const int choice = editor.uniform(0, 9);
                 if (choice < 5 || (!source->canUndo() && !source->canRedo())) {
@@ -146,6 +149,7 @@ private Q_SLOTS:
                     if (editor.uniform(0, 9) == 0) {
                         source->abortTransaction();
                     } else {
+                        engine->pending = recorder.actions;
                         source->commitTransaction();
                         QVERIFY(!recorder.failed);
                         QVERIFY(replay(*target, codec, recorder.actions));
@@ -159,10 +163,19 @@ private Q_SLOTS:
                 }
                 QCOMPARE(qdump(target->root()), qdump(source->root()));
                 QCOMPARE(target->nodeCount(), source->nodeCount());
-                if (QTest::currentTestFailed()) {
-                    break;
+
+                if (round % 25 == 0) {
+                    auto restored = restoreCopy(codec, *source, *engine);
+                    QVERIFY(restored);
+                    ++restores;
+                    QVERIFY(sweepHistory(*source, *restored, [&] {
+                        return qdump(restored->root()) == qdump(source->root()) &&
+                               restored->nodeCount() == source->nodeCount() &&
+                               restored->currentStep() == source->currentStep();
+                    }));
                 }
             }
+            QCOMPARE(restores, 120);
             source->removeObserver(&recorder);
         }
         QCOMPARE(LiveNodes::count(), before);
