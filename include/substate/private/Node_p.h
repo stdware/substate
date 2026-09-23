@@ -22,6 +22,10 @@ namespace ss {
         /// free and has no parent. See constraint 1 in docs/Design.md.
         static inline bool isInsertable(const Node *node);
 
+        /// Returns whether \a node is \a target or one of its ancestors. Inserting \a node into
+        /// \a target would then create a cycle.
+        static inline bool isAncestorOrSelf(const Node *node, const Node *target);
+
         /// Records \a parent as the parent of the free node \a node, which is inserted into a free
         /// container without an action.
         static inline void setFreeParent(Node *node, Node *parent);
@@ -52,6 +56,15 @@ namespace ss {
 
     inline bool NodePrivate::isInsertable(const Node *node) {
         return node && node->isFree() && !node->parent();
+    }
+
+    inline bool NodePrivate::isAncestorOrSelf(const Node *node, const Node *target) {
+        for (auto current = target; current; current = current->parent()) {
+            if (current == node) {
+                return true;
+            }
+        }
+        return false;
     }
 
     inline void NodePrivate::setFreeParent(Node *node, Node *parent) {

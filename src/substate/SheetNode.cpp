@@ -1,128 +1,129 @@
 #include "SheetNode.h"
-#include "SheetNode_p.h"
 
 #include <cassert>
-#include <utility>
 
-#include "Model_p.h"
 #include "Node_p.h"
 
 namespace ss {
 
-    void SheetNodePrivate::copy(SheetNode *dest, const SheetNode *src, bool copyId) {
-        if (!copyId) {
-            dest->_id = src->_id;
-        }
-        // Clone children
-        dest->_sheet.reserve(src->_sheet.size());
-        for (auto it = src->_sheet.begin(); it != src->_sheet.end(); ++it) {
-            auto newChild = NodePrivate::clone(it->second.get(), copyId);
-            dest->addChild(newChild.get());
-            dest->_sheet.insert(std::make_pair(it->first, newChild));
-        }
-        dest->_maxId = src->_maxId;
-    }
-
     SheetNode::~SheetNode() = default;
 
-    int SheetNode::insert(const std::shared_ptr<Node> &node) {
-        assert(isWritable());
-        assert(node && node->isFree());
-
-        int id = _maxId = _maxId + 1;
-        auto a = std::make_unique<SheetAction>(
-            Action::SheetInsert, std::static_pointer_cast<SheetNode>(shared_from_this()), id, node);
-        a->execute(false);
-        ModelPrivate::pushAction(_model, std::move(a));
-        return id;
+    Node *SheetNode::at(int key) const {
+        auto it = m_children.find(key);
+        return it == m_children.end() ? nullptr : it->second.get();
     }
 
-    bool SheetNode::remove(int id) {
+    std::vector<int> SheetNode::keys() const {
+        std::vector<int> result;
+        result.reserve(m_children.size());
+        for (const auto &child : m_children) {
+            result.push_back(child.first);
+        }
+        return result;
+    }
+
+    int SheetNode::insert(std::unique_ptr<Node> node) {
+        assert(isWritable());
+        assert(NodePrivate::isInsertable(node.get()));
+        assert(!NodePrivate::isAncestorOrSelf(node.get(), this));
+
+        const int key = ++m_lastKey;
+        if (isFree()) {
+            NodePrivate::setFreeParent(node.get(), this);
+            m_children.emplace(key, std::move(node));
+            return key;
+        }
+
+        std::unique_ptr<SheetInsDelAction> action(
+            new SheetInsDelAction(Action::SheetInsert, this, key, std::move(node)));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
+        return key;
+    }
+
+    bool SheetNode::remove(int key) {
         assert(isWritable());
 
-        auto it = _sheet.find(_id);
-        if (it == _sheet.end()) {
+        auto it = m_children.find(key);
+        if (it == m_children.end()) {
             return false;
         }
-        const auto &node = it->second;
 
-        beginAction();
-
-        auto a = std::make_unique<SheetAction>(
-            Action::SheetRemove, std::static_pointer_cast<SheetNode>(shared_from_this()), id, node);
-
-        // Pre-Propagate
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, a.get());
-            notify(&n);
+        if (isFree()) {
+            m_children.erase(it);
+            return true;
         }
 
-        // Do change
-        removeChild(node.get());
-        _sheet.erase(it);
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, a.get());
-            notify(&n);
-        }
-
-        endAction();
-        ModelPrivate::pushAction(_model, std::move(a));
+        std::unique_ptr<SheetInsDelAction> action(
+            new SheetInsDelAction(Action::SheetRemove, this, key, nullptr));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
         return true;
     }
 
-    std::shared_ptr<Node> SheetNode::clone(bool copyId) const {
-        auto node = std::make_shared<SheetNode>(_type);
-        SheetNodePrivate::copy(node.get(), this, copyId);
+    std::unique_ptr<Node> SheetNode::take(int key) {
+        assert(isFree());
+
+        auto it = m_children.find(key);
+        if (it == m_children.end()) {
+            return nullptr;
+        }
+        auto node = std::move(it->second);
+        m_children.erase(it);
+        NodePrivate::setFreeParent(node.get(), nullptr);
         return node;
     }
 
-    void SheetNode::propagateChildren(const std::function<void(Node *)> &func) {
-        for (const auto &pair : std::as_const(_sheet)) {
-            NodePrivate::propagate(pair.second.get(), func);
+    std::unique_ptr<Node> SheetNode::clone() const {
+        std::unique_ptr<SheetNode> node(new SheetNode());
+        node->cloneChildrenFrom(*this);
+        return node;
+    }
+
+    void SheetNode::forEachChild(const std::function<void(Node *)> &func) const {
+        for (const auto &child : m_children) {
+            func(child.second.get());
         }
     }
 
-    void SheetAction::queryNodes(bool inserted,
-                                 const std::function<void(const std::shared_ptr<Node> &)> &add) {
-        if (inserted == (_type == Action::SheetInsert)) {
-            add(_child);
+    void SheetNode::cloneChildrenFrom(const SheetNode &source) {
+        assert(isFree() && m_children.empty());
+        for (const auto &child : source.m_children) {
+            auto copy = child.second->clone();
+            NodePrivate::setFreeParent(copy.get(), this);
+            m_children.emplace(child.first, std::move(copy));
+        }
+        m_lastKey = source.m_lastKey;
+    }
+
+    SheetInsDelAction::SheetInsDelAction(int type, SheetNode *parent, int key,
+                                         std::unique_ptr<Node> held)
+        : Action(type), m_parent(parent), m_key(key),
+          m_child(type == SheetInsert ? held.get() : parent->at(key)), m_held(std::move(held)) {
+    }
+
+    SheetInsDelAction::~SheetInsDelAction() = default;
+
+    void SheetInsDelAction::forEachHeldNode(const std::function<void(Node *)> &func) const {
+        if (m_held) {
+            func(m_held.get());
         }
     }
 
-    void SheetAction::execute(bool undo) {
-        auto parent = static_cast<SheetNode *>(_parent.get());
+    void SheetInsDelAction::execute(Operation operation) {
+        auto &children = m_parent->m_children;
+        const bool intoTree = (type() == SheetInsert) == isForward(operation);
 
-        // Pre-Propagate
-        {
-            ActionNotification n(Notification::ActionAboutToTrigger, this);
-            parent->notify(&n);
-        }
-
-        // Do change
-        if ((_type == SheetRemove) ^ undo) {
-            auto it = parent->_sheet.find(_id);
-            assert(it != parent->_sheet.end());
-
-            const auto &node = it->second;
-            assert(node.get() == _child.get());
-
-            // Do change
-            parent->removeChild(node.get());
-            parent->_sheet.erase(it);
+        if (intoTree) {
+            assert(m_held && children.find(m_key) == children.end());
+            NodePrivate::attach(m_held.get(), m_parent, m_parent->model());
+            children.emplace(m_key, std::move(m_held));
         } else {
-            parent->addChild(_child.get());
-            parent->_sheet.insert(std::make_pair(_id, _child));
-        }
-
-        // Propagate signal
-        {
-            ActionNotification n(Notification::ActionTriggered, this);
-            parent->notify(&n);
-        }
-
-        parent->endAction();
+            auto it = children.find(m_key);
+            assert(!m_held && it != children.end() && it->second.get() == m_child);
+            m_held = std::move(it->second);
+            children.erase(it);
+            NodePrivate::detach(m_held.get());        }
     }
 
 }

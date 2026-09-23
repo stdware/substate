@@ -58,7 +58,7 @@ endfunction()
 add_subdirectory(substate)
 
 # qsubstate still uses the ownership representation that docs/Design.md replaces. It rejoins the
-# build in step 3 of the implementation order.
+# build within step 2 of the implementation order.
 # add_subdirectory(qsubstate)
 
 if(SUBSTATE_INSTALL)

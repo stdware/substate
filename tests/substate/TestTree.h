@@ -3,21 +3,35 @@
 
 #include <memory>
 #include <string>
-#include <vector>
 
+#include <substate/SheetNode.h>
 #include <substate/VectorNode.h>
 
-/// A VectorNode that counts its live instances. The count is compared with the identifier index
-/// of the model, which verifies that no node outlives its owner and that no owner is missing,
-/// without a leak detector.
+/// The number of live objects of the counting node types below. The count is compared with the
+/// identifier index of the model, which verifies that no node outlives its owner and that no
+/// owner is missing, without a leak detector.
+class LiveNodes {
+public:
+    static inline int count() {
+        return s_count;
+    }
+
+private:
+    static inline int s_count = 0;
+
+    friend class CountingNode;
+    friend class CountingSheet;
+};
+
+/// A VectorNode that counts its live instances in LiveNodes.
 class CountingNode : public ss::VectorNode {
 public:
     inline CountingNode() : VectorNode(User) {
-        ++s_live;
+        ++LiveNodes::s_count;
     }
 
     inline ~CountingNode() {
-        --s_live;
+        --LiveNodes::s_count;
     }
 
     inline std::unique_ptr<ss::Node> clone() const override {
@@ -30,13 +44,28 @@ public:
         return static_cast<CountingNode *>(at(index));
     }
 
-    /// The number of CountingNode objects that exist.
+    /// The number of live objects of all counting node types.
     static inline int live() {
-        return s_live;
+        return LiveNodes::count();
+    }
+};
+
+/// A SheetNode that counts its live instances in LiveNodes.
+class CountingSheet : public ss::SheetNode {
+public:
+    inline CountingSheet() : SheetNode(User + 1) {
+        ++LiveNodes::s_count;
     }
 
-private:
-    static inline int s_live = 0;
+    inline ~CountingSheet() {
+        --LiveNodes::s_count;
+    }
+
+    inline std::unique_ptr<ss::Node> clone() const override {
+        auto node = std::make_unique<CountingSheet>();
+        node->cloneChildrenFrom(*this);
+        return node;
+    }
 };
 
 /// Returns a free node with \a children free leaves.
@@ -48,30 +77,38 @@ inline std::unique_ptr<CountingNode> makeNode(int children = 0) {
     return node;
 }
 
-/// Returns a vector holding \a node, for the functions that insert several nodes.
-inline std::vector<std::unique_ptr<ss::Node>> nodes(std::unique_ptr<ss::Node> node) {
-    std::vector<std::unique_ptr<ss::Node>> result;
-    result.push_back(std::move(node));
-    return result;
-}
-
-/// The structure of the tree under \a node as text: the identifier of each node, followed by the
-/// children in parentheses. An empty string represents an empty tree.
+/// The structure of the tree under \a node as text. Each node is written as its identifier,
+/// followed by the children of a VectorNode in parentheses, or by the children of a SheetNode in
+/// braces, each preceded by <tt>#key=</tt>. An empty string represents an empty tree.
 inline std::string dump(const ss::Node *node) {
     if (!node) {
         return {};
     }
-    auto vector = static_cast<const ss::VectorNode *>(node);
     std::string out = std::to_string(node->id());
-    if (vector->size() > 0) {
-        out += '(';
-        for (int i = 0; i < vector->size(); ++i) {
-            if (i > 0) {
-                out += ',';
+    if (auto vector = dynamic_cast<const ss::VectorNode *>(node)) {
+        if (vector->size() > 0) {
+            out += '(';
+            for (int i = 0; i < vector->size(); ++i) {
+                if (i > 0) {
+                    out += ',';
+                }
+                out += dump(vector->at(i));
             }
-            out += dump(vector->at(i));
+            out += ')';
         }
-        out += ')';
+    } else if (auto sheet = dynamic_cast<const ss::SheetNode *>(node)) {
+        if (sheet->size() > 0) {
+            out += '{';
+            bool first = true;
+            for (int key : sheet->keys()) {
+                if (!first) {
+                    out += ',';
+                }
+                first = false;
+                out += '#' + std::to_string(key) + '=' + dump(sheet->at(key));
+            }
+            out += '}';
+        }
     }
     return out;
 }

@@ -22,19 +22,6 @@ namespace ss {
             }
         }
 
-#ifndef NDEBUG
-        // Returns whether node is target or one of its ancestors, which would create a cycle if
-        // node were inserted into target.
-        bool isAncestorOrSelf(const Node *node, const Node *target) {
-            for (auto current = target; current; current = current->parent()) {
-                if (current == node) {
-                    return true;
-                }
-            }
-            return false;
-        }
-#endif
-
     }
 
     VectorNode::~VectorNode() = default;
@@ -46,7 +33,7 @@ namespace ss {
 #ifndef NDEBUG
         for (const auto &node : nodes) {
             assert(NodePrivate::isInsertable(node.get()));
-            assert(!isAncestorOrSelf(node.get(), this));
+            assert(!NodePrivate::isAncestorOrSelf(node.get(), this));
         }
 #endif
 

@@ -37,21 +37,30 @@ namespace {
         model.commitTransaction();
     }
 
-    /// Adds the identifiers in a configuration produced by dump() to \a ids.
+    /// Adds the identifiers in a configuration produced by dump() to \a ids. A number preceded by
+    /// \c # is the key of a SheetNode child, not an identifier.
     void collectIds(const std::string &configuration, std::set<std::uint64_t> &ids) {
         std::uint64_t value = 0;
         bool inNumber = false;
+        bool isKey = false;
+        char previous = 0;
         for (char c : configuration) {
             if (std::isdigit(static_cast<unsigned char>(c))) {
+                if (!inNumber) {
+                    isKey = previous == '#';
+                }
                 value = value * 10 + std::uint64_t(c - '0');
                 inNumber = true;
             } else if (inNumber) {
-                ids.insert(value);
+                if (!isKey) {
+                    ids.insert(value);
+                }
                 value = 0;
                 inNumber = false;
             }
+            previous = c;
         }
-        if (inNumber) {
+        if (inNumber && !isKey) {
             ids.insert(value);
         }
     }
@@ -141,13 +150,19 @@ namespace {
             return std::uniform_int_distribution<int>(low, high)(m_random);
         }
 
-        std::unique_ptr<CountingNode> subtree(int depth) {
-            auto node = std::make_unique<CountingNode>();
-            if (depth > 0) {
-                const int children = uniform(0, 2);
+        /// A random free subtree of VectorNode and SheetNode objects.
+        std::unique_ptr<Node> subtree(int depth) {
+            const int children = depth > 0 ? uniform(0, 2) : 0;
+            if (uniform(0, 3) == 0) {
+                auto sheet = std::make_unique<CountingSheet>();
                 for (int i = 0; i < children; ++i) {
-                    node->append(subtree(depth - 1));
+                    sheet->insert(subtree(depth - 1));
                 }
+                return sheet;
+            }
+            auto node = std::make_unique<CountingNode>();
+            for (int i = 0; i < children; ++i) {
+                node->append(subtree(depth - 1));
             }
             return node;
         }
@@ -155,13 +170,13 @@ namespace {
         /// Performs one random modification within the current transaction. Every call creates
         /// exactly one action, so that a transaction is never empty.
         void modify(Model &model) {
-            auto root = rootOf(model);
+            auto root = model.root();
             if (!root) {
                 model.setRoot(subtree(2));
                 return;
             }
 
-            std::vector<CountingNode *> all;
+            Containers all;
             collect(root, all);
 
             const int kind = uniform(0, 19);
@@ -176,21 +191,24 @@ namespace {
                 return;
             }
 
-            std::vector<CountingNode *> removable;
-            std::vector<CountingNode *> movable;
-            for (auto node : all) {
+            Containers removable;
+            std::vector<VectorNode *> movable;
+            for (auto node : all.vectors) {
                 if (node->size() > 0) {
-                    removable.push_back(node);
+                    removable.vectors.push_back(node);
                 }
                 if (node->size() > 1) {
                     movable.push_back(node);
                 }
             }
+            for (auto node : all.sheets) {
+                if (node->size() > 0) {
+                    removable.sheets.push_back(node);
+                }
+            }
 
-            if (kind < 16 && !removable.empty()) {
-                auto parent = pick(removable);
-                const int index = uniform(0, parent->size() - 1);
-                parent->remove(index, uniform(1, parent->size() - index));
+            if (kind < 16 && removable.size() > 0) {
+                remove(removable);
                 return;
             }
 
@@ -212,25 +230,59 @@ namespace {
         }
 
     private:
-        static void collect(CountingNode *node, std::vector<CountingNode *> &out) {
-            out.push_back(node);
-            for (int i = 0; i < node->size(); ++i) {
-                collect(node->child(i), out);
+        struct Containers {
+            std::vector<VectorNode *> vectors;
+            std::vector<SheetNode *> sheets;
+
+            size_t size() const {
+                return vectors.size() + sheets.size();
+            }
+        };
+
+        static void collect(Node *node, Containers &out) {
+            if (auto vector = dynamic_cast<VectorNode *>(node)) {
+                out.vectors.push_back(vector);
+                for (int i = 0; i < vector->size(); ++i) {
+                    collect(vector->at(i), out);
+                }
+            } else if (auto sheet = dynamic_cast<SheetNode *>(node)) {
+                out.sheets.push_back(sheet);
+                for (int key : sheet->keys()) {
+                    collect(sheet->at(key), out);
+                }
             }
         }
 
-        CountingNode *pick(const std::vector<CountingNode *> &nodes) {
+        template <class T>
+        T pick(const std::vector<T> &nodes) {
             return nodes[size_t(uniform(0, int(nodes.size()) - 1))];
         }
 
-        void insert(const std::vector<CountingNode *> &all) {
-            auto parent = pick(all);
+        void insert(const Containers &all) {
+            const int choice = uniform(0, int(all.size()) - 1);
+            if (choice >= int(all.vectors.size())) {
+                all.sheets[size_t(choice) - all.vectors.size()]->insert(subtree(uniform(0, 2)));
+                return;
+            }
+            auto parent = all.vectors[size_t(choice)];
             std::vector<std::unique_ptr<Node>> inserted;
             const int count = uniform(1, 2);
             for (int i = 0; i < count; ++i) {
                 inserted.push_back(subtree(uniform(0, 2)));
             }
             parent->insert(uniform(0, parent->size()), std::move(inserted));
+        }
+
+        void remove(const Containers &removable) {
+            const int choice = uniform(0, int(removable.size()) - 1);
+            if (choice >= int(removable.vectors.size())) {
+                auto sheet = removable.sheets[size_t(choice) - removable.vectors.size()];
+                BOOST_REQUIRE(sheet->remove(pick(sheet->keys())));
+                return;
+            }
+            auto parent = removable.vectors[size_t(choice)];
+            const int index = uniform(0, parent->size() - 1);
+            parent->remove(index, uniform(1, parent->size() - index));
         }
 
         std::mt19937 m_random;
