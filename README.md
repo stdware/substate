@@ -59,4 +59,4 @@ A consumer finds the installed package with `find_package(substate)` and links `
 
 ## License
 
-Substate is licensed under the Apache License 2.0.
+Apache License 2.0. See [LICENSE](LICENSE).
