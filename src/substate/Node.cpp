@@ -1,94 +1,62 @@
 #include "Node.h"
+#include "Node_p.h"
 
 #include <cassert>
 
-#include "Node_p.h"
 #include "Model.h"
-#include "StorageEngine_p.h"
 
 namespace ss {
 
-    void NodePrivate::propagate(NodePtr &node, Model *model) {
-        auto engine = model->storageEngine();
-        propagate(node, [model, engine](NodePtr &node) {
-            node->_model = model;
-            node->_id = StorageEnginePrivate::addNode(engine, node.transferred(), node->_id);
+    void NodePrivate::forEachInSubtree(Node *node, const std::function<void(Node *)> &func) {
+        func(node);
+        node->forEachChild([&func](Node *child) { forEachInSubtree(child, func); });
+    }
+
+    void NodePrivate::attach(Node *node, Node *parent, Model *model) {
+        assert(model);
+        node->m_parent = parent;
+        forEachInSubtree(node, [model](Node *n) {
+            if (!n->m_model) {
+                n->m_model = model;
+                n->m_id = ++model->m_lastId;
+                model->m_index.emplace(n->m_id, n);
+            }
+            assert(n->m_model == model);
+            n->m_attached = true;
         });
     }
 
+    void NodePrivate::detach(Node *node) {
+        node->m_parent = nullptr;
+        forEachInSubtree(node, [](Node *n) { n->m_attached = false; });
+    }
+
+    void NodePrivate::pushAction(Model *model, std::unique_ptr<Action> action) {
+        assert(model->inTransaction());
+        model->m_actions.push_back(std::move(action));
+    }
+
+    void NodePrivate::removeFromIndex(Node *node) {
+        auto erased = node->m_model->m_index.erase(node->m_id);
+        assert(erased == 1);
+        (void) erased;
+    }
+
     Node::~Node() {
-        if (_id > 0) {
-            assert(_model);
-            if (!_model->_clearing) {
-                StorageEnginePrivate::removeNode(_model->_storageEngine.get(), _id);
-            }
+        if (m_model) {
+            NodePrivate::removeFromIndex(this);
         }
     }
 
-    bool Node::isDetached() const {
-        if (isFree())
-            return false;
-
-        // The node is removed?
-        if (_state == Detached)
-            return true;
-
-        // The parent is obsolete?
-        if (auto parent = _parent)
-            return parent->isDetached();
-
-        return false;
-    }
-
-    bool Node::isWritable() const {
-        // The node is not managed by a model?
-        if (!_model)
-            return true;
-
-        // The parent is writable?
-        if (auto parent = _parent)
-            return parent->isWritable();
-
-        return _model->isWritable() && _state != Detached;
-    }
-
-    void Node::addChild(Node *node) {
-        node->_parent = this;
-        node->_state = Active;
-    }
-
-    void Node::removeChild(Node *node) {
-        node->_parent = nullptr;
-        if (_model)
-            node->_state = Detached;
-    }
-
-    void Node::beginAction() {
-        if (_model)
-            _model->_lockedNode = this;
-    }
-
-    void Node::endAction() {
-        if (_model)
-            _model->_lockedNode = nullptr;
-    }
-
-    void Node::propagateChildren(const std::function<void(NodePtr &)> &func) {
+    void Node::forEachChild(const std::function<void(Node *)> &func) const {
         (void) func;
     }
 
-    void Node::notify(Notification *n) {
-        switch (n->type()) {
-            case Notification::ActionAboutToTrigger:
-            case Notification::ActionTriggered: {
-                if (_model) {
-                    _model->notify(n);
-                }
-                break;
-            }
-            default:
-                break;
+    bool Node::isWritable() const {
+        if (!m_model) {
+            return true;
         }
+        return m_model->inTransaction() && m_attached;
     }
 
 }

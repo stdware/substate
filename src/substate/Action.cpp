@@ -1,65 +1,42 @@
 #include "Action.h"
 
-#include "Model_p.h"
+#include "Model.h"
+#include "Node_p.h"
 
 namespace ss {
 
-    void RootChangeAction::queryNodes(bool inserted,
-                                      const std::function<void(const NodePtr &)> &add) {
-        if (inserted) {
-            if (_newRoot) {
-                add(_newRoot);
-            }
-        } else {
-            if (_oldRoot) {
-                add(_oldRoot);
-            }
+    Action::~Action() = default;
+
+    void Action::forEachHeldNode(const std::function<void(Node *)> &func) const {
+        (void) func;
+    }
+
+    RootChangeAction::RootChangeAction(Model *model, std::unique_ptr<Node> newRoot)
+        : Action(RootChange), m_model(model), m_newRoot(newRoot.get()), m_oldRoot(model->root()),
+          m_held(std::move(newRoot)) {
+    }
+
+    RootChangeAction::~RootChangeAction() = default;
+
+    void RootChangeAction::forEachHeldNode(const std::function<void(Node *)> &func) const {
+        if (m_held) {
+            func(m_held.get());
         }
     }
 
-    void RootChangeAction::execute(bool undo) {
-        Model *model;
-        if (_newRoot) {
-            model = _newRoot->model();
-        } else {
-            model = _oldRoot->model();
+    void RootChangeAction::execute(Operation operation) {
+        // Every operation exchanges the held root with the root of the model.
+        (void) operation;
+
+        std::unique_ptr<Node> leaving = std::move(m_model->m_root);
+        if (leaving) {
+            NodePrivate::detach(leaving.get());
         }
-
-        auto &oldRoot = model->_root;
-
-        model->_lockedNode = oldRoot ? oldRoot.get() : node.get();
-
-        // Pre-Propagate
-        {
-            if (undo) {
-                // TODO
-            }
-            ActionNotification n(Notification::ActionAboutToTrigger, this);
-            model->notify(&n);
+        m_model->m_root = std::move(m_held);
+        if (m_model->m_root) {
+            NodePrivate::attach(m_model->m_root.get(), nullptr, m_model);
         }
-
-        // Do change
-        if (root) {
-            root->_state = Node::Detached;
-        }
-        if (node) {
-            node->_state = Node::Active;
-        }
-        root = std::move(node);
-
-        // Propagate signal
-        {
-            if (undo) {
-                // TODO
-            }
-            ActionNotification n(Notification::ActionTriggered, &a);
-            model->notify(&n);
-        }
-
-        model->_lockedNode = nullptr;
-
-        ModelPrivate::setRoot(_newRoot ? _newRoot->model() : _oldRoot->model(),
-                              undo ? _oldRoot : _newRoot);
+        m_held = std::move(leaving);
     }
 
 }

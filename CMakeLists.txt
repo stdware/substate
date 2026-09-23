@@ -56,6 +56,7 @@ set(SUBSTATE_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 add_subdirectory(src)
 
 if(SUBSTATE_BUILD_TESTS)
+    enable_testing()
     add_subdirectory(tests)
 endif()
 

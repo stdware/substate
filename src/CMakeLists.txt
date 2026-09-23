@@ -46,13 +46,20 @@ function(substate_add_library _target)
 
     if(NOT WIN32)
         target_link_libraries(${_target} PRIVATE dl)
+    endif()
+
+    # Rejects undefined symbols in the shared library at link time. The linker of Apple does so by
+    # default and does not accept the option.
+    if(NOT WIN32 AND NOT APPLE)
         target_link_options(${_target} PRIVATE -Wl,-z,defs)
     endif()
 endfunction()
 
 add_subdirectory(substate)
 
-add_subdirectory(qsubstate)
+# qsubstate still uses the ownership representation that docs/Design.md replaces. It rejoins the
+# build in step 3 of the implementation order.
+# add_subdirectory(qsubstate)
 
 if(SUBSTATE_INSTALL)
     # Add install target

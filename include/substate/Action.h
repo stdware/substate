@@ -4,16 +4,26 @@
 #ifndef SUBSTATE_ACTION_H
 #define SUBSTATE_ACTION_H
 
-#include <memory>
 #include <functional>
-#include <iostream>
+#include <memory>
 
-#include <substate/Notification.h>
-#include <substate/Node.h>
+#include <substate/substate_global.h>
 
 namespace ss {
 
-    class Action {
+    class Model;
+
+    class Node;
+
+    /// A recorded change of the tree, which the model can apply and revert.
+    ///
+    /// An action refers to the nodes it changes by non-owning pointers. It owns a node only in the
+    /// cases specified by constraint 2 of docs/Design.md: an insertion owns the inserted nodes
+    /// while it is not executed, and a removal owns the removed nodes while it is executed.
+    ///
+    /// \note The destructor of an action must not access the nodes it refers to without owning
+    ///       them, because the actions of a transaction are destroyed in an unspecified order.
+    class SUBSTATE_EXPORT Action {
     public:
         enum Type {
             RootChange = 1,
@@ -27,118 +37,97 @@ namespace ss {
             BytesRemove,
             MappingAssign,
             StructAssign,
+            User = 1024,
         };
 
-        /// Default constructor creates an invalid action.
-        inline explicit Action(int type);
-        virtual ~Action() = default;
+        /// The occasion on which an action is applied.
+        enum Operation {
+            /// The first application, within the transaction that creates the action.
+            Execute,
+            Undo,
+            Redo,
+        };
+
+        /// Returns whether \a operation applies the change of an action rather than reverting it.
+        static inline bool isForward(Operation operation);
+
+        virtual ~Action();
+
+        Action(const Action &) = delete;
+        Action &operator=(const Action &) = delete;
 
         inline int type() const;
 
-        inline int state() const;
-        inline void setState(int state);
-
-        /// Query the nodes associated with the action.
-        virtual void queryNodes(bool inserted, const std::function<void(const NodePtr &)> &add) = 0;
-
-        /// Undo or redo the action.
-        virtual void execute(bool undo) = 0;
+        /// Calls \a func on each node that this action owns at present, excluding their
+        /// descendants.
+        virtual void forEachHeldNode(const std::function<void(Node *)> &func) const;
 
     protected:
-        int _type;
+        inline explicit Action(int type);
+
+        /// Applies the action to the tree for \a operation.
+        virtual void execute(Operation operation) = 0;
+
+    private:
+        int m_type;
+
+        friend class Model;
     };
 
-    inline Action::Action(int type) : _type(type) {
+    inline Action::Action(int type) : m_type(type) {
+    }
+
+    inline bool Action::isForward(Operation operation) {
+        return operation != Undo;
     }
 
     inline int Action::type() const {
-        return _type;
+        return m_type;
     }
 
-
-    /// NodeAction - Base action for node change.
-    class NodeAction : public Action {
-    public:
-        inline NodeAction(int type, Node *parent);
-        ~NodeAction() = default;
-
-        inline std::shared_ptr<Node> parent() const;
-
-    protected:
-        std::shared_ptr<Node> _parent;
-    };
-
-    inline NodeAction::NodeAction(int type, Node *parent) : Action(type), _parent(parent) {
-    }
-
-    inline std::shared_ptr<Node> NodeAction::parent() const {
-        return _parent;
-    }
-
-
-    /// RootChangeAction - Action for model root change.
+    /// Replacement of the root of a model.
+    ///
+    /// Owns the root that is not in the tree: the new root before execution and after undo, the
+    /// old root after execution. Either root may be \c nullptr.
     class SUBSTATE_EXPORT RootChangeAction : public Action {
     public:
-        inline RootChangeAction(NodePtr oldRoot, NodePtr newRoot);
-        ~RootChangeAction() = default;
+        ~RootChangeAction();
 
-        void queryNodes(bool inserted, const std::function<void(const NodePtr &)> &add) override;
-        void execute(bool undo) override;
+        inline Model *model() const;
 
-    public:
-        inline Node *root() const;
+        /// The root after the action is executed.
+        inline Node *newRoot() const;
+
+        /// The root before the action is executed.
         inline Node *oldRoot() const;
 
+        void forEachHeldNode(const std::function<void(Node *)> &func) const override;
+
     protected:
-        NodePtr _oldRoot;
-        NodePtr _newRoot;
+        void execute(Operation operation) override;
+
+    private:
+        RootChangeAction(Model *model, std::unique_ptr<Node> newRoot);
+
+        Model *m_model;
+        Node *m_newRoot;
+        Node *m_oldRoot;
+        std::unique_ptr<Node> m_held;
+
+        friend class Model;
     };
 
-    inline RootChangeAction::RootChangeAction(NodePtr oldRoot, NodePtr newRoot)
-        : Action(Action::RootChange), _oldRoot(std::move(oldRoot)), _newRoot(std::move(newRoot)) {
+    inline Model *RootChangeAction::model() const {
+        return m_model;
     }
 
-    inline Node *RootChangeAction::root() const {
-        return _newRoot.get();
+    inline Node *RootChangeAction::newRoot() const {
+        return m_newRoot;
     }
 
     inline Node *RootChangeAction::oldRoot() const {
-        return _oldRoot.get();
+        return m_oldRoot;
     }
-
-
-    /// ActionNotification - Notification carrying an action.
-    class ActionNotification : public Notification {
-    public:
-        inline ActionNotification(Type type, const Action *action);
-        ~ActionNotification() = default;
-
-        inline const Action *action() const;
-
-    protected:
-        const Action *_action;
-    };
-
-    inline const Action *ActionNotification::action() const {
-        return _action;
-    }
-
-    ActionNotification::ActionNotification(Type type, const Action *action)
-        : Notification(type), _action(action) {
-    }
-
-
-    /// ActionIOInterface - Interface for reading and writing actions and nodes.
-    class ActionIOInterface {
-    public:
-        virtual ~ActionIOInterface() = default;
-
-        virtual std::shared_ptr<Node> readNode(std::istream &is) = 0;
-        virtual void writeNode(const Node &node, std::ostream &os) = 0;
-
-        virtual std::unique_ptr<Action> readAction(std::istream &is) = 0;
-        virtual void writeAction(const Action &action, std::ostream &os) = 0;
-    };
 
 }
 

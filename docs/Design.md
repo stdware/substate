@@ -198,7 +198,7 @@
 | `MappingAssign` | 父节点、键、新旧值（均可为空） | 当前不在树中的子节点 |
 
 - **`BytesReplace` 不改变长度。** 新旧字节长度相同。改变长度的替换由调用方组合删除与插入完成，或由 `BytesNode::replace()` 在内部拆分为两个动作。
-- 每个动作提供 `execute(Direction)`，`Direction` 为执行、撤销、重做之一，取代现在的 `bool undo`。
+- 每个动作提供 `execute(Operation)`，`Operation` 为 `Action` 中的枚举，取值为执行、撤销、重做之一，取代现在的 `bool undo`。
 - **动作按 ID 引用节点**以便序列化，运行时另存非持有指针以避免查表。
 - 动作不理解业务语义。新增业务操作时组合现有动作，而非新增动作类型。
 
@@ -236,8 +236,8 @@ model.commitTransaction({{"message", "Move 3 notes"}});
 class ModelObserver {
 public:
     virtual ~ModelObserver();
-    virtual void actionAboutToApply(const Action &action, Direction direction);
-    virtual void actionApplied(const Action &action, Direction direction);
+    virtual void actionAboutToApply(const Action &action, Action::Operation operation);
+    virtual void actionApplied(const Action &action, Action::Operation operation);
     virtual void stepChanged(int step);
     virtual void nodeAboutToBeDestroyed(Node *node);
     virtual void aboutToReset();
@@ -329,12 +329,11 @@ qsubstate 目前只支持 Qt 6，Qt 5 的支持在之后添加。两者 `QVarian
 
 每一步单独提交，每个提交均可构建并通过测试。
 
-1. 恢复可构建状态：补回 `ArrayView`，删除 `SmartPtr` 的引用，建立 Boost 与 QtTest 的测试框架。
-2. 所有权模型：`Node`、`VectorNode`、`Model` 改用 `std::unique_ptr`，删除 `Detached`，实现 `isAttached()` 与 ID 索引。
-3. 其余节点：`SheetNode`、`BytesNode`、`ArrayNode<T>`，以及 qsubstate 的 `Property`、`StructNode`、`MappingNode`。
-4. 存储引擎的职责调整与 `MemoryStorageEngine`。
-5. 通知与 Qt 适配器。
-6. 编解码器与序列化，包括整棵树的往返测试。
-7. 注释与文档按正式文体整理。
+1. 恢复可构建状态并建立所有权模型：补回 `ArrayView`，删除 `SmartPtr`，`Node`、`VectorNode`、`Model` 改用 `std::unique_ptr`，删除 `Detached`，实现 `isAttached()` 与 ID 索引，存储引擎按「存储引擎」一节调整并实现 `MemoryStorageEngine`，建立 Boost.Test 测试框架。删除 `SmartPtr` 后，节点容器、动作与引擎都须改用某种确定的所有权类型，恢复构建与所有权模型因此无法分为两步。`SheetNode`、`BytesNode`、`FilesystemStorageEngine` 与 qsubstate 仍使用旧的所有权表示，在这一步暂不参与构建。
+2. 其余节点：`SheetNode`、`BytesNode`、`ArrayNode<T>`，以及 qsubstate 的 `Property`、`StructNode`、`MappingNode`，建立 QtTest 测试框架。上一步暂不参与构建的部分由此加回。
+3. 转移：各容器的 `transferIn()` 与 `Transfer` 动作，以及「可执行的检验」中与转移相关的测试。
+4. 通知与 Qt 适配器。
+5. 编解码器与序列化，包括整棵树的往返测试。
+6. 注释与文档按正式文体整理。
 
-第 6 步完成后即可接入 HelloUTAU 的 `HelloKitEdit`。WAL 引擎作为第二阶段，另行设计。
+第 5 步完成后即可接入 HelloUTAU 的 `HelloKitEdit`。WAL 引擎作为第二阶段，另行设计。

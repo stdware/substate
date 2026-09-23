@@ -4,178 +4,174 @@
 #ifndef SUBSTATE_VECTORNODE_H
 #define SUBSTATE_VECTORNODE_H
 
+#include <memory>
 #include <vector>
 
-#include <substate/Node.h>
 #include <substate/Action.h>
+#include <substate/Node.h>
 
 namespace ss {
 
-    class VectorInsDelAction;
-
-    class VectorMoveAction;
-
-    class VectorNodePrivate;
-
-    /// VectorNode - Vector data structure node.
+    /// A node with an ordered list of children, addressed by index.
     class SUBSTATE_EXPORT VectorNode : public Node {
     public:
-        inline explicit VectorNode(int type = Vector);
+        inline VectorNode();
         ~VectorNode();
 
-    public:
-        inline void prepend(NodePtr node);
-        inline void prepend(std::vector<NodePtr> nodes);
-        inline void append(NodePtr node);
-        inline void append(std::vector<NodePtr> nodes);
-        inline void insert(int index, NodePtr node);
-        inline void removeOne(int index);
-        void insert(int index, std::vector<NodePtr> nodes);
-        void move(int index, int count, int dest);         // dest: destination index before move
-        inline void move2(int index, int count, int dest); // dest: destination index after move
-        void remove(int index, int count);
-        inline Node *at(int index) const;
-        inline const std::vector<NodePtr> &data() const;
-        inline int count() const;
         inline int size() const;
+        inline Node *at(int index) const;
+
+        /// Inserts \a nodes before \a index. Each node must be free and without a parent.
+        void insert(int index, std::vector<std::unique_ptr<Node>> nodes);
+        inline void insert(int index, std::unique_ptr<Node> node);
+        inline void append(std::vector<std::unique_ptr<Node>> nodes);
+        inline void append(std::unique_ptr<Node> node);
+
+        /// Removes \a count children starting at \a index.
+        ///
+        /// In a model, the removed children are owned by the action and return to this node if the
+        /// removal is undone. In a free node, they are destroyed. Use take() to keep them.
+        void remove(int index, int count);
+
+        /// Moves \a count children starting at \a index so that the first of them is at
+        /// \a destination afterwards. \a destination is an index into the list after the move and
+        /// must differ from \a index.
+        void move(int index, int count, int destination);
+
+        /// Removes and returns \a count children starting at \a index. The node must be free.
+        std::vector<std::unique_ptr<Node>> take(int index, int count);
+
+        std::unique_ptr<Node> clone() const override;
 
     protected:
-        NodePtr clone(bool copyId) const override;
-        void propagateChildren(const std::function<void(Node *)> &func) override;
+        inline explicit VectorNode(int type);
 
-        std::vector<NodePtr> _vec;
+        void forEachChild(const std::function<void(Node *)> &func) const override;
 
-        friend class VectorNodePrivate;
+        /// Appends copies of the children of \a source, for the clone() of a subclass. This node
+        /// must be free and empty.
+        void cloneChildrenFrom(const VectorNode &source);
+
+    private:
+        std::vector<std::unique_ptr<Node>> m_children;
+
         friend class VectorInsDelAction;
         friend class VectorMoveAction;
     };
 
+    inline VectorNode::VectorNode() : VectorNode(Vector) {
+    }
+
     inline VectorNode::VectorNode(int type) : Node(type) {
     }
 
-    inline void VectorNode::prepend(NodePtr node) {
-        insert(0, std::move(node));
-    }
-
-    inline void VectorNode::prepend(std::vector<NodePtr> nodes) {
-        insert(0, std::move(nodes));
-    }
-
-    inline void VectorNode::append(NodePtr node) {
-        insert(size(), std::move(node));
-    }
-
-    inline void VectorNode::append(std::vector<NodePtr> nodes) {
-        insert(size(), std::move(nodes));
-    }
-
-    inline void VectorNode::insert(int index, NodePtr node) {
-        insert(index, std::vector<NodePtr>{std::move(node)});
-    }
-
-    inline void VectorNode::removeOne(int index) {
-        remove(index, 1);
-    }
-
-    inline void VectorNode::move2(int index, int count, int dest) {
-        move(index, count, (dest <= index) ? dest : (dest + count));
+    inline int VectorNode::size() const {
+        return int(m_children.size());
     }
 
     inline Node *VectorNode::at(int index) const {
-        return _vec.at(index).get();
+        return m_children.at(size_t(index)).get();
     }
 
-    inline const std::vector<NodePtr> &VectorNode::data() const {
-        return _vec;
+    inline void VectorNode::insert(int index, std::unique_ptr<Node> node) {
+        std::vector<std::unique_ptr<Node>> nodes;
+        nodes.push_back(std::move(node));
+        insert(index, std::move(nodes));
     }
 
-    inline int VectorNode::count() const {
-        return size();
+    inline void VectorNode::append(std::vector<std::unique_ptr<Node>> nodes) {
+        insert(size(), std::move(nodes));
     }
 
-    inline int VectorNode::size() const {
-        return int(_vec.size());
+    inline void VectorNode::append(std::unique_ptr<Node> node) {
+        insert(size(), std::move(node));
     }
 
-
-    /// VectorAction - Action for \c VectorNode operations.
-    class VectorAction : public NodeAction {
+    /// Insertion into or removal from a VectorNode.
+    ///
+    /// Owns the children while they are not in the tree: an insertion before execution and after
+    /// undo, a removal after execution.
+    class SUBSTATE_EXPORT VectorInsDelAction : public Action {
     public:
-        inline VectorAction(Type type, Node *parent, int index);
-        ~VectorAction() = default;
+        ~VectorInsDelAction();
 
-    public:
+        inline VectorNode *parent() const;
         inline int index() const;
 
-    public:
-        int _index;
+        /// The inserted or removed children in order.
+        inline const std::vector<Node *> &children() const;
+
+        void forEachHeldNode(const std::function<void(Node *)> &func) const override;
+
+    protected:
+        void execute(Operation operation) override;
+
+    private:
+        // For an insertion, held contains the inserted nodes. For a removal, held is empty and
+        // the removed children are read from parent.
+        VectorInsDelAction(int type, VectorNode *parent, int index, int count,
+                           std::vector<std::unique_ptr<Node>> held);
+
+        VectorNode *m_parent;
+        int m_index;
+        std::vector<Node *> m_children;
+        std::vector<std::unique_ptr<Node>> m_held;
+
+        friend class VectorNode;
     };
 
-    inline int VectorAction::index() const {
-        return _index;
+    inline VectorNode *VectorInsDelAction::parent() const {
+        return m_parent;
     }
 
-    inline VectorAction::VectorAction(Type type, Node *parent, int index)
-        : NodeAction(type, parent), _index(index) {
+    inline int VectorInsDelAction::index() const {
+        return m_index;
     }
 
+    inline const std::vector<Node *> &VectorInsDelAction::children() const {
+        return m_children;
+    }
 
-    /// VectorMoveAction - Action for \c VectorNode movement.
-    class SUBSTATE_EXPORT VectorMoveAction : public VectorAction {
+    /// Reordering of children within a VectorNode. Owns no node.
+    class SUBSTATE_EXPORT VectorMoveAction : public Action {
     public:
-        inline VectorMoveAction(Node *parent, int index, int count, int dest);
-        ~VectorMoveAction() = default;
+        ~VectorMoveAction();
 
-    public:
-        void queryNodes(bool inserted, const std::function<void(const NodePtr &)> &add) override;
-        void execute(bool undo) override;
-
-    public:
+        inline VectorNode *parent() const;
+        inline int index() const;
         inline int count() const;
+
+        /// The index of the first moved child after the move.
         inline int destination() const;
 
     protected:
-        int _count, _dest;
+        void execute(Operation operation) override;
+
+    private:
+        VectorMoveAction(VectorNode *parent, int index, int count, int destination);
+
+        VectorNode *m_parent;
+        int m_index;
+        int m_count;
+        int m_destination;
+
+        friend class VectorNode;
     };
 
-    inline VectorMoveAction::VectorMoveAction(Node *parent, int index, int count, int dest)
-        : VectorAction(VectorMove, parent, index), _count(count), _dest(dest) {
+    inline VectorNode *VectorMoveAction::parent() const {
+        return m_parent;
+    }
+
+    inline int VectorMoveAction::index() const {
+        return m_index;
     }
 
     inline int VectorMoveAction::count() const {
-        return _count;
+        return m_count;
     }
 
     inline int VectorMoveAction::destination() const {
-        return _dest;
-    }
-
-
-    /// VectorInsDelAction - Action for \c VectorNode insertion or deletion.
-    class SUBSTATE_EXPORT VectorInsDelAction : public VectorAction {
-    public:
-        inline VectorInsDelAction(Type type, Node *parent, int index,
-                                  std::vector<NodePtr> children);
-        ~VectorInsDelAction() = default;
-
-    public:
-        void queryNodes(bool inserted, const std::function<void(const NodePtr &)> &add) override;
-        void execute(bool undo) override;
-
-    public:
-        inline const std::vector<NodePtr> &children() const;
-
-    protected:
-        std::vector<NodePtr> _children;
-    };
-
-    inline VectorInsDelAction::VectorInsDelAction(Type type, Node *parent, int index,
-                                                  std::vector<NodePtr> children)
-        : VectorAction(type, parent, index), _children(std::move(children)) {
-    }
-
-    inline const std::vector<NodePtr> &VectorInsDelAction::children() const {
-        return _children;
+        return m_destination;
     }
 
 }

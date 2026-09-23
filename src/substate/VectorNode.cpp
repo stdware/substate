@@ -1,206 +1,198 @@
 #include "VectorNode.h"
-#include "VectorNode_p.h"
 
-#include <cassert>
 #include <algorithm>
-#include <utility>
+#include <cassert>
+#include <iterator>
 
-#include "Model_p.h"
 #include "Node_p.h"
 
 namespace ss {
 
-    template <class T>
-    static inline void arrayMove(std::vector<T> &arr, int index, int count, int dest) {
-        assert(dest != index && count > 0);
-        if (dest < index) {
-            std::rotate(arr.begin() + dest, arr.begin() + index, arr.begin() + index + count);
-        } else {
-            std::rotate(arr.begin() + index, arr.begin() + index + count,
-                        arr.begin() + dest + count);
-        }
-    }
+    namespace {
 
-    void VectorNodePrivate::copy(VectorNode *dest, const VectorNode *src, bool copyId) {
-        if (!copyId) {
-            dest->_id = src->_id;
+        using Children = std::vector<std::unique_ptr<Node>>;
+
+        // Moves the range [index, index + count) so that it starts at destination afterwards.
+        void moveRange(Children &children, int index, int count, int destination) {
+            auto begin = children.begin();
+            if (destination < index) {
+                std::rotate(begin + destination, begin + index, begin + index + count);
+            } else {
+                std::rotate(begin + index, begin + index + count, begin + destination + count);
+            }
         }
-        // Clone children
-        dest->_vec.reserve(src->_vec.size());
-        for (auto &child : src->_vec) {
-            auto newChild = NodePrivate::clone(child.get(), copyId);
-            dest->addChild(newChild.get());
-            dest->_vec.emplace_back(std::move(newChild));
+
+#ifndef NDEBUG
+        // Returns whether node is target or one of its ancestors, which would create a cycle if
+        // node were inserted into target.
+        bool isAncestorOrSelf(const Node *node, const Node *target) {
+            for (auto current = target; current; current = current->parent()) {
+                if (current == node) {
+                    return true;
+                }
+            }
+            return false;
         }
+#endif
+
     }
 
     VectorNode::~VectorNode() = default;
 
-    void VectorNode::insert(int index, std::vector<NodePtr> nodes) {
+    void VectorNode::insert(int index, std::vector<std::unique_ptr<Node>> nodes) {
         assert(isWritable());
-        assert(NodePrivate::validateArrayQueryArguments(index, _vec.size()));
+        assert(NodePrivate::isValidInsertion(index, size()));
         assert(!nodes.empty());
-
 #ifndef NDEBUG
         for (const auto &node : nodes) {
-            assert(node && node->isFree());
+            assert(NodePrivate::isInsertable(node.get()));
+            assert(!isAncestorOrSelf(node.get(), this));
         }
 #endif
 
-        auto action = std::make_unique<VectorInsDelAction>(Action::VectorInsert, this, index,
-                                                           std::move(nodes));
-        action->execute(false);
-        ModelPrivate::pushAction(_model, std::move(action));
-    }
+        if (isFree()) {
+            for (const auto &node : nodes) {
+                NodePrivate::setFreeParent(node.get(), this);
+            }
+            m_children.insert(m_children.begin() + index, std::make_move_iterator(nodes.begin()),
+                              std::make_move_iterator(nodes.end()));
+            return;
+        }
 
-    void VectorNode::move(int index, int count, int dest) {
-        assert(isWritable());
-        assert(NodePrivate::validateArrayRemoveArguments(index, count, _vec.size()) &&
-               !(dest >= index && dest < index + count));
-
-        auto action = std::make_unique<VectorMoveAction>(this, index, count, dest);
-        action->execute(false);
-        ModelPrivate::pushAction(_model, std::move(action));
+        std::unique_ptr<VectorInsDelAction> action(new VectorInsDelAction(
+            Action::VectorInsert, this, index, int(nodes.size()), std::move(nodes)));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
     }
 
     void VectorNode::remove(int index, int count) {
         assert(isWritable());
-        assert(NodePrivate::validateArrayRemoveArguments(index, count, _vec.size()));
+        assert(NodePrivate::isValidRemoval(index, count, size()));
 
-        std::vector<NodePtr> nodes;
-        nodes.resize(count);
-        for (size_t i = 0; i < count; ++i) {
-            nodes[i] = _vec[index + i].makeRef();
+        if (isFree()) {
+            m_children.erase(m_children.begin() + index, m_children.begin() + index + count);
+            return;
         }
-        auto action = std::make_unique<VectorInsDelAction>(Action::VectorRemove, this, index,
-                                                           std::move(nodes));
-        action->execute(false);
-        ModelPrivate::pushAction(_model, std::move(action));
+
+        std::unique_ptr<VectorInsDelAction> action(
+            new VectorInsDelAction(Action::VectorRemove, this, index, count, {}));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
     }
 
-    NodePtr VectorNode::clone(bool copyId) const {
-        auto node = makeSmart<VectorNode>(_type);
-        VectorNodePrivate::copy(node.get(), this, copyId);
+    void VectorNode::move(int index, int count, int destination) {
+        assert(isWritable());
+        assert(NodePrivate::isValidRemoval(index, count, size()));
+        assert(destination >= 0 && destination <= size() - count && destination != index);
+
+        if (isFree()) {
+            moveRange(m_children, index, count, destination);
+            return;
+        }
+
+        std::unique_ptr<VectorMoveAction> action(
+            new VectorMoveAction(this, index, count, destination));
+        action->execute(Action::Execute);
+        NodePrivate::pushAction(model(), std::move(action));
+    }
+
+    std::vector<std::unique_ptr<Node>> VectorNode::take(int index, int count) {
+        assert(isFree());
+        assert(NodePrivate::isValidRemoval(index, count, size()));
+
+        auto first = m_children.begin() + index;
+        auto last = first + count;
+        std::vector<std::unique_ptr<Node>> taken(std::make_move_iterator(first),
+                                                 std::make_move_iterator(last));
+        m_children.erase(first, last);
+        for (const auto &node : taken) {
+            NodePrivate::setFreeParent(node.get(), nullptr);
+        }
+        return taken;
+    }
+
+    std::unique_ptr<Node> VectorNode::clone() const {
+        std::unique_ptr<VectorNode> node(new VectorNode());
+        node->cloneChildrenFrom(*this);
         return node;
     }
 
-    void VectorNode::propagateChildren(const std::function<void(Node *)> &func) {
-        for (const auto &node : std::as_const(_vec)) {
-            NodePrivate::propagate(node.get(), func);
+    void VectorNode::forEachChild(const std::function<void(Node *)> &func) const {
+        for (const auto &child : m_children) {
+            func(child.get());
         }
     }
 
-    void VectorMoveAction::queryNodes(bool inserted,
-                                      const std::function<void(const NodePtr &)> &add) {
-        (void) inserted;
-        (void) add;
+    void VectorNode::cloneChildrenFrom(const VectorNode &source) {
+        assert(isFree() && m_children.empty());
+        m_children.reserve(source.m_children.size());
+        for (const auto &child : source.m_children) {
+            auto copy = child->clone();
+            NodePrivate::setFreeParent(copy.get(), this);
+            m_children.push_back(std::move(copy));
+        }
     }
 
-    void VectorMoveAction::execute(bool undo) {
-        auto parent = static_cast<VectorNode *>(_parent.get());
-        auto &vec = parent->_vec;
-
-        parent->beginAction();
-        // Pre-Propagate signal
-        {
-            if (undo) {
-                // TODO
-            }
-
-            ActionNotification n(Notification::ActionAboutToTrigger, this);
-            parent->notify(&n);
-        }
-
-        // Do change
-        int index;
-        int dest;
-        if (undo) {
-            if (_dest > _index) {
-                index = _dest - _count;
-                dest = _index;
-            } else {
-                index = _dest;
-                dest = _index + _count;
+    VectorInsDelAction::VectorInsDelAction(int type, VectorNode *parent, int index, int count,
+                                           std::vector<std::unique_ptr<Node>> held)
+        : Action(type), m_parent(parent), m_index(index), m_held(std::move(held)) {
+        m_children.reserve(size_t(count));
+        if (type == VectorInsert) {
+            for (const auto &node : m_held) {
+                m_children.push_back(node.get());
             }
         } else {
-            index = _index;
-            dest = _dest;
-        }
-        arrayMove(vec, index, _count, dest);
-
-        // Propagate signal
-        {
-            if (undo) {
-                // TODO
-            }
-
-            ActionNotification n(Notification::ActionTriggered, this);
-            parent->notify(&n);
-        }
-        parent->endAction();
-    }
-
-    void VectorInsDelAction::queryNodes(bool inserted,
-                                        const std::function<void(const NodePtr &)> &add) {
-        if (inserted == (_type == VectorInsert)) {
-            for (const auto &node : std::as_const(_children)) {
-                add(node);
+            for (int i = 0; i < count; ++i) {
+                m_children.push_back(parent->at(index + i));
             }
         }
     }
 
-    void VectorInsDelAction::execute(bool undo) {
-        auto parent = static_cast<VectorNode *>(_parent.get());
-        auto &vec = parent->_vec;
+    VectorInsDelAction::~VectorInsDelAction() = default;
 
-        parent->beginAction();
-        // Pre-Propagate signal
-        {
-            auto orgType = _type;
-            if (undo) {
-                _type = _type == VectorInsert ? VectorRemove : VectorInsert;
-            }
-
-            ActionNotification n(Notification::ActionAboutToTrigger, this);
-            parent->notify(&n);
-
-            _type = orgType;
+    void VectorInsDelAction::forEachHeldNode(const std::function<void(Node *)> &func) const {
+        for (const auto &node : m_held) {
+            func(node.get());
         }
+    }
 
-        // Do change
-        if (((_type == VectorRemove) ^ undo)) {
-            for (size_t i = 0; i < _children.size(); ++i) {
-                auto &orgNode = vec[_index + i];
-                _children[i].swap(orgNode);
-                parent->removeChild(orgNode.get());
+    void VectorInsDelAction::execute(Operation operation) {
+        auto &children = m_parent->m_children;
+        const bool intoTree = (type() == VectorInsert) == isForward(operation);
+
+        if (intoTree) {
+            assert(m_held.size() == m_children.size());
+            for (const auto &node : m_held) {
+                NodePrivate::attach(node.get(), m_parent, m_parent->model());
             }
-            vec.erase(vec.begin() + _index, vec.begin() + _index + _children.size());
+            children.insert(children.begin() + m_index, std::make_move_iterator(m_held.begin()),
+                            std::make_move_iterator(m_held.end()));
+            m_held.clear();
         } else {
-            for (const auto &node : std::as_const(_children)) {
-                parent->addChild(node.get());
-            }
-            vec.insert(vec.begin() + _index, _children.size(), NodePtr());
-            for (size_t i = 0; i < _children.size(); ++i) {
-                auto &node = _children[i];
-                auto &newNode = vec[_index + i];
-                newNode = node.makeRef();
-                newNode.swap(node);
+            assert(m_held.empty());
+            auto first = children.begin() + m_index;
+            auto last = first + std::ptrdiff_t(m_children.size());
+            m_held.assign(std::make_move_iterator(first), std::make_move_iterator(last));
+            children.erase(first, last);
+            for (const auto &node : m_held) {
+                NodePrivate::detach(node.get());
             }
         }
+    }
 
-        // Post-propagate signal
-        {
-            auto orgType = _type;
-            if (undo) {
-                _type = _type == VectorInsert ? VectorRemove : VectorInsert;
-            }
+    VectorMoveAction::VectorMoveAction(VectorNode *parent, int index, int count, int destination)
+        : Action(VectorMove), m_parent(parent), m_index(index), m_count(count),
+          m_destination(destination) {
+    }
 
-            ActionNotification n(Notification::ActionTriggered, this);
-            parent->notify(&n);
+    VectorMoveAction::~VectorMoveAction() = default;
 
-            _type = orgType;
+    void VectorMoveAction::execute(Operation operation) {
+        if (isForward(operation)) {
+            moveRange(m_parent->m_children, m_index, m_count, m_destination);
+        } else {
+            moveRange(m_parent->m_children, m_destination, m_count, m_index);
         }
-        parent->endAction();
     }
 
 }

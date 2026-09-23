@@ -4,127 +4,115 @@
 #ifndef SUBSTATE_MODEL_H
 #define SUBSTATE_MODEL_H
 
-#include <vector>
+#include <cstddef>
+#include <cstdint>
 #include <map>
-#include <string>
 #include <memory>
+#include <string>
+#include <unordered_map>
+#include <vector>
 
-#include <substate/Notification.h>
-#include <substate/Node.h>
 #include <substate/Action.h>
+#include <substate/Node.h>
+#include <substate/StorageEngine.h>
 
 namespace ss {
 
-    class StorageEngine;
+    class NodePrivate;
 
-    class StandardStorageEngine;
-
-    class ModelPrivate;
-
-    /// Model - Document model and undo/redo manager.
-    class SUBSTATE_EXPORT Model : public NotificationSubject {
+    /// A document tree with transactions and undo history.
+    ///
+    /// Every modification of a node in the tree occurs within a transaction and is recorded as an
+    /// action. A committed transaction is one undo step, stored by the storage engine.
+    class SUBSTATE_EXPORT Model {
     public:
+        /// Creates a model with a MemoryStorageEngine.
+        Model();
+
         explicit Model(std::unique_ptr<StorageEngine> storageEngine);
         ~Model();
 
         Model(const Model &) = delete;
         Model &operator=(const Model &) = delete;
 
-    public:
         inline StorageEngine *storageEngine() const;
 
-        enum StateFlag {
-            TransactionFlag = 1,
-            UndoRedoFlag = 2,
-            UndoFlag = 4,
-            RedoFlag = 8,
-        };
-
-        enum State {
-            Idle = 0,
-            Transaction = TransactionFlag,
-            Undo = UndoFlag | UndoRedoFlag,
-            Redo = RedoFlag | UndoRedoFlag,
-        };
-
-        inline State state() const;
-        inline bool inTransaction() const;
-        inline bool stepChanging() const;
-
-        /// Return if the model is writable.
-        /// \note The model is writable only when it's in \c Transaction state and no node holds the
-        /// action lock.
-        bool isWritable() const;
-
-        /// Return the node of \a id.
-        Node *indexOf(size_t id) const;
-
         inline Node *root() const;
-        void setRoot(Node *root);
 
-        /// Reset the model to empty state.
-        void reset();
+        /// Returns the node with \a id, or \c nullptr if no such node exists. A node removed from
+        /// the tree remains available until the action that owns it is discarded.
+        Node *nodeById(std::uint64_t id) const;
 
-        /// Enters the transaction state.
+        /// The number of nodes with an identifier: the nodes in the tree and the nodes owned by
+        /// actions in the history, including their descendants.
+        inline std::size_t nodeCount() const;
+
+        /// Replaces the root within the current transaction. \a root must be free and without a
+        /// parent, or \c nullptr.
+        void setRoot(std::unique_ptr<Node> root);
+
+        /// Discards the tree and the history, and installs \a root as the initial tree without
+        /// creating an action. Identifiers are not reused after a reset.
+        void reset(std::unique_ptr<Node> root = {});
+
         void beginTransaction();
+
+        /// Reverts every action of the current transaction in reverse order and discards them.
+        /// The tree is restored to its state before beginTransaction().
         void abortTransaction();
-        void commitTransaction(std::map<std::string, std::string> message);
 
-        std::map<std::string, std::string> stepMessage(int step) const;
+        /// Commits the current transaction to the storage engine as one step, unless it contains
+        /// no action.
+        void commitTransaction(std::map<std::string, std::string> message = {});
 
+        inline bool inTransaction() const;
+
+        bool canUndo() const;
+        bool canRedo() const;
         void undo();
         void redo();
-
-        inline bool canUndo() const;
-        inline bool canRedo() const;
 
         int minimumStep() const;
         int maximumStep() const;
         int currentStep() const;
+        std::map<std::string, std::string> stepMessage(int step) const;
 
-    protected:
-        void notify(Notification *n) override;
+    private:
+        enum class State {
+            Idle,
+            Transaction,
+            Undo,
+            Redo,
+        };
 
-        Node *_lockedNode;
-        Node *_root;
-        State _state = Idle;
-        std::vector<std::unique_ptr<Action>> _txActions;
-        std::unique_ptr<StorageEngine> _storageEngine;
-        bool _clearing = false;
+        // The declaration order determines the destruction order required by docs/Design.md:
+        // the history first, then the tree, and the index last, because every node removes
+        // itself from the index when destroyed.
+        std::unordered_map<std::uint64_t, Node *> m_index;
+        std::uint64_t m_lastId = 0;
+        std::unique_ptr<Node> m_root;
+        std::unique_ptr<StorageEngine> m_storageEngine;
+        std::vector<std::unique_ptr<Action>> m_actions;
+        State m_state = State::Idle;
 
-        friend class Node;
         friend class NodePrivate;
-        friend class ModelPrivate;
-        friend class StorageEngine;
-        friend class StandardStorageEngine;
+        friend class RootChangeAction;
     };
 
     inline StorageEngine *Model::storageEngine() const {
-        return _storageEngine.get();
-    }
-
-    inline Model::State Model::state() const {
-        return _state;
-    }
-
-    inline bool Model::inTransaction() const {
-        return state() == Transaction;
-    }
-
-    inline bool Model::stepChanging() const {
-        return state() & UndoRedoFlag;
+        return m_storageEngine.get();
     }
 
     inline Node *Model::root() const {
-        return _root;
+        return m_root.get();
     }
 
-    inline bool Model::canUndo() const {
-        return currentStep() > minimumStep();
+    inline std::size_t Model::nodeCount() const {
+        return m_index.size();
     }
 
-    inline bool Model::canRedo() const {
-        return currentStep() < maximumStep();
+    inline bool Model::inTransaction() const {
+        return m_state == State::Transaction;
     }
 
 }

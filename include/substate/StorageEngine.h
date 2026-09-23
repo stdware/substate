@@ -4,86 +4,61 @@
 #ifndef SUBSTATE_STORAGEENGINE_H
 #define SUBSTATE_STORAGEENGINE_H
 
-#include <string>
 #include <map>
-#include <vector>
-#include <memory>
-#include <unordered_map>
+#include <string>
 
-#include <substate/Node.h>
-#include <substate/Action.h>
+#include <substate/Transaction.h>
 
 namespace ss {
 
-    class Model;
-
-    class StorageEnginePrivate;
-
-    /// StorageEngine - Node and Action storage backend, could be memory, filesystem, database, etc.
+    /// The history of a model.
+    ///
+    /// The engine stores committed transactions and decides where they are kept. The model
+    /// executes them and emits the notifications. Steps are numbered from the creation of the
+    /// model: step \c n is the state after the <tt>n</tt>-th committed transaction that is still
+    /// reachable.
+    ///
+    /// An engine discards transactions only in two ways, as required by constraint 3 of
+    /// docs/Design.md. Eviction discards the oldest executed transactions. Truncation discards
+    /// all undone transactions, and occurs when a new transaction is committed. The nodes owned
+    /// by a discarded transaction are destroyed with it.
     class SUBSTATE_EXPORT StorageEngine {
     public:
-        StorageEngine() = default;
+        StorageEngine();
         virtual ~StorageEngine();
 
         StorageEngine(const StorageEngine &) = delete;
         StorageEngine &operator=(const StorageEngine &) = delete;
 
-        StorageEngine(StorageEngine &&) = default;
-        StorageEngine &operator=(StorageEngine &&) = default;
+        /// Takes ownership of \a transaction, which becomes the current step. Undone transactions
+        /// are truncated first.
+        virtual void commit(Transaction transaction) = 0;
 
-    public:
-        inline Model *model() const;
+        /// Returns the transaction of the current step and makes the previous step current, or
+        /// returns \c nullptr if the current step is the minimum step. The transaction remains
+        /// valid until the next commit or reset.
+        virtual Transaction *stepBackward() = 0;
 
-        inline Node *indexOf(size_t id) const;
+        /// Returns the transaction of the next step and makes it current, or returns \c nullptr
+        /// if the current step is the maximum step. The transaction remains valid until the next
+        /// commit or reset.
+        virtual Transaction *stepForward() = 0;
 
-        /// Sets up the engine with a model, must set \c this->_model to \c model after this call.
-        virtual void setup(Model *model);
+        /// Discards all transactions and restarts the step numbers at 0.
+        virtual void reset() = 0;
 
-        /// Prepare for transaction, this function is called when the model turns into transaction
-        /// mode.
-        virtual void prepare();
+        /// The oldest step that can be reached by undo.
+        virtual int minimumStep() const = 0;
 
-        /// Abort transaction, this function is called when the model turns into idle mode without
-        /// any actions to commit.
-        virtual void abort();
+        /// The newest step that can be reached by redo.
+        virtual int maximumStep() const = 0;
 
-        /// Commit a list of actions with a message to the engine.
-        virtual void commit(std::vector<std::unique_ptr<Action>> actions,
-                            std::map<std::string, std::string> message) = 0;
+        virtual int currentStep() const = 0;
 
-        /// Executes undo or redo and updates engine's internal state.
-        virtual void execute(bool undo) = 0;
-
-        /// Resets the engine and model.
-        virtual void reset();
-
-        virtual int minimum() const = 0;
-        virtual int maximum() const = 0;
-        virtual int current() const = 0;
+        /// The message of the transaction that leads to \a step, or an empty map if \a step is
+        /// out of range.
         virtual std::map<std::string, std::string> stepMessage(int step) const = 0;
-
-    protected:
-        std::unordered_map<size_t, SmartPtr<Node>> _nodeMap;
-        size_t _maxId = 0;
-        Model *_model = nullptr;
-
-        friend class Model;
-        friend class Node;
-        friend class NodePrivate;
-        friend class StorageEnginePrivate;
     };
-
-    inline Model *StorageEngine::model() const {
-        return _model;
-    }
-
-    inline Node *StorageEngine::indexOf(size_t id) const {
-        auto it = _nodeMap.find(id);
-        if (it == _nodeMap.end()) {
-            return nullptr;
-        }
-        return it->second.get();
-    }
 
 }
 
