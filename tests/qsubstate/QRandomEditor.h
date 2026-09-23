@@ -124,7 +124,7 @@ private:
         std::vector<ss::StructNodeBase *> structs;
         std::vector<ss::MappingNode *> mappings;
 
-        /// Every node except the root.
+        // Every node except the root.
         std::vector<ss::Node *> children;
 
         inline size_t size() const {
@@ -141,9 +141,9 @@ private:
         return false;
     }
 
-    /// Transfers a random node to a random valid target: a VectorNode, an empty slot of a
-    /// StructNode, or a missing key of a MappingNode. Returns false without an action if no
-    /// valid target exists.
+    // Transfers a random node to a random valid target: a VectorNode, an empty slot of a
+    // StructNode, or a missing key of a MappingNode. Returns false without an action if no
+    // valid target exists.
     inline bool transfer(const Nodes &all) {
         if (all.children.empty()) {
             return false;
@@ -216,7 +216,7 @@ private:
         return QString(QChar(u'a' + uniform(0, 3)));
     }
 
-    /// A scalar value that differs from every previous one.
+    // A scalar value that differs from every previous one.
     inline QVariant uniqueVariant() {
         return QVariant(qint64(++m_serial));
     }
@@ -232,7 +232,7 @@ private:
         return {};
     }
 
-    /// A value that differs from \a current, so that the assignment creates an action.
+    // A value that differs from current, so that the assignment creates an action.
     inline ss::Property changedValue(const ss::Property &current) {
         const int kind = uniform(current.isEmpty() ? 1 : 0, 2);
         if (kind == 1) {

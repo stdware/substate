@@ -28,7 +28,7 @@ namespace {
         return "redo";
     }
 
-    /// Records every notification as a line of text.
+    // Records every notification as a line of text.
     class RecordingObserver : public ModelObserver {
     public:
         std::vector<std::string> log;

@@ -22,12 +22,12 @@ using namespace ss;
 
 namespace {
 
-    /// A value type without stream operators, which has no encoding.
+    // A value type without stream operators, which has no encoding.
     struct Opaque {
         int value = 0;
     };
 
-    /// A QCodec for the counting node types of the tests.
+    // A QCodec for the counting node types of the tests.
     class TestQCodec : public QCodec {
     public:
         TestQCodec() {

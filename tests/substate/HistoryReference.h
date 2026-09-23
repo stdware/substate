@@ -45,19 +45,19 @@ inline void collectIds(const std::string &configuration, std::set<std::uint64_t>
 /// retained step and every position after an action of a retained transaction.
 class Reference {
 public:
-    explicit Reference(int stepLimit, std::string base)
+    inline explicit Reference(int stepLimit, std::string base)
         : m_stepLimit(stepLimit), m_base(std::move(base)) {
     }
 
-    void record(std::string configuration) {
+    inline void record(std::string configuration) {
         m_pending.push_back(std::move(configuration));
     }
 
-    void abort() {
+    inline void abort() {
         m_pending.clear();
     }
 
-    void commit() {
+    inline void commit() {
         m_transactions.erase(m_transactions.begin() + m_executed, m_transactions.end());
         m_transactions.push_back(std::move(m_pending));
         m_pending.clear();
@@ -69,33 +69,33 @@ public:
         }
     }
 
-    void undo() {
+    inline void undo() {
         --m_executed;
     }
 
-    void redo() {
+    inline void redo() {
         ++m_executed;
     }
 
     /// The configuration at the current step.
-    const std::string &current() const {
+    inline const std::string &current() const {
         return m_executed == 0 ? m_base : m_transactions[size_t(m_executed - 1)].back();
     }
 
     /// The configuration after the last action, within the transaction in progress if any.
-    const std::string &latest() const {
+    inline const std::string &latest() const {
         return m_pending.empty() ? current() : m_pending.back();
     }
 
-    int executed() const {
+    inline int executed() const {
         return m_executed;
     }
 
-    int retained() const {
+    inline int retained() const {
         return int(m_transactions.size());
     }
 
-    std::set<std::uint64_t> liveIds() const {
+    inline std::set<std::uint64_t> liveIds() const {
         std::set<std::uint64_t> ids;
         collectIds(m_base, ids);
         for (const auto &transaction : m_transactions) {

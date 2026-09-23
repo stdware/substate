@@ -11,7 +11,7 @@ BOOST_AUTO_TEST_SUITE(test_VectorNode)
 
 namespace {
 
-    /// A model whose root has \a children leaves.
+    // A model whose root has children leaves.
     std::unique_ptr<Model> makeModel(int children) {
         auto model = std::make_unique<Model>();
         model->reset(makeNode(children));

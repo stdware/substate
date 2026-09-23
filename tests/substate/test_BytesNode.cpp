@@ -21,7 +21,7 @@ namespace {
         return std::string(node.data().begin(), node.data().end());
     }
 
-    /// A model whose root is a CountingBytes with \a text.
+    // A model whose root is a CountingBytes with text.
     std::unique_ptr<Model> makeModel(const std::string &text) {
         auto node = std::make_unique<CountingBytes>();
         node->append(view(text));

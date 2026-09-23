@@ -5,6 +5,7 @@
 #define SUBSTATE_NODE_P_H
 
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -34,7 +35,7 @@ namespace ss {
         /// container without an action.
         static inline void setFreeParent(Node *node, Node *parent);
 
-        /// Hangs \a node under \a parent in the tree of \a model, or makes it the root if
+        /// Attaches \a node to \a parent in the tree of \a model, or makes it the root if
         /// \a parent is \c nullptr. A free subtree enters the model first: each of its nodes
         /// receives the model and an identifier. Every node of the subtree becomes attached.
         static void attach(Node *node, Node *parent, Model *model);
@@ -74,6 +75,7 @@ namespace ss {
         ///         occurs twice, or exists in the model, and then no node enters.
         static bool adopt(Model *model, const std::vector<std::pair<Node *, std::uint64_t>> &nodes);
 
+        /// Call the protected functions of \a node with the same names, for the codec.
         static inline void writeContent(const Node *node, Encoder &encoder);
         static inline bool readContent(Node *node, Decoder &decoder);
         static inline std::unique_ptr<TransferEndpoint> readEndpoint(Node *node, Decoder &decoder);

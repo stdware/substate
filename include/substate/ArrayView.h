@@ -4,14 +4,26 @@
 #ifndef SUBSTATE_ARRAYVIEW_H
 #define SUBSTATE_ARRAYVIEW_H
 
+#include <algorithm>
 #include <array>
-#include <optional>
-#include <vector>
 #include <cassert>
+#include <cstddef>
+#include <initializer_list>
+#include <iterator>
+#include <optional>
+#include <type_traits>
+#include <vector>
 
 namespace ss {
 
-    /// ArrayView - A lightweight view of an array or vector, ported from \c llvm::ArrayRef.
+    /// A read-only view of a contiguous array, which does not own the elements. Ported from
+    /// \c llvm::ArrayRef.
+    ///
+    /// The type names and the functions for iteration follow the standard containers, so that a
+    /// view works with the standard algorithms and range-based loops.
+    ///
+    /// \warning A view does not extend the lifetime of the viewed elements, including the
+    ///          elements of an initializer list.
     template <class T>
     class ArrayView {
     public:
@@ -24,183 +36,189 @@ namespace ss {
         using const_iterator = const_pointer;
         using reverse_iterator = std::reverse_iterator<iterator>;
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-        using size_type = size_t;
-        using difference_type = ptrdiff_t;
+        using size_type = std::size_t;
+        using difference_type = std::ptrdiff_t;
 
-    public:
-        ArrayView() = default;
+        inline ArrayView() = default;
 
-        ArrayView(std::nullopt_t) {
+        inline ArrayView(std::nullopt_t) {
         }
 
-        ArrayView(const T &item) : _data(&item), _size(1) {
+        /// Creates a view of the single element \a item.
+        inline ArrayView(const T &item) : m_data(&item), m_size(1) {
         }
 
-        constexpr ArrayView(const T *data, size_t length) : _data(data), _size(length) {
+        inline constexpr ArrayView(const T *data, std::size_t length)
+            : m_data(data), m_size(length) {
         }
 
-        constexpr ArrayView(const T *begin, const T *end) : _data(begin), _size(end - begin) {
+        inline constexpr ArrayView(const T *begin, const T *end)
+            : m_data(begin), m_size(std::size_t(end - begin)) {
             assert(begin <= end);
         }
 
+        /// Creates a view of the elements of a container with contiguous storage, such as
+        /// \c std::vector.
         template <template <class, class...> class V, class... A>
-        ArrayView(const V<T, A...> &vec) : _data(vec.data()), _size(vec.size()) {
+        inline ArrayView(const V<T, A...> &container)
+            : m_data(container.data()), m_size(container.size()) {
         }
 
-        template <size_t N>
-        constexpr ArrayView(const std::array<T, N> &Arr) : _data(Arr.data()), _size(N) {
+        template <std::size_t N>
+        inline constexpr ArrayView(const std::array<T, N> &array)
+            : m_data(array.data()), m_size(N) {
         }
 
-        template <size_t N>
-        constexpr ArrayView(const T (&Arr)[N]) : _data(Arr), _size(N) {
+        template <std::size_t N>
+        inline constexpr ArrayView(const T (&array)[N]) : m_data(array), m_size(N) {
         }
 
 #if defined(__GNUC__) && __GNUC__ >= 9
-// Disable gcc's warning in this constructor as it generates an enormous amount
-// of messages. Anyone using ArrayRef(ArrayView) should already be aware of the fact that
-// it does not do lifetime extension.
+// GCC warns at every use of this constructor that the initializer list is not extended in
+// lifetime. The class description states that a view never extends the lifetime of its elements.
 #  pragma GCC diagnostic push
 #  pragma GCC diagnostic ignored "-Winit-list-lifetime"
 #endif
-        constexpr ArrayView(std::initializer_list<T> vec)
-            : _data(vec.begin() == vec.end() ? (T *) nullptr : vec.begin()), _size(vec.size()) {
+        inline constexpr ArrayView(std::initializer_list<T> list)
+            : m_data(list.begin() == list.end() ? nullptr : list.begin()), m_size(list.size()) {
         }
 #if defined(__GNUC__) && __GNUC__ >= 9
 #  pragma GCC diagnostic pop
 #endif
 
-        template <typename T1>
-        ArrayView(const ArrayView<T1 *> &RHS,
-                   std::enable_if_t<std::is_convertible<T1 *const *, T const *>::value> * = nullptr)
-            : _data(RHS.data()), _size(RHS.size()) {
+        /// Creates a view of pointers to \c const from a view of pointers.
+        template <class U>
+        inline ArrayView(
+            const ArrayView<U *> &RHS,
+            std::enable_if_t<std::is_convertible<U *const *, T const *>::value> * = nullptr)
+            : m_data(RHS.data()), m_size(RHS.size()) {
         }
 
-    public:
-        iterator begin() const {
-            return _data;
+        inline iterator begin() const {
+            return m_data;
         }
-        iterator end() const {
-            return _data + _size;
+
+        inline iterator end() const {
+            return m_data + m_size;
         }
-        reverse_iterator rbegin() const {
+
+        inline reverse_iterator rbegin() const {
             return reverse_iterator(end());
         }
-        reverse_iterator rend() const {
+
+        inline reverse_iterator rend() const {
             return reverse_iterator(begin());
         }
-        bool empty() const {
-            return _size == 0;
-        }
-        const T *data() const {
-            return _data;
-        }
-        size_t size() const {
-            return _size;
+
+        inline bool empty() const {
+            return m_size == 0;
         }
 
-    public:
-        const T &front() const {
+        inline const T *data() const {
+            return m_data;
+        }
+
+        inline std::size_t size() const {
+            return m_size;
+        }
+
+        inline const T &front() const {
             assert(!empty());
-            return _data[0];
+            return m_data[0];
         }
-        const T &back() const {
+
+        inline const T &back() const {
             assert(!empty());
-            return _data[_size - 1];
-        }
-        bool equals(const ArrayView &RHS) const {
-            if (_size != RHS._size)
-                return false;
-            return std::equal(begin(), end(), RHS.begin());
+            return m_data[m_size - 1];
         }
 
-        /// slice(i, j) - Chop off the first \p i elements of the array, and keep \p j
-        /// elements in the array.
-        ArrayView<T> slice(size_t i, size_t j) const {
-            assert(i + j <= size() && "Invalid specifier");
-            return ArrayView<T>(data() + i, j);
+        /// Returns whether both views have equal elements.
+        inline bool equals(const ArrayView &RHS) const {
+            return m_size == RHS.m_size && std::equal(begin(), end(), RHS.begin());
         }
 
-        /// slice(n) - Chop off the first i elements of the array.
-        ArrayView<T> slice(size_t i) const {
-            return drop_front(i);
+        /// Returns the \a length elements starting at \a start, which must lie within the view.
+        inline ArrayView<T> slice(std::size_t start, std::size_t length) const {
+            assert(start + length <= size());
+            return ArrayView<T>(data() + start, length);
         }
 
-        /// Drop the first \p i elements of the array.
-        ArrayView<T> drop_front(size_t i = 1) const {
-            assert(size() >= i && "Dropping more elements than exist");
-            return slice(i, size() - i);
+        /// Returns the elements from \a start to the end.
+        inline ArrayView<T> slice(std::size_t start) const {
+            return dropFront(start);
         }
 
-        /// Drop the last \p i elements of the array.
-        ArrayView<T> drop_back(size_t i = 1) const {
-            assert(size() >= i && "Dropping more elements than exist");
-            return slice(0, size() - i);
+        /// Returns the view without its first \a count elements, which must exist.
+        inline ArrayView<T> dropFront(std::size_t count = 1) const {
+            assert(count <= size());
+            return slice(count, size() - count);
         }
 
-        /// Return a copy of *this with only the first \p i elements.
-        ArrayView<T> take_front(size_t i = 1) const {
-            if (i >= size())
+        /// Returns the view without its last \a count elements, which must exist.
+        inline ArrayView<T> dropBack(std::size_t count = 1) const {
+            assert(count <= size());
+            return slice(0, size() - count);
+        }
+
+        /// Returns the first \a count elements, or the whole view if it has fewer.
+        inline ArrayView<T> takeFront(std::size_t count = 1) const {
+            if (count >= size()) {
                 return *this;
-            return drop_back(size() - i);
+            }
+            return dropBack(size() - count);
         }
 
-        /// Return a copy of *this with only the last \p i elements.
-        ArrayView<T> take_back(size_t i = 1) const {
-            if (i >= size())
+        /// Returns the last \a count elements, or the whole view if it has fewer.
+        inline ArrayView<T> takeBack(std::size_t count = 1) const {
+            if (count >= size()) {
                 return *this;
-            return drop_front(size() - i);
+            }
+            return dropFront(size() - count);
         }
 
-        /// @}
-        /// @name Operator Overloads
-        /// @{
-        const T &operator[](size_t index) const {
-            assert(index < _size && "Invalid index!");
-            return _data[index];
+        inline const T &operator[](std::size_t index) const {
+            assert(index < m_size);
+            return m_data[index];
         }
 
-        /// Disallow accidental assignment from a temporary.
-        ///
-        /// The declaration here is extra complicated so that "arrayRef = {}"
-        /// continues to select the move assignment operator.
-        template <typename T1>
-        std::enable_if_t<std::is_same<T1, T>::value, ArrayView<T>> &
-            operator=(T1 &&Temporary) = delete;
+        /// Prevents the assignment of a temporary, whose elements would not outlive the view.
+        /// The template form keeps <tt>view = {}</tt> selecting the move assignment operator.
+        template <class U>
+        std::enable_if_t<std::is_same<U, T>::value, ArrayView<T>> &
+            operator=(U &&temporary) = delete;
 
-        /// Disallow accidental assignment from a temporary.
-        ///
-        /// The declaration here is extra complicated so that "arrayRef = {}"
-        /// continues to select the move assignment operator.
-        template <typename T1>
-        std::enable_if_t<std::is_same<T1, T>::value, ArrayView<T>> &
-            operator=(std::initializer_list<T1>) = delete;
+        /// Prevents the assignment of an initializer list, whose elements would not outlive the
+        /// view.
+        template <class U>
+        std::enable_if_t<std::is_same<U, T>::value, ArrayView<T>> &
+            operator=(std::initializer_list<U>) = delete;
 
-        std::vector<T> vec() const {
-            return std::vector<T>(_data, _data + _size);
+        /// Returns a copy of the elements.
+        inline std::vector<T> vec() const {
+            return std::vector<T>(m_data, m_data + m_size);
         }
 
     private:
-        const T *_data = nullptr;
-        size_type _size = 0;
+        const T *m_data = nullptr;
+        size_type m_size = 0;
     };
 
-
-    template <typename T>
+    template <class T>
     inline bool operator==(ArrayView<T> LHS, ArrayView<T> RHS) {
         return LHS.equals(RHS);
     }
 
-    template <template <class, class...> class V, typename T, class... A>
+    template <template <class, class...> class V, class T, class... A>
     inline bool operator==(const V<T, A...> &LHS, ArrayView<T> RHS) {
         return ArrayView<T>(LHS).equals(RHS);
     }
 
-    template <typename T>
+    template <class T>
     inline bool operator!=(ArrayView<T> LHS, ArrayView<T> RHS) {
         return !(LHS == RHS);
     }
 
-    template <template <class, class...> class V, typename T, class... A>
+    template <template <class, class...> class V, class T, class... A>
     inline bool operator!=(const V<T, A...> &LHS, ArrayView<T> RHS) {
         return !(LHS == RHS);
     }

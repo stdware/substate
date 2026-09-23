@@ -128,10 +128,10 @@ private:
         std::vector<ss::SheetNode *> sheets;
         std::vector<ss::BytesNode *> bytes;
 
-        /// Every node except the root.
+        // Every node except the root.
         std::vector<ss::Node *> children;
 
-        /// The number of nodes that can have children.
+        // The number of nodes that can have children.
         inline size_t size() const {
             return vectors.size() + sheets.size();
         }
@@ -145,8 +145,8 @@ private:
         return result;
     }
 
-    /// Inserts, removes or replaces bytes. A replacement may extend the array, which creates
-    /// a replacement and an insertion.
+    // Inserts, removes or replaces bytes. A replacement may extend the array, which creates
+    // a replacement and an insertion.
     inline void editBytes(ss::BytesNode *node) {
         const int size = node->size();
         const int kind = uniform(0, 2);
@@ -208,8 +208,8 @@ private:
         return false;
     }
 
-    /// Transfers a random node, or a range of consecutive children of a VectorNode, to a
-    /// random valid target. Returns false without an action if no valid target exists.
+    // Transfers a random node, or a range of consecutive children of a VectorNode, to a
+    // random valid target. Returns false without an action if no valid target exists.
     inline bool transfer(const Containers &all) {
         if (all.children.empty()) {
             return false;

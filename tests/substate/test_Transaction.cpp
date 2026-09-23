@@ -18,7 +18,7 @@ BOOST_AUTO_TEST_SUITE(test_Transaction)
 
 namespace {
 
-    /// A storage engine without a step limit that gives access to its transactions.
+    // A storage engine without a step limit that gives access to its transactions.
     class KeepingEngine : public StorageEngine {
     public:
         std::deque<Transaction> transactions;

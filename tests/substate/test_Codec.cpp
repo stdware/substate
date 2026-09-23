@@ -20,7 +20,7 @@ BOOST_AUTO_TEST_SUITE(test_Codec)
 
 namespace {
 
-    /// A Codec for the counting node types of the tests.
+    // A Codec for the counting node types of the tests.
     class TestCodec : public Codec {
     public:
         TestCodec() {
@@ -34,8 +34,8 @@ namespace {
         return std::make_unique<Model>(std::make_unique<MemoryStorageEngine>(stepLimit));
     }
 
-    /// Returns a tree with every counting node type, and a SheetNode whose key counter exceeds
-    /// its keys, because a child was removed.
+    // Returns a tree with every counting node type, and a SheetNode whose key counter exceeds
+    // its keys, because a child was removed.
     std::unique_ptr<Node> makeTree() {
         auto root = makeNode(1);
         auto sheet = std::make_unique<CountingSheet>();
@@ -147,8 +147,8 @@ BOOST_AUTO_TEST_CASE(test_an_action_referring_to_a_missing_node_is_rejected) {
 
 namespace {
 
-    /// Replays the addition of a child to an empty SheetNode, by insertion or by transfer, and
-    /// returns the key of a later insertion into the restored SheetNode.
+    // Replays the addition of a child to an empty SheetNode, by insertion or by transfer, and
+    // returns the key of a later insertion into the restored SheetNode.
     int keyAfterReplay(bool transfer) {
         const TestCodec codec;
         auto tree = makeNode(1);

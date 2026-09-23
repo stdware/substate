@@ -48,8 +48,8 @@ namespace ss {
         assert(index >= 0 && index <= size());
 
         const int overlap = std::min(int(bytes.size()), size() - index);
-        const auto within = bytes.take_front(size_t(overlap));
-        const auto beyond = bytes.drop_front(size_t(overlap));
+        const auto within = bytes.takeFront(size_t(overlap));
+        const auto beyond = bytes.dropFront(size_t(overlap));
 
         if (isFree()) {
             std::copy(within.begin(), within.end(), m_data.begin() + index);

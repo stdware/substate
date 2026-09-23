@@ -17,9 +17,9 @@ using namespace ss;
 
 namespace {
 
-    /// An observer that compares the state of the model around each notification with the
-    /// accessors of the action for the reported operation, and keeps the identifiers of the nodes
-    /// that have been in the tree until their destruction is reported.
+    // An observer that compares the state of the model around each notification with the
+    // accessors of the action for the reported operation, and keeps the identifiers of the nodes
+    // that have been in the tree until their destruction is reported.
     class NotificationChecker : public ModelObserver {
     public:
         explicit NotificationChecker(const Model &model)

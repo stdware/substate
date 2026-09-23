@@ -1,5 +1,6 @@
 #include "BinaryStream.h"
 
+#include <cstddef>
 #include <cstdint>
 
 // Numbers are written in the byte order of the platform, which the persistent format requires to
@@ -10,243 +11,222 @@
 
 namespace ss {
 
-    static constexpr const int DATA_ALIGN = 4;
+    namespace {
 
-    template <class T>
-    static bool substate_readNum(std::istream &in, T &i) {
-        i = 0;
-        if (in.read(reinterpret_cast<char *>(&i), sizeof(T)).fail()) {
-            i = 0;
-            return false;
+        // Strings are padded to a multiple of this size.
+        constexpr int stringAlignment = 4;
+
+        template <class T>
+        void readNumber(std::istream &in, T &value) {
+            value = 0;
+            if (in.read(reinterpret_cast<char *>(&value), sizeof(T)).fail()) {
+                value = 0;
+            }
         }
-        return true;
-    }
 
-    template <class T>
-    static bool substate_writeNum(std::ostream &out, T i) {
-        if (out.write(reinterpret_cast<const char *>(&i), sizeof(T)).fail()) {
-            return false;
+        template <class T>
+        void writeNumber(std::ostream &out, T value) {
+            out.write(reinterpret_cast<const char *>(&value), sizeof(T));
         }
-        return true;
+
     }
 
-    int IBinaryStream::readRawData(char *data, int len) {
-        auto org = _in.tellg();
-        _in.read(data, len);
-        return int(_in.tellg() - org);
+    int IBinaryStream::readRawData(char *data, int length) {
+        m_in.read(data, length);
+        return int(m_in.gcount());
     }
 
-    int IBinaryStream::skipRawData(int len) {
-        auto org = _in.tellg();
-        _in.ignore(len);
-        return int(_in.tellg() - org);
+    int IBinaryStream::skipRawData(int length) {
+        m_in.ignore(length);
+        return int(m_in.gcount());
     }
 
     int IBinaryStream::align(int size) {
-        auto rem = int(_in.tellg() % size);
-        if (rem == 0)
+        const auto remainder = int(m_in.tellg() % size);
+        if (remainder == 0) {
             return 0;
-        return skipRawData(size - rem);
+        }
+        return skipRawData(size - remainder);
     }
 
-    IBinaryStream &IBinaryStream::operator>>(bool &b) {
-        int8_t c;
-        (*this) >> c;
-        b = _in.good() && c;
+    IBinaryStream &IBinaryStream::operator>>(bool &value) {
+        int8_t byte = 0;
+        (*this) >> byte;
+        value = !m_in.fail() && byte != 0;
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(int8_t &c) {
-        substate_readNum(_in, c);
+    IBinaryStream &IBinaryStream::operator>>(int8_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(uint8_t &uc) {
-        substate_readNum(_in, uc);
+    IBinaryStream &IBinaryStream::operator>>(uint8_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(int16_t &s) {
-        substate_readNum(_in, s);
+    IBinaryStream &IBinaryStream::operator>>(int16_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(uint16_t &us) {
-        substate_readNum(_in, us);
+    IBinaryStream &IBinaryStream::operator>>(uint16_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(int32_t &i) {
-        substate_readNum(_in, i);
+    IBinaryStream &IBinaryStream::operator>>(int32_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(uint32_t &u) {
-        substate_readNum(_in, u);
+    IBinaryStream &IBinaryStream::operator>>(uint32_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(int64_t &l) {
-        substate_readNum(_in, l);
+    IBinaryStream &IBinaryStream::operator>>(int64_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(uint64_t &ul) {
-        substate_readNum(_in, ul);
+    IBinaryStream &IBinaryStream::operator>>(uint64_t &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(float &f) {
-        substate_readNum(_in, f);
+    IBinaryStream &IBinaryStream::operator>>(float &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(double &d) {
-        substate_readNum(_in, d);
+    IBinaryStream &IBinaryStream::operator>>(double &value) {
+        readNumber(m_in, value);
         return *this;
     }
 
-    IBinaryStream &IBinaryStream::operator>>(std::string &s) {
-        int size;
-
-        // Read size
+    IBinaryStream &IBinaryStream::operator>>(std::string &value) {
+        int32_t size = 0;
         (*this) >> size;
-        if (_in.fail())
+        if (m_in.fail()) {
             return *this;
+        }
         if (size < 0) {
-            _in.setstate(std::ios::failbit);
+            m_in.setstate(std::ios::failbit);
             return *this;
         }
         if (size == 0) {
-            s.clear();
+            value.clear();
             return *this;
         }
 
-        // Read string
-        std::string str;
-        str.resize(size);
-        _in.read(&str[0], size);
-
-        // align data size to DATA_ALIGN
-        if (int align = size % DATA_ALIGN; align > 0) {
-            skipRawData(DATA_ALIGN - align);
+        std::string text(std::size_t(size), '\0');
+        m_in.read(&text[0], size);
+        if (const int remainder = size % stringAlignment; remainder > 0) {
+            skipRawData(stringAlignment - remainder);
         }
-        if (_in.good()) {
-            s = std::move(str);
+        if (!m_in.fail()) {
+            value = std::move(text);
         }
         return *this;
     }
 
-    int OBinaryStream::writeRawData(const char *data, int len) {
-        auto org = _out.tellp();
-        _out.write(data, len);
-        return int(_out.tellp() - org);
+    int OBinaryStream::writeRawData(const char *data, int length) {
+        m_out.write(data, length);
+        return m_out.fail() ? 0 : length;
     }
 
-    int OBinaryStream::skipRawData(int len) {
-        if (len <= 0) {
+    int OBinaryStream::skipRawData(int length) {
+        if (length <= 0) {
             return 0;
         }
-
-        static const constexpr std::size_t blockSize = 1024;
         // Zero bytes, so that the output depends only on the written values.
-        char buffer[blockSize] = {};
-
-        std::size_t fullBlocks = len / blockSize;
-        std::size_t lastBlockSize = len % blockSize;
-
-        auto org = _out.tellp();
-
-        for (std::size_t i = 0; i < fullBlocks; ++i) {
-            _out.write(buffer, blockSize);
+        constexpr int blockSize = 1024;
+        const char zeros[blockSize] = {};
+        for (int remaining = length; remaining > 0; remaining -= blockSize) {
+            m_out.write(zeros, remaining < blockSize ? remaining : blockSize);
         }
-        if (lastBlockSize > 0) {
-            _out.write(buffer, lastBlockSize);
-        }
-        return int(_out.tellp() - org);
+        return m_out.fail() ? 0 : length;
     }
 
     int OBinaryStream::align(int size) {
-        auto rem = int(_out.tellp() % size);
-        if (rem == 0)
+        const auto remainder = int(m_out.tellp() % size);
+        if (remainder == 0) {
             return 0;
-        return skipRawData(size - rem);
+        }
+        return skipRawData(size - remainder);
     }
 
-    OBinaryStream &OBinaryStream::operator<<(bool b) {
-        return (*this) << int8_t(b ? 1 : 0);
+    OBinaryStream &OBinaryStream::operator<<(bool value) {
+        return (*this) << int8_t(value ? 1 : 0);
     }
 
-    OBinaryStream &OBinaryStream::operator<<(int8_t c) {
-        substate_writeNum(_out, c);
+    OBinaryStream &OBinaryStream::operator<<(int8_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(uint8_t uc) {
-        substate_writeNum(_out, uc);
+    OBinaryStream &OBinaryStream::operator<<(uint8_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(int16_t s) {
-        substate_writeNum(_out, s);
+    OBinaryStream &OBinaryStream::operator<<(int16_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(uint16_t us) {
-        substate_writeNum(_out, us);
+    OBinaryStream &OBinaryStream::operator<<(uint16_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(int32_t i) {
-        substate_writeNum(_out, i);
+    OBinaryStream &OBinaryStream::operator<<(int32_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(uint32_t u) {
-        substate_writeNum(_out, u);
+    OBinaryStream &OBinaryStream::operator<<(uint32_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(int64_t l) {
-        substate_writeNum(_out, l);
+    OBinaryStream &OBinaryStream::operator<<(int64_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(uint64_t ul) {
-        substate_writeNum(_out, ul);
+    OBinaryStream &OBinaryStream::operator<<(uint64_t value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(float f) {
-        substate_writeNum(_out, f);
+    OBinaryStream &OBinaryStream::operator<<(float value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(double d) {
-        substate_writeNum(_out, d);
+    OBinaryStream &OBinaryStream::operator<<(double value) {
+        writeNumber(m_out, value);
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(const std::string_view &s) {
-        // Write size
-        (*this) << int(s.size());
-
-        // Write string
-        _out.write(s.data(), std::streamsize(s.size()));
-
-        // align data size to DATA_ALIGN
-        if (int align = s.size() % DATA_ALIGN; align > 0) {
-            skipRawData(DATA_ALIGN - align);
+    OBinaryStream &OBinaryStream::operator<<(const std::string_view &value) {
+        (*this) << int32_t(value.size());
+        m_out.write(value.data(), std::streamsize(value.size()));
+        if (const int remainder = int(value.size() % stringAlignment); remainder > 0) {
+            skipRawData(stringAlignment - remainder);
         }
         return *this;
     }
 
-    OBinaryStream &OBinaryStream::operator<<(const std::string &s) {
-        return (*this) << std::string_view(s);
+    OBinaryStream &OBinaryStream::operator<<(const std::string &value) {
+        return (*this) << std::string_view(value);
     }
 
-    OBinaryStream &OBinaryStream::operator<<(const char *s) {
-        return (*this) << std::string_view(s);
+    OBinaryStream &OBinaryStream::operator<<(const char *value) {
+        return (*this) << std::string_view(value);
     }
 
 }

@@ -28,7 +28,7 @@ namespace {
         return static_cast<CountingNode *>(model.root());
     }
 
-    /// Commits one transaction that appends a leaf to \a target, for filling the history.
+    // Commits one transaction that appends a leaf to target, for filling the history.
     void appendLeaf(Model &model, CountingNode *target) {
         model.beginTransaction();
         target->append(makeNode());

@@ -13,7 +13,7 @@ BOOST_AUTO_TEST_SUITE(test_SheetNode)
 
 namespace {
 
-    /// A model whose root is an empty CountingSheet.
+    // A model whose root is an empty CountingSheet.
     std::unique_ptr<Model> makeModel() {
         auto model = std::make_unique<Model>();
         model->reset(std::make_unique<CountingSheet>());
