@@ -1,3 +1,4 @@
+#include <functional>
 #include <random>
 #include <vector>
 
@@ -52,7 +53,7 @@ namespace {
         /// exactly one action, so that a transaction is never empty.
         void modify(Model &model) {
             auto root = model.root();
-            const int kind = uniform(0, 19);
+            const int kind = uniform(0, 21);
             if (!root || kind == 0) {
                 model.setRoot(subtree(2));
                 return;
@@ -100,6 +101,9 @@ namespace {
                 node->setAt(index, changedValue(node->at(index)));
                 return;
             }
+            if (kind < 18 && transfer(all)) {
+                return;
+            }
             if (!all.mappings.empty()) {
                 auto node = pick(all.mappings);
                 const QString key = randomKey();
@@ -120,12 +124,69 @@ namespace {
             std::vector<StructNodeBase *> structs;
             std::vector<MappingNode *> mappings;
 
+            /// Every node except the root.
+            std::vector<Node *> children;
+
             size_t size() const {
                 return vectors.size() + structs.size() + mappings.size();
             }
         };
 
+        static bool isAncestorOrSelf(const Node *node, const Node *target) {
+            for (auto current = target; current; current = current->parent()) {
+                if (current == node) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// Transfers a random node to a random valid target: a VectorNode, an empty slot of a
+        /// StructNode, or a missing key of a MappingNode. Returns false without an action if no
+        /// valid target exists.
+        bool transfer(const Nodes &all) {
+            if (all.children.empty()) {
+                return false;
+            }
+            auto node = pick(all.children);
+            const auto valid = [&](const Node *target) {
+                return target != node->parent() && !isAncestorOrSelf(node, target);
+            };
+
+            std::vector<std::function<void()>> targets;
+            for (auto target : all.vectors) {
+                if (valid(target)) {
+                    targets.push_back([this, target, node] {
+                        QVERIFY(target->transferIn(uniform(0, target->size()), node));
+                    });
+                }
+            }
+            for (auto target : all.structs) {
+                for (int i = 0; i < target->size(); ++i) {
+                    if (valid(target) && target->at(i).isEmpty()) {
+                        targets.push_back(
+                            [target, node, i] { QVERIFY(target->transferIn(i, node)); });
+                    }
+                }
+            }
+            for (auto target : all.mappings) {
+                const QString key = randomKey();
+                if (valid(target) && !target->contains(key)) {
+                    targets.push_back(
+                        [target, node, key] { QVERIFY(target->transferIn(key, node)); });
+                }
+            }
+            if (targets.empty()) {
+                return false;
+            }
+            pick(targets)();
+            return true;
+        }
+
         static void collect(Node *node, Nodes &out) {
+            if (node->parent()) {
+                out.children.push_back(node);
+            }
             if (auto vector = dynamic_cast<VectorNode *>(node)) {
                 out.vectors.push_back(vector);
                 for (int i = 0; i < vector->size(); ++i) {
@@ -207,6 +268,10 @@ private:
             QCOMPARE(node->id(), id);
             // A node is attached exactly if it is in the tree.
             QCOMPARE(node->isAttached(), attached.count(id) == 1);
+        }
+        if (auto root = model.root()) {
+            QVERIFY(!root->parent());
+            QVERIFY(qparentsConsistent(root));
         }
         if (!inTransaction) {
             QCOMPARE(qdump(model.root()), reference.current());

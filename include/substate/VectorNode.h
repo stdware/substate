@@ -41,12 +41,23 @@ namespace ss {
         /// Removes and returns \a count children starting at \a index. The node must be free.
         std::vector<std::unique_ptr<Node>> take(int index, int count);
 
+        /// Moves \a nodes from their parent in the same model to this node before \a index,
+        /// keeping their identity. The nodes must be children of one parent, and consecutive in
+        /// order if that parent is a VectorNode. See TransferAction.
+        ///
+        /// \return whether the transfer was performed. It is rejected, creating no action, if a
+        ///         node is the root, if the parent is this node, or if this node is one of the
+        ///         nodes or their descendants.
+        bool transferIn(int index, const std::vector<Node *> &nodes);
+        inline bool transferIn(int index, Node *node);
+
         std::unique_ptr<Node> clone() const override;
 
     protected:
         inline explicit VectorNode(int type);
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
+        std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
 
         /// Appends copies of the children of \a source, for the clone() of a subclass. This node
         /// must be free and empty.
@@ -57,6 +68,7 @@ namespace ss {
 
         friend class VectorInsDelAction;
         friend class VectorMoveAction;
+        friend class VectorNodeEndpoint;
     };
 
     inline VectorNode::VectorNode() : VectorNode(Vector) {
@@ -85,6 +97,10 @@ namespace ss {
 
     inline void VectorNode::append(std::unique_ptr<Node> node) {
         insert(size(), std::move(node));
+    }
+
+    inline bool VectorNode::transferIn(int index, Node *node) {
+        return transferIn(index, std::vector<Node *>{node});
     }
 
     /// Insertion into or removal from a VectorNode.

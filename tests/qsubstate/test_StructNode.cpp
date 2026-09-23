@@ -148,6 +148,41 @@ private Q_SLOTS:
         QCOMPARE(copied->child(1)->parent(), copied);
         QVERIFY(copied->at(2).isEmpty());
     }
+
+    // The slot 0 holds a vector with one leaf, which is transferred to the slot 1 and back.
+    void a_transfer_moves_a_child_between_slots_and_parents() {
+        auto model = makeModel();
+        auto node = rootOf(*model);
+        assign(*model, 0, makeNode(1));
+        auto vector = static_cast<CountingNode *>(node->child(0));
+        auto leaf = vector->child(0);
+        const auto id = leaf->id();
+
+        model->beginTransaction();
+        // The slot 0 is occupied.
+        QVERIFY(!node->transferIn(0, leaf));
+        QVERIFY(node->transferIn(1, leaf));
+        model->commitTransaction();
+        QCOMPARE(model->maximumStep(), 2);
+        QVERIFY(node->child(1) == leaf);
+        QVERIFY(leaf->parent() == node);
+        QCOMPARE(vector->size(), 0);
+        QCOMPARE(leaf->id(), id);
+
+        model->undo();
+        QVERIFY(node->at(1).isEmpty());
+        QVERIFY(vector->child(0) == leaf);
+        model->redo();
+        QVERIFY(node->child(1) == leaf);
+
+        // Back into the vector, which leaves the slot empty.
+        model->beginTransaction();
+        QVERIFY(vector->transferIn(0, leaf));
+        model->commitTransaction();
+        QVERIFY(node->at(1).isEmpty());
+        model->undo();
+        QVERIFY(node->child(1) == leaf);
+    }
 };
 
 QTEST_APPLESS_MAIN(test_StructNode)

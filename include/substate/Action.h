@@ -6,6 +6,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include <substate/substate_global.h>
 
@@ -14,6 +15,8 @@ namespace ss {
     class Model;
 
     class Node;
+
+    class TransferEndpoint;
 
     /// A recorded change of the tree, which the model can apply and revert.
     ///
@@ -27,6 +30,7 @@ namespace ss {
     public:
         enum Type {
             RootChange = 1,
+            Transfer,
             VectorInsert,
             VectorRemove,
             VectorMove,
@@ -127,6 +131,41 @@ namespace ss {
 
     inline Node *RootChangeAction::oldRoot() const {
         return m_oldRoot;
+    }
+
+    /// Transfer of nodes from one parent to another within the same model, which keeps their
+    /// addresses and identifiers. Owns no node, because the nodes remain in the tree.
+    ///
+    /// Created by the \c transferIn() functions of the container node types.
+    class SUBSTATE_EXPORT TransferAction : public Action {
+    public:
+        ~TransferAction();
+
+        /// The parent of the nodes before execution.
+        Node *source() const;
+
+        /// The parent of the nodes after execution.
+        Node *target() const;
+
+        /// The transferred nodes in order.
+        inline const std::vector<Node *> &nodes() const;
+
+    protected:
+        void execute(Operation operation) override;
+
+    private:
+        TransferAction(std::unique_ptr<TransferEndpoint> source,
+                       std::unique_ptr<TransferEndpoint> target, std::vector<Node *> nodes);
+
+        std::unique_ptr<TransferEndpoint> m_source;
+        std::unique_ptr<TransferEndpoint> m_target;
+        std::vector<Node *> m_nodes;
+
+        friend class NodePrivate;
+    };
+
+    inline const std::vector<Node *> &TransferAction::nodes() const {
+        return m_nodes;
     }
 
 }

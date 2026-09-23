@@ -151,4 +151,45 @@ BOOST_AUTO_TEST_CASE(test_a_clone_keeps_the_keys_without_identifiers) {
     BOOST_CHECK_EQUAL(copied->insert(makeNode()), 3);
 }
 
+// The sheet under a vector root, and a leaf of the root that is transferred into the sheet and
+// out of it again.
+BOOST_AUTO_TEST_CASE(test_a_transfer_assigns_a_key_that_redo_keeps) {
+    auto model = std::make_unique<Model>();
+    model->reset(makeNode(1));
+    auto root = static_cast<CountingNode *>(model->root());
+    auto leaf = root->child(0);
+    model->beginTransaction();
+    root->append(std::make_unique<CountingSheet>());
+    model->commitTransaction();
+    auto sheet = static_cast<SheetNode *>(root->at(1));
+    const auto id = leaf->id();
+
+    model->beginTransaction();
+    const int key = sheet->transferIn(leaf);
+    model->commitTransaction();
+    BOOST_CHECK_EQUAL(key, 1);
+    BOOST_CHECK_EQUAL(sheet->at(key), leaf);
+    BOOST_CHECK_EQUAL(leaf->parent(), sheet);
+    BOOST_CHECK_EQUAL(root->size(), 1);
+
+    model->undo();
+    BOOST_CHECK(!sheet->at(key));
+    BOOST_CHECK_EQUAL(root->child(0), leaf);
+    model->redo();
+    BOOST_CHECK_EQUAL(sheet->at(key), leaf);
+    BOOST_CHECK_EQUAL(leaf->id(), id);
+
+    // Out of the sheet. The key is not assigned again afterwards.
+    model->beginTransaction();
+    BOOST_CHECK(root->transferIn(0, leaf));
+    model->commitTransaction();
+    BOOST_CHECK_EQUAL(sheet->size(), 0);
+    model->undo();
+    BOOST_CHECK_EQUAL(sheet->at(key), leaf);
+    model->redo();
+    model->beginTransaction();
+    BOOST_CHECK_EQUAL(sheet->insert(makeNode()), 2);
+    model->commitTransaction();
+}
+
 BOOST_AUTO_TEST_SUITE_END()

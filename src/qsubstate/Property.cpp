@@ -74,6 +74,14 @@ namespace ss {
         }
     }
 
+    std::unique_ptr<Node> PropertyPrivate::releaseChild(Property &slot) {
+        auto child = std::get_if<std::unique_ptr<Node>>(&slot.m_value);
+        assert(child);
+        std::unique_ptr<Node> node = std::move(*child);
+        slot.m_value = std::monostate();
+        return node;
+    }
+
     PropertyAction::PropertyAction(int type, Node *parent, const Property &oldValue,
                                    Property newValue)
         : Action(type), m_parent(parent), m_newVariant(newValue.variant()),

@@ -5,9 +5,11 @@
 #define SUBSTATE_NODE_P_H
 
 #include <memory>
+#include <vector>
 
 #include <substate/Action.h>
 #include <substate/Node.h>
+#include <substate/private/Transfer_p.h>
 
 namespace ss {
 
@@ -39,6 +41,19 @@ namespace ss {
         /// the identifiers remain.
         static void detach(Node *node);
 
+        /// Records \a parent as the parent of \a node, which remains in the tree. Used by transfer.
+        static inline void reparent(Node *node, Node *parent);
+
+        /// Transfers \a nodes, children of one parent, to the position \a targetEnd of \a target
+        /// within the current transaction.
+        ///
+        /// \return whether the transfer was performed. A rejected transfer creates no action. The
+        ///         transfer is rejected if a node has no parent, if the parent is \a target, if
+        ///         \a target is one of the nodes or their descendants, or if the parent cannot
+        ///         provide a position for the nodes together.
+        static bool transfer(Node *target, std::unique_ptr<TransferEndpoint> targetEnd,
+                             const std::vector<Node *> &nodes);
+
         /// Appends \a action, which has been executed, to the transaction in progress.
         static void pushAction(Model *model, std::unique_ptr<Action> action);
 
@@ -68,6 +83,10 @@ namespace ss {
     }
 
     inline void NodePrivate::setFreeParent(Node *node, Node *parent) {
+        node->m_parent = parent;
+    }
+
+    inline void NodePrivate::reparent(Node *node, Node *parent) {
         node->m_parent = parent;
     }
 

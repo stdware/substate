@@ -26,6 +26,10 @@ namespace ss {
         /// Exchanges \a slot of \a parent with \a other, and updates the parent and the
         /// attachment of the children involved. \a parent must be in the tree of a model.
         static void exchange(Node *parent, Property &slot, Property &other);
+
+        /// Moves the child out of \a slot, which must hold one, and leaves \a slot empty. The
+        /// parent of the child is not changed. Used by transfer.
+        static std::unique_ptr<Node> releaseChild(Property &slot);
     };
 
 }

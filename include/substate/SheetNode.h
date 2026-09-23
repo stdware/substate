@@ -46,12 +46,21 @@ namespace ss {
         /// exists. The node must be free.
         std::unique_ptr<Node> take(int key);
 
+        /// Moves \a node from its parent in the same model to this node under a new key, keeping
+        /// its identity. See TransferAction. Redoing the transfer uses the same key.
+        ///
+        /// \return the new key, or 0 if the transfer is rejected, creating no action, because
+        ///         \a node is the root, its parent is this node, or this node is \a node or one of
+        ///         its descendants
+        int transferIn(Node *node);
+
         std::unique_ptr<Node> clone() const override;
 
     protected:
         inline explicit SheetNode(int type);
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
+        std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
 
         /// Copies the children of \a source with their keys, and the key counter, for the clone()
         /// of a subclass. This node must be free and empty.
@@ -62,6 +71,7 @@ namespace ss {
         int m_lastKey = 0;
 
         friend class SheetInsDelAction;
+        friend class SheetNodeEndpoint;
     };
 
     inline SheetNode::SheetNode() : SheetNode(Sheet) {

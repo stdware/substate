@@ -8,7 +8,59 @@
 
 namespace ss {
 
+    // An entry, as an end of a transfer. The entry exists exactly while it holds the child.
+    class MappingNodeEndpoint : public TransferEndpoint {
+    public:
+        MappingNodeEndpoint(MappingNode *node, QString key) : m_node(node), m_key(std::move(key)) {
+        }
+
+        Node *container() const override {
+            return m_node;
+        }
+
+        std::vector<std::unique_ptr<Node>> take(int count) override {
+            assert(count == 1);
+            (void) count;
+            auto it = m_node->m_entries.find(m_key);
+            assert(it != m_node->m_entries.end());
+            std::vector<std::unique_ptr<Node>> taken;
+            taken.push_back(PropertyPrivate::releaseChild(it->second));
+            m_node->m_entries.erase(it);
+            return taken;
+        }
+
+        void put(std::vector<std::unique_ptr<Node>> nodes) override {
+            assert(nodes.size() == 1 && !m_node->contains(m_key));
+            m_node->m_entries.emplace(m_key, Property(std::move(nodes.front())));
+        }
+
+    private:
+        MappingNode *m_node;
+        QString m_key;
+    };
+
     MappingNode::~MappingNode() = default;
+
+    bool MappingNode::transferIn(const QString &key, Node *node) {
+        assert(isWritable() && !isFree());
+        if (contains(key)) {
+            return false;
+        }
+        return NodePrivate::transfer(this, std::make_unique<MappingNodeEndpoint>(this, key),
+                                     {node});
+    }
+
+    std::unique_ptr<TransferEndpoint> MappingNode::endpointOf(const std::vector<Node *> &children) {
+        if (children.size() != 1) {
+            return nullptr;
+        }
+        for (const auto &entry : m_entries) {
+            if (entry.second.child() == children.front()) {
+                return std::make_unique<MappingNodeEndpoint>(this, entry.first);
+            }
+        }
+        return nullptr;
+    }
 
     bool MappingNode::contains(const QString &key) const {
         return m_entries.find(key) != m_entries.end();

@@ -31,6 +31,35 @@ namespace ss {
         forEachInSubtree(node, [](Node *n) { n->m_attached = false; });
     }
 
+    bool NodePrivate::transfer(Node *target, std::unique_ptr<TransferEndpoint> targetEnd,
+                               const std::vector<Node *> &nodes) {
+        assert(target->isWritable() && !target->isFree());
+        assert(!nodes.empty());
+
+        auto source = nodes.front()->parent();
+        if (!source || source == target) {
+            return false;
+        }
+        for (auto node : nodes) {
+            assert(node->parent() == source && node->model() == target->model());
+            assert(node->isAttached());
+            if (isAncestorOrSelf(node, target)) {
+                return false;
+            }
+        }
+
+        auto sourceEnd = source->endpointOf(nodes);
+        if (!sourceEnd) {
+            return false;
+        }
+
+        std::unique_ptr<TransferAction> action(
+            new TransferAction(std::move(sourceEnd), std::move(targetEnd), nodes));
+        action->execute(Action::Execute);
+        pushAction(target->model(), std::move(action));
+        return true;
+    }
+
     void NodePrivate::pushAction(Model *model, std::unique_ptr<Action> action) {
         assert(model->inTransaction());
         model->m_actions.push_back(std::move(action));
@@ -50,6 +79,11 @@ namespace ss {
 
     void Node::forEachChild(const std::function<void(Node *)> &func) const {
         (void) func;
+    }
+
+    std::unique_ptr<TransferEndpoint> Node::endpointOf(const std::vector<Node *> &children) {
+        (void) children;
+        return nullptr;
     }
 
     bool Node::isWritable() const {

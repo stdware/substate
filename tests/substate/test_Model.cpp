@@ -78,7 +78,7 @@ namespace {
             Containers all;
             collect(root, all);
 
-            const int kind = uniform(0, 19);
+            const int kind = uniform(0, 21);
             if (kind == 0) {
                 // A null root occasionally, which leaves an empty tree.
                 model.setRoot(uniform(0, 3) == 0 ? nullptr : subtree(2));
@@ -122,6 +122,10 @@ namespace {
                 return;
             }
 
+            if (kind < 20 && transfer(all)) {
+                return;
+            }
+
             if (!movable.empty()) {
                 auto parent = pick(movable);
                 const int size = parent->size();
@@ -144,6 +148,9 @@ namespace {
             std::vector<VectorNode *> vectors;
             std::vector<SheetNode *> sheets;
             std::vector<BytesNode *> bytes;
+
+            /// Every node except the root.
+            std::vector<Node *> children;
 
             /// The number of nodes that can have children.
             size_t size() const {
@@ -175,6 +182,9 @@ namespace {
         }
 
         static void collect(Node *node, Containers &out) {
+            if (node->parent()) {
+                out.children.push_back(node);
+            }
             if (auto vector = dynamic_cast<VectorNode *>(node)) {
                 out.vectors.push_back(vector);
                 for (int i = 0; i < vector->size(); ++i) {
@@ -210,6 +220,75 @@ namespace {
             parent->insert(uniform(0, parent->size()), std::move(inserted));
         }
 
+        static bool isAncestorOrSelf(const Node *node, const Node *target) {
+            for (auto current = target; current; current = current->parent()) {
+                if (current == node) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        /// Transfers a random node, or a range of consecutive children of a VectorNode, to a
+        /// random valid target. Returns false without an action if no valid target exists.
+        bool transfer(const Containers &all) {
+            if (all.children.empty()) {
+                return false;
+            }
+            std::vector<Node *> nodes{pick(all.children)};
+            const auto parent = nodes.front()->parent();
+            if (auto vector = dynamic_cast<VectorNode *>(parent)) {
+                int index = 0;
+                while (vector->at(index) != nodes.front()) {
+                    ++index;
+                }
+                const int count = uniform(1, std::min(3, vector->size() - index));
+                for (int i = 1; i < count; ++i) {
+                    nodes.push_back(vector->at(index + i));
+                }
+            }
+
+            const auto valid = [&](const Node *target) {
+                if (target == parent) {
+                    return false;
+                }
+                for (auto node : nodes) {
+                    if (isAncestorOrSelf(node, target)) {
+                        return false;
+                    }
+                }
+                return true;
+            };
+            std::vector<VectorNode *> vectors;
+            std::vector<SheetNode *> sheets;
+            for (auto node : all.vectors) {
+                if (valid(node)) {
+                    vectors.push_back(node);
+                }
+            }
+            // A SheetNode receives one node per transfer.
+            if (nodes.size() == 1) {
+                for (auto node : all.sheets) {
+                    if (valid(node)) {
+                        sheets.push_back(node);
+                    }
+                }
+            }
+
+            if (vectors.empty() && sheets.empty()) {
+                return false;
+            }
+            const int choice = uniform(0, int(vectors.size() + sheets.size()) - 1);
+            if (choice < int(vectors.size())) {
+                auto target = vectors[size_t(choice)];
+                BOOST_REQUIRE(target->transferIn(uniform(0, target->size()), nodes));
+            } else {
+                BOOST_REQUIRE(sheets[size_t(choice) - vectors.size()]->transferIn(nodes.front()) >
+                              0);
+            }
+            return true;
+        }
+
         void remove(const Containers &removable) {
             const int choice = uniform(0, int(removable.size()) - 1);
             if (choice >= int(removable.vectors.size())) {
@@ -237,6 +316,10 @@ namespace {
             BOOST_REQUIRE_EQUAL(node->id(), id);
             // A node is attached exactly if it is in the tree.
             BOOST_REQUIRE_EQUAL(node->isAttached(), attached.count(id) == 1);
+        }
+        if (auto root = model.root()) {
+            BOOST_REQUIRE(!root->parent());
+            BOOST_REQUIRE(parentsConsistent(root));
         }
         if (!inTransaction) {
             BOOST_REQUIRE_EQUAL(dump(model.root()), reference.current());
@@ -407,6 +490,46 @@ BOOST_AUTO_TEST_CASE(test_a_removed_initial_node_is_destroyed_with_its_removal) 
     BOOST_CHECK(!model->nodeById(yId));
     // The removed node is destroyed, and the leaves appended to the filler exist.
     BOOST_CHECK_EQUAL(CountingNode::live(), live - 1 + (model->currentStep() - 1));
+    BOOST_CHECK_EQUAL(model->nodeCount(), size_t(CountingNode::live()));
+}
+
+// The check of transfer in docs/Design.md: a node is transferred to another parent, the former
+// parent is removed, and the steps before the removal are evicted. Undoing the removal restores
+// the former parent, and the transferred node remains alive under its new parent.
+BOOST_AUTO_TEST_CASE(test_a_transferred_node_survives_the_eviction_of_the_transfer) {
+    auto tree = makeNode();
+    auto former = makeNode(1);
+    auto formerRaw = former.get();
+    auto node = former->child(0);
+    tree->append(std::move(former));
+    tree->append(makeNode());
+    tree->append(makeNode());
+    auto model = makeModel(2, std::move(tree));
+    auto root = rootOf(*model);
+    auto target = root->child(1);
+    auto filler = root->child(2);
+    const auto nodeId = node->id();
+    const auto formerId = formerRaw->id();
+
+    model->beginTransaction();
+    BOOST_REQUIRE(target->transferIn(0, node));
+    model->commitTransaction();
+    model->beginTransaction();
+    root->remove(0, 1);
+    model->commitTransaction();
+    appendLeaf(*model, filler);
+    BOOST_REQUIRE_EQUAL(model->minimumStep(), 1);
+
+    model->undo();
+    model->undo();
+    BOOST_CHECK(!model->canUndo());
+    BOOST_CHECK_EQUAL(root->child(0), formerRaw);
+    BOOST_CHECK_EQUAL(formerRaw->id(), formerId);
+    BOOST_CHECK(formerRaw->isAttached());
+    BOOST_CHECK_EQUAL(formerRaw->size(), 0);
+    BOOST_CHECK_EQUAL(target->child(0), node);
+    BOOST_CHECK_EQUAL(node->id(), nodeId);
+    BOOST_CHECK(node->isAttached());
     BOOST_CHECK_EQUAL(model->nodeCount(), size_t(CountingNode::live()));
 }
 

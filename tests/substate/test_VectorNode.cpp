@@ -175,4 +175,68 @@ BOOST_AUTO_TEST_CASE(test_a_clone_is_a_free_copy_without_identifiers) {
     BOOST_CHECK(copied->child(0)->id() != root->child(0)->id());
 }
 
+// The root holds two vectors: the source with four leaves and the empty target.
+BOOST_AUTO_TEST_CASE(test_a_transfer_keeps_the_identity_of_the_nodes) {
+    auto model = makeModel(0);
+    auto root = rootOf(*model);
+    model->beginTransaction();
+    root->append(makeNode(4));
+    root->append(makeNode());
+    model->commitTransaction();
+    auto source = root->child(0);
+    auto target = root->child(1);
+    auto second = source->child(1);
+    auto third = source->child(2);
+    const auto secondId = second->id();
+    const int live = CountingNode::live();
+
+    model->beginTransaction();
+    BOOST_CHECK(target->transferIn(0, {second, third}));
+    model->commitTransaction();
+    BOOST_CHECK_EQUAL(source->size(), 2);
+    BOOST_REQUIRE_EQUAL(target->size(), 2);
+    BOOST_CHECK_EQUAL(target->child(0), second);
+    BOOST_CHECK_EQUAL(target->child(1), third);
+    BOOST_CHECK_EQUAL(second->parent(), target);
+    BOOST_CHECK_EQUAL(second->id(), secondId);
+    BOOST_CHECK(second->isAttached());
+    BOOST_CHECK_EQUAL(CountingNode::live(), live);
+
+    model->undo();
+    BOOST_REQUIRE_EQUAL(source->size(), 4);
+    BOOST_CHECK_EQUAL(source->child(1), second);
+    BOOST_CHECK_EQUAL(source->child(2), third);
+    BOOST_CHECK_EQUAL(second->parent(), source);
+    BOOST_CHECK_EQUAL(target->size(), 0);
+
+    model->redo();
+    BOOST_CHECK_EQUAL(target->child(0), second);
+}
+
+// Constraint 6 of docs/Design.md. Each rejected transfer creates no action.
+BOOST_AUTO_TEST_CASE(test_an_invalid_transfer_is_rejected) {
+    auto model = makeModel(0);
+    auto root = rootOf(*model);
+    model->beginTransaction();
+    root->append(makeNode(2));
+    model->commitTransaction();
+    auto node = root->child(0);
+    auto leaf = node->child(0);
+
+    model->beginTransaction();
+    // Into itself or into one of its descendants.
+    BOOST_CHECK(!node->transferIn(0, node));
+    BOOST_CHECK(!leaf->transferIn(0, node));
+    // Within the same parent, which is a move.
+    BOOST_CHECK(!node->transferIn(0, leaf));
+    // The root has no parent.
+    BOOST_CHECK(!leaf->transferIn(0, root));
+    // A range that is not consecutive in its parent.
+    BOOST_CHECK(!root->transferIn(0, {node->child(1), node->child(0)}));
+    model->commitTransaction();
+
+    BOOST_CHECK_EQUAL(model->maximumStep(), 1);
+    BOOST_CHECK_EQUAL(leaf->parent(), node);
+}
+
 BOOST_AUTO_TEST_SUITE_END()

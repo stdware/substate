@@ -33,6 +33,14 @@ namespace ss {
         /// node must be free.
         Property take(int index);
 
+        /// Moves \a node from its parent in the same model to the slot \a index, keeping its
+        /// identity. See TransferAction.
+        ///
+        /// \return whether the transfer was performed. It is rejected, creating no action, if the
+        ///         slot is not empty, if \a node is the root, if its parent is this node, or if
+        ///         this node is \a node or one of its descendants.
+        bool transferIn(int index, Node *node);
+
     protected:
         inline StructNodeBase(int type, int size);
 
@@ -41,6 +49,7 @@ namespace ss {
         inline void setStorage(Property *storage);
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
+        std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
 
         /// Stores copies of the values of \a source, for the clone() of a subclass. This node must
         /// be free, empty and of the same size.
@@ -51,6 +60,7 @@ namespace ss {
         int m_size;
 
         friend class StructAssignAction;
+        friend class StructNodeEndpoint;
     };
 
     inline StructNodeBase::StructNodeBase(int type, int size) : Node(type), m_size(size) {

@@ -76,6 +76,30 @@ inline std::string qdump(const ss::Property &value) {
     return "_";
 }
 
+/// Returns whether every descendant of \a node records the node that holds it as its parent,
+/// like parentsConsistent() of TestTree.h, extended to the node types of qsubstate.
+inline bool qparentsConsistent(const ss::Node *node) {
+    bool consistent = true;
+    const auto check = [&](const ss::Node *child) {
+        consistent =
+            consistent && (!child || (child->parent() == node && qparentsConsistent(child)));
+    };
+    if (auto vector = dynamic_cast<const ss::VectorNode *>(node)) {
+        for (int i = 0; i < vector->size(); ++i) {
+            check(vector->at(i));
+        }
+    } else if (auto structNode = dynamic_cast<const ss::StructNodeBase *>(node)) {
+        for (int i = 0; i < structNode->size(); ++i) {
+            check(structNode->child(i));
+        }
+    } else if (auto mapping = dynamic_cast<const ss::MappingNode *>(node)) {
+        for (const auto &key : mapping->keys()) {
+            check(mapping->child(key));
+        }
+    }
+    return consistent;
+}
+
 /// The structure of the tree under \a node as text, like dump() of TestTree.h, extended to the
 /// node types of qsubstate. The slots of a StructNode are written in angle brackets, and the
 /// entries of a MappingNode in braces as the letters of the key, \c =, and the value. Scalar

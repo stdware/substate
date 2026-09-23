@@ -101,6 +101,24 @@ inline std::unique_ptr<CountingNode> makeNode(int children = 0) {
     return node;
 }
 
+/// Returns whether every descendant of \a node records the node that holds it as its parent.
+inline bool parentsConsistent(const ss::Node *node) {
+    bool consistent = true;
+    const auto check = [&](const ss::Node *child) {
+        consistent = consistent && child->parent() == node && parentsConsistent(child);
+    };
+    if (auto vector = dynamic_cast<const ss::VectorNode *>(node)) {
+        for (int i = 0; i < vector->size(); ++i) {
+            check(vector->at(i));
+        }
+    } else if (auto sheet = dynamic_cast<const ss::SheetNode *>(node)) {
+        for (int key : sheet->keys()) {
+            check(sheet->at(key));
+        }
+    }
+    return consistent;
+}
+
 /// The structure of the tree under \a node as text. Each node is written as its identifier,
 /// followed by the children of a VectorNode in parentheses, by the children of a SheetNode in
 /// braces, each preceded by <tt>#key=</tt>, or by the bytes of a BytesNode in brackets. A byte is

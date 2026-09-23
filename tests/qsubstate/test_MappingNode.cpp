@@ -117,6 +117,37 @@ private Q_SLOTS:
                 rootOf(*model)->child(QStringLiteral("child")));
         QVERIFY(copied->child(QStringLiteral("child"))->parent() == copied);
     }
+
+    // The entry "from" holds a vector with one leaf, which is transferred to a new entry and
+    // back. The entry exists exactly while it holds the leaf.
+    void a_transfer_creates_and_removes_entries() {
+        auto model = makeModel();
+        auto node = rootOf(*model);
+        assign(*model, QStringLiteral("from"), makeNode(1));
+        auto vector = static_cast<CountingNode *>(node->child(QStringLiteral("from")));
+        auto leaf = vector->child(0);
+
+        model->beginTransaction();
+        // The entry exists.
+        QVERIFY(!node->transferIn(QStringLiteral("from"), leaf));
+        QVERIFY(node->transferIn(QStringLiteral("to"), leaf));
+        model->commitTransaction();
+        QCOMPARE(model->maximumStep(), 2);
+        QVERIFY(node->child(QStringLiteral("to")) == leaf);
+        QVERIFY(leaf->parent() == node);
+
+        model->undo();
+        QVERIFY(!node->contains(QStringLiteral("to")));
+        QVERIFY(vector->child(0) == leaf);
+
+        model->redo();
+        model->beginTransaction();
+        QVERIFY(vector->transferIn(0, leaf));
+        model->commitTransaction();
+        QVERIFY(!node->contains(QStringLiteral("to")));
+        model->undo();
+        QVERIFY(node->child(QStringLiteral("to")) == leaf);
+    }
 };
 
 QTEST_APPLESS_MAIN(test_MappingNode)

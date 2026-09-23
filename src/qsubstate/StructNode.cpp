@@ -8,7 +8,58 @@
 
 namespace ss {
 
+    // A slot, as an end of a transfer.
+    class StructNodeEndpoint : public TransferEndpoint {
+    public:
+        StructNodeEndpoint(StructNodeBase *node, int index) : m_node(node), m_index(index) {
+        }
+
+        Node *container() const override {
+            return m_node;
+        }
+
+        std::vector<std::unique_ptr<Node>> take(int count) override {
+            assert(count == 1);
+            (void) count;
+            std::vector<std::unique_ptr<Node>> taken;
+            taken.push_back(PropertyPrivate::releaseChild(m_node->m_slots[m_index]));
+            return taken;
+        }
+
+        void put(std::vector<std::unique_ptr<Node>> nodes) override {
+            assert(nodes.size() == 1 && m_node->m_slots[m_index].isEmpty());
+            m_node->m_slots[m_index] = Property(std::move(nodes.front()));
+        }
+
+    private:
+        StructNodeBase *m_node;
+        int m_index;
+    };
+
     StructNodeBase::~StructNodeBase() = default;
+
+    bool StructNodeBase::transferIn(int index, Node *node) {
+        assert(isWritable() && !isFree());
+        assert(index >= 0 && index < m_size);
+        if (!m_slots[index].isEmpty()) {
+            return false;
+        }
+        return NodePrivate::transfer(this, std::make_unique<StructNodeEndpoint>(this, index),
+                                     {node});
+    }
+
+    std::unique_ptr<TransferEndpoint>
+        StructNodeBase::endpointOf(const std::vector<Node *> &children) {
+        if (children.size() != 1) {
+            return nullptr;
+        }
+        for (int i = 0; i < m_size; ++i) {
+            if (m_slots[i].child() == children.front()) {
+                return std::make_unique<StructNodeEndpoint>(this, i);
+            }
+        }
+        return nullptr;
+    }
 
     void StructNodeBase::setAt(int index, Property value) {
         assert(isWritable());

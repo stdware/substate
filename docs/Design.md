@@ -206,9 +206,11 @@
 
 转移在同一模型内把节点从一个父节点移到另一个父节点，节点的地址与 ID 不变。用于需要保持身份的场合，例如多轨工程中把音符移到另一轨，或把一条 oto 条目改挂到另一个 wav 下：界面中的选区与拖动状态以 ID 记录，删除后插入副本会使其失效。
 
-- 由目标容器发起，被转移节点的当前位置即为源位置：`VectorNode::transferIn(int index, std::vector<Node *> nodes)`、`StructNode::transferIn(int slot, Node *node)`、`MappingNode::transferIn(const QString &key, Node *node)`、`SheetNode::transferIn(Node *node)`，后者返回新键。源为 `VectorNode` 时，一次转移的多个节点须为同一父节点中的一段连续区间。
+- 由目标容器发起，被转移节点的当前位置即为源位置：`VectorNode::transferIn(int index, const std::vector<Node *> &nodes)`、`StructNode::transferIn(int slot, Node *node)`、`MappingNode::transferIn(const QString &key, Node *node)` 返回转移是否执行，`SheetNode::transferIn(Node *node)` 返回新键，未执行时返回 0。源为 `VectorNode` 时，一次转移的多个节点须为同一父节点中的一段连续区间。
 - 源父节点与目标父节点须不同，同一父节点内的重排使用 `VectorMove`。二者都须在树中，目标不能是被转移节点本身或其后代（约束 5、6）。环检查沿目标父节点向上遍历祖先，代价与树的深度成正比。
 - 目标为槽位或键时，该槽位或键须为空。需要替换已有内容时，由调用方先删除、再转移，二者属于同一事务。
+- 违反上述条件的转移被拒绝：不产生动作，并以返回值告知调用方。条件包括被转移节点为根、源与目标为同一父节点、目标为被转移节点本身或其后代、目标槽位或键已被占用，以及多个节点不构成源中的一段连续区间。拒绝而非断言，是因为这些条件可能来自用户的拖放操作，调用方据返回值给出提示即可。在事务之外或对自由节点调用则是编程错误，以断言检查。
+- 位置由各容器类型的转移端点描述：`VectorNode` 为下标，`SheetNode` 为键，`StructNode` 为槽位，`MappingNode` 为键。端点负责从容器中取出节点和把节点放回，转移动作只在两端之间搬运，并更新节点的父节点。
 - 转入 `SheetNode` 时，键在首次执行时由该节点分配并记录在动作中，重做时使用同一个键。键不复用，因此不会冲突。转出后原键不再使用。
 - 转移动作不持有节点，序列化时只写出两端的父节点、位置与节点 ID，不写出子树。
 - 通知给出源与目标两端，观察者据此把同一节点从一处移到另一处，而不是删除后新建。撤销时两端互换。

@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include <substate/substate_global.h>
 
@@ -15,6 +16,8 @@ namespace ss {
     class Model;
 
     class NodePrivate;
+
+    class TransferEndpoint;
 
     /// A node of a document tree.
     ///
@@ -71,6 +74,11 @@ namespace ss {
 
         /// Calls \a func on each child, excluding further descendants.
         virtual void forEachChild(const std::function<void(Node *)> &func) const;
+
+        /// Returns the position of \a children, which are children of this node, as the source of
+        /// a transfer, or \c nullptr if they cannot be transferred together. A container that
+        /// supports transfer overrides this function. The default returns \c nullptr.
+        virtual std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children);
 
         /// Returns whether the node can be modified: it is free, or it is in the tree and the
         /// model is in a transaction.

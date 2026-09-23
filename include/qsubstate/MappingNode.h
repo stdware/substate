@@ -44,12 +44,21 @@ namespace ss {
         /// entry does not exist. The node must be free.
         Property take(const QString &key);
 
+        /// Moves \a node from its parent in the same model to the entry of \a key, keeping its
+        /// identity. See TransferAction.
+        ///
+        /// \return whether the transfer was performed. It is rejected, creating no action, if the
+        ///         entry exists, if \a node is the root, if its parent is this node, or if this
+        ///         node is \a node or one of its descendants.
+        bool transferIn(const QString &key, Node *node);
+
         std::unique_ptr<Node> clone() const override;
 
     protected:
         inline explicit MappingNode(int type);
 
         void forEachChild(const std::function<void(Node *)> &func) const override;
+        std::unique_ptr<TransferEndpoint> endpointOf(const std::vector<Node *> &children) override;
 
         /// Stores copies of the entries of \a source, for the clone() of a subclass. This node
         /// must be free and empty.
@@ -59,6 +68,7 @@ namespace ss {
         std::map<QString, Property> m_entries;
 
         friend class MappingAssignAction;
+        friend class MappingNodeEndpoint;
     };
 
     inline MappingNode::MappingNode() : MappingNode(Mapping) {

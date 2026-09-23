@@ -6,7 +6,68 @@
 
 namespace ss {
 
+    // The child under a key, as an end of a transfer. A key of 0 at the target is assigned by the
+    // node at the first execution and kept for redo.
+    class SheetNodeEndpoint : public TransferEndpoint {
+    public:
+        SheetNodeEndpoint(SheetNode *node, int key) : m_node(node), m_key(key) {
+        }
+
+        Node *container() const override {
+            return m_node;
+        }
+
+        int key() const {
+            return m_key;
+        }
+
+        std::vector<std::unique_ptr<Node>> take(int count) override {
+            assert(count == 1);
+            (void) count;
+            auto it = m_node->m_children.find(m_key);
+            assert(it != m_node->m_children.end());
+            std::vector<std::unique_ptr<Node>> taken;
+            taken.push_back(std::move(it->second));
+            m_node->m_children.erase(it);
+            return taken;
+        }
+
+        void put(std::vector<std::unique_ptr<Node>> nodes) override {
+            assert(nodes.size() == 1);
+            if (m_key == 0) {
+                m_key = ++m_node->m_lastKey;
+            }
+            m_node->m_children.emplace(m_key, std::move(nodes.front()));
+        }
+
+    private:
+        SheetNode *m_node;
+        int m_key;
+    };
+
     SheetNode::~SheetNode() = default;
+
+    int SheetNode::transferIn(Node *node) {
+        assert(isWritable() && !isFree());
+        auto end = std::make_unique<SheetNodeEndpoint>(this, 0);
+        auto raw = end.get();
+        if (!NodePrivate::transfer(this, std::move(end), {node})) {
+            return 0;
+        }
+        return raw->key();
+    }
+
+    std::unique_ptr<TransferEndpoint> SheetNode::endpointOf(const std::vector<Node *> &children) {
+        if (children.size() != 1) {
+            return nullptr;
+        }
+        for (const auto &child : m_children) {
+            if (child.second.get() == children.front()) {
+                return std::make_unique<SheetNodeEndpoint>(this, child.first);
+            }
+        }
+        return nullptr;
+    }
 
     Node *SheetNode::at(int key) const {
         auto it = m_children.find(key);
@@ -123,7 +184,8 @@ namespace ss {
             assert(!m_held && it != children.end() && it->second.get() == m_child);
             m_held = std::move(it->second);
             children.erase(it);
-            NodePrivate::detach(m_held.get());        }
+            NodePrivate::detach(m_held.get());
+        }
     }
 
 }

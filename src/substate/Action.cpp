@@ -2,6 +2,7 @@
 
 #include "Model.h"
 #include "Node_p.h"
+#include "Transfer_p.h"
 
 namespace ss {
 
@@ -37,6 +38,36 @@ namespace ss {
             NodePrivate::attach(m_model->m_root.get(), nullptr, m_model);
         }
         m_held = std::move(leaving);
+    }
+
+    TransferEndpoint::~TransferEndpoint() = default;
+
+    TransferAction::TransferAction(std::unique_ptr<TransferEndpoint> source,
+                                   std::unique_ptr<TransferEndpoint> target,
+                                   std::vector<Node *> nodes)
+        : Action(Transfer), m_source(std::move(source)), m_target(std::move(target)),
+          m_nodes(std::move(nodes)) {
+    }
+
+    TransferAction::~TransferAction() = default;
+
+    Node *TransferAction::source() const {
+        return m_source->container();
+    }
+
+    Node *TransferAction::target() const {
+        return m_target->container();
+    }
+
+    void TransferAction::execute(Operation operation) {
+        auto &from = isForward(operation) ? m_source : m_target;
+        auto &to = isForward(operation) ? m_target : m_source;
+
+        auto nodes = from->take(int(m_nodes.size()));
+        for (const auto &node : nodes) {
+            NodePrivate::reparent(node.get(), to->container());
+        }
+        to->put(std::move(nodes));
     }
 
 }

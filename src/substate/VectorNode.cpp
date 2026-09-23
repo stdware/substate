@@ -24,7 +24,61 @@ namespace ss {
 
     }
 
+    // A range of children starting at an index, as an end of a transfer.
+    class VectorNodeEndpoint : public TransferEndpoint {
+    public:
+        VectorNodeEndpoint(VectorNode *node, int index) : m_node(node), m_index(index) {
+        }
+
+        Node *container() const override {
+            return m_node;
+        }
+
+        std::vector<std::unique_ptr<Node>> take(int count) override {
+            auto &children = m_node->m_children;
+            auto first = children.begin() + m_index;
+            auto last = first + count;
+            std::vector<std::unique_ptr<Node>> taken(std::make_move_iterator(first),
+                                                     std::make_move_iterator(last));
+            children.erase(first, last);
+            return taken;
+        }
+
+        void put(std::vector<std::unique_ptr<Node>> nodes) override {
+            auto &children = m_node->m_children;
+            children.insert(children.begin() + m_index, std::make_move_iterator(nodes.begin()),
+                            std::make_move_iterator(nodes.end()));
+        }
+
+    private:
+        VectorNode *m_node;
+        int m_index;
+    };
+
     VectorNode::~VectorNode() = default;
+
+    bool VectorNode::transferIn(int index, const std::vector<Node *> &nodes) {
+        assert(isWritable() && !isFree());
+        assert(NodePrivate::isValidInsertion(index, size()));
+        return NodePrivate::transfer(this, std::make_unique<VectorNodeEndpoint>(this, index),
+                                     nodes);
+    }
+
+    std::unique_ptr<TransferEndpoint> VectorNode::endpointOf(const std::vector<Node *> &children) {
+        auto first = std::find_if(m_children.begin(), m_children.end(), [&](const auto &child) {
+            return child.get() == children.front();
+        });
+        if (first == m_children.end() ||
+            m_children.end() - first < std::ptrdiff_t(children.size())) {
+            return nullptr;
+        }
+        for (size_t i = 0; i < children.size(); ++i) {
+            if (first[std::ptrdiff_t(i)].get() != children[i]) {
+                return nullptr;
+            }
+        }
+        return std::make_unique<VectorNodeEndpoint>(this, int(first - m_children.begin()));
+    }
 
     void VectorNode::insert(int index, std::vector<std::unique_ptr<Node>> nodes) {
         assert(isWritable());
