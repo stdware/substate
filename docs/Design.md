@@ -327,7 +327,7 @@ qsubstate 目前只支持 Qt 6，Qt 5 的支持在之后添加。两者 `QVarian
 - 不使用 qmsetup，构建脚本只使用 CMake 自身的功能。
 - 命名空间保持 `ss`。
 - 全局头文件保持 `substate_global.h` 与 `qsubstate_global.h`。
-- 设计文档位于 `docs/`，现在的 `doc/classes.md` 在重构后删除，其内容由本文档与头文件中的说明取代。
+- 文档位于 `docs/`。旧的类列表与序列化说明 `docs/classes.md` 在编解码器完成后删除，其内容由本文档与头文件中的说明取代。
 
 ## 实施顺序
 
