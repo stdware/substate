@@ -4,25 +4,10 @@
 #ifndef SUBSTATE_FILESYSTEMSTORAGEENGINE_H
 #define SUBSTATE_FILESYSTEMSTORAGEENGINE_H
 
-#include <filesystem>
-
-#include <substate/StandardStorageEngine.h>
+// Placeholder for the storage engine with a write-ahead log, which is designed in the second
+// phase of docs/Design.md.
 
 namespace ss {
-
-    class SUBSTATE_EXPORT FilesystemStorageEngine : public StandardStorageEngine {
-    public:
-        explicit FilesystemStorageEngine(std::unique_ptr<ActionIOInterface> io);
-        ~FilesystemStorageEngine();
-
-    public:
-        // TODO
-
-    protected:
-        std::unique_ptr<ActionIOInterface> _io;
-
-        virtual bool createWarningFile(const std::filesystem::path &dir);
-    };
 
 }
 
