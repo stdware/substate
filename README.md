@@ -34,23 +34,21 @@ A storage engine with a write-ahead log, which provides crash consistency, is pl
 | Qt | 6, for `qsubstate` |
 | Boost.Test | For the tests of `substate` |
 
-## Build and Installation
+## Build & Install
 
 ```sh
-cmake -B build -G Ninja -DSUBSTATE_BUILD_SHARED=ON -DSUBSTATE_BUILD_TESTS=ON
+cmake -B build -G Ninja
 cmake --build build
-ctest --test-dir build
 cmake --install build --prefix <prefix>
 ```
 
-| Option | Default | Effect |
-|---|---|---|
-| `SUBSTATE_BUILD_SHARED` | `OFF` | Builds shared libraries. Without this option and `BUILD_SHARED_LIBS`, the libraries are static. |
-| `SUBSTATE_BUILD_STATIC` | `OFF` | Builds static libraries regardless of the other options. |
-| `SUBSTATE_BUILD_TESTS` | `OFF` | Builds the tests, which require Boost.Test and Qt Test. |
-| `SUBSTATE_INSTALL` | `ON` | Installs the libraries, the headers and the CMake package. |
+## Integration
 
-A consumer finds the installed package with `find_package(substate)` and links `substate::substate` or `substate::qsubstate`.
+```cmake
+find_package(substate CONFIG REQUIRED)   # -Dsubstate_DIR=<prefix>/lib/cmake/substate
+target_link_libraries(<target> PRIVATE substate::substate)
+target_link_libraries(<target> PRIVATE substate::qsubstate)
+```
 
 ## Documentation
 
