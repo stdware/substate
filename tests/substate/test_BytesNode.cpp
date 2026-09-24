@@ -113,6 +113,26 @@ BOOST_AUTO_TEST_CASE(test_a_replacement_beyond_the_end_extends_the_array) {
     BOOST_CHECK_EQUAL(textOf(*node), "abcdWXYZ");
 }
 
+// A replacement with equal bytes creates no action, as an assignment of an equal value to a slot
+// does not. The part beyond the end is still inserted.
+BOOST_AUTO_TEST_CASE(test_a_replacement_with_equal_bytes_creates_no_action) {
+    auto model = makeModel("abcdef");
+    auto node = rootOf(*model);
+
+    model->beginTransaction();
+    node->replace(1, view("bcd"));
+    model->commitTransaction();
+    BOOST_CHECK_EQUAL(model->maximumStep(), 0);
+
+    model->beginTransaction();
+    node->replace(4, view("efgh"));
+    model->commitTransaction();
+    BOOST_CHECK_EQUAL(model->maximumStep(), 1);
+    BOOST_CHECK_EQUAL(textOf(*node), "abcdefgh");
+    model->undo();
+    BOOST_CHECK_EQUAL(textOf(*node), "abcdef");
+}
+
 BOOST_AUTO_TEST_CASE(test_an_empty_insertion_creates_no_step) {
     auto model = makeModel("abc");
     model->beginTransaction();

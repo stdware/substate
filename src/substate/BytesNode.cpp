@@ -57,8 +57,8 @@ namespace ss {
             return;
         }
 
-        if (!within.empty()) {
-            auto first = m_data.begin() + index;
+        auto first = m_data.begin() + index;
+        if (!within.empty() && !std::equal(within.begin(), within.end(), first)) {
             std::unique_ptr<BytesReplaceAction> action(
                 new BytesReplaceAction(this, index, std::vector<char>(within.begin(), within.end()),
                                        std::vector<char>(first, first + overlap)));

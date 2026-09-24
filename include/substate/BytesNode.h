@@ -35,7 +35,8 @@ namespace ss {
         /// \a bytes reaches beyond its end. \a index must not exceed size().
         ///
         /// In a model, the part within the array is recorded as a replacement and the part
-        /// beyond its end as an insertion, because a replacement preserves the length.
+        /// beyond its end as an insertion, because a replacement preserves the length. A part
+        /// within the array equal to the current bytes creates no action.
         void replace(int index, ArrayView<char> bytes);
 
         /// Removes the bytes from \a size to the end.
