@@ -1,4 +1,4 @@
-// Copyright (C) 2022-2025 Stdware Collections (https://www.github.com/stdware)
+// Copyright (C) 2022-present Stdware Collections (https://www.github.com/stdware)
 // SPDX-License-Identifier: Apache-2.0
 
 #ifndef SUBSTATE_TRANSFER_P_H

@@ -30,7 +30,7 @@ function(substate_add_library _target)
     # Add platform specific
     if(WIN32)
         set(RC_DESCRIPTION "Crash Consistent Undo Framework")
-        set(RC_COPYRIGHT "Copyright (C) 2022-2025 Stdware Collections")
+        set(RC_COPYRIGHT "Copyright (C) 2022-present Stdware Collections")
         include("${SUBSTATE_SOURCE_DIR}/cmake/winrc.cmake")
     endif()
 
