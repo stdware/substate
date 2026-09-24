@@ -6,7 +6,7 @@ project(substate VERSION 0.0.1.2 LANGUAGES CXX)
 # Build Options
 # ----------------------------------
 option(SUBSTATE_BUILD_STATIC "Build static library" OFF)
-option(SUBSTATE_BUILD_SHARED "Build shared library" OFF)
+option(SUBSTATE_BUILD_SHARED "Build shared library" ON)
 option(SUBSTATE_BUILD_TESTS "Build test cases" OFF)
 option(SUBSTATE_BUILD_EXAMPLES "Build examples" OFF)
 option(SUBSTATE_INSTALL "Install library" ON)
